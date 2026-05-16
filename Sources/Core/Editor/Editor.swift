@@ -111,10 +111,9 @@ public final class Editor {
             return .restoreStrokes(entries: entries)
 
         case .restoreStrokes(let entries):
-            // Re-insert in original deletion order so each atIndex is meaningful relative
-            // to the strokeOrder state it was captured against.
-            let reversed = Array(entries.reversed())
-            for entry in reversed {
+            // Insert in ascending atIndex order so earlier inserts don't shift later ones.
+            let sorted = entries.sorted { $0.atIndex < $1.atIndex }
+            for entry in sorted {
                 doc.strokes[entry.snapshot.id] = entry.snapshot
                 let insertAt = max(0, min(entry.atIndex, doc.strokeOrder.count))
                 doc.strokeOrder.insert(entry.snapshot.id, at: insertAt)

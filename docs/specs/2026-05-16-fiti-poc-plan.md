@@ -1835,10 +1835,9 @@ private func applyInverse(_ op: InverseOp) -> InverseOp? {
         return .restoreStrokes(entries: entries)
 
     case .restoreStrokes(let entries):
-        // Re-insert in original deletion order so each atIndex is meaningful relative
-        // to the strokeOrder state it was captured against.
-        let reversed = Array(entries.reversed())
-        for e in reversed {
+        // Insert in ascending atIndex order so earlier inserts don't shift later ones.
+        let sorted = entries.sorted { $0.atIndex < $1.atIndex }
+        for e in sorted {
             doc.strokes[e.snapshot.id] = e.snapshot
             let insertAt = max(0, min(e.atIndex, doc.strokeOrder.count))
             doc.strokeOrder.insert(e.snapshot.id, at: insertAt)
