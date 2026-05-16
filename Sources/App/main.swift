@@ -20,6 +20,12 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     init(args: Args) { self.args = args }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if args.dev == false {
+            if !AccessibilityCheck.isTrusted(prompt: true) {
+                NSLog("fiti: accessibility permission not granted; Cmd+Opt+Z global hotkey will not work until granted in System Settings → Privacy & Security → Accessibility.")
+            }
+        }
+
         editor = Editor(clock: SystemClock(), ids: UUIDStrokeIds())
         window = TransparentWindow()
         let frame = window.contentLayoutRect
