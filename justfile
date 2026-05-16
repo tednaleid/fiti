@@ -81,3 +81,52 @@ stop:
     @osascript -e 'tell application "Fiti" to quit' 2>/dev/null \
         || pkill -f 'Fiti.app/Contents/MacOS/Fiti' 2>/dev/null \
         || echo "fiti not running"
+
+# ─── inspect (dev HTTP @ localhost:9876) ──────────────────────────────────
+
+[group('inspect')]
+inspect-state:
+    @curl -sf localhost:{{dev_port}}/state | jq .
+
+[group('inspect')]
+inspect-doc:
+    @curl -sf localhost:{{dev_port}}/doc | jq .
+
+[group('inspect')]
+inspect-stroke id:
+    @curl -sf localhost:{{dev_port}}/strokes/{{id}} | jq .
+
+[group('inspect')]
+inspect-screenshot path=(".llm/inspect/screenshot-" + `date +%Y%m%d-%H%M%S` + ".png"):
+    @mkdir -p .llm/inspect && curl -sf 'localhost:{{dev_port}}/snapshot.png' -o '{{path}}' && echo '{{path}}'
+
+[group('inspect')]
+inspect-pointer event x y:
+    @curl -sf -X POST localhost:{{dev_port}}/pointer \
+        -H 'Content-Type: application/json' \
+        -d '{"event":"{{event}}","x":{{x}},"y":{{y}}}' \
+        | jq -R 'try fromjson catch .'
+
+[group('inspect')]
+inspect-clear:
+    @curl -sf -X POST localhost:{{dev_port}}/clear
+
+[group('inspect')]
+inspect-undo:
+    @curl -sf -X POST localhost:{{dev_port}}/undo | jq .
+
+[group('inspect')]
+inspect-redo:
+    @curl -sf -X POST localhost:{{dev_port}}/redo | jq .
+
+[group('inspect')]
+inspect-activate:
+    @curl -sf -X POST localhost:{{dev_port}}/activate
+
+[group('inspect')]
+inspect-deactivate:
+    @curl -sf -X POST localhost:{{dev_port}}/deactivate
+
+[group('inspect')]
+inspect-erase id:
+    @curl -sf -X POST localhost:{{dev_port}}/strokes/{{id}}/erase | jq .
