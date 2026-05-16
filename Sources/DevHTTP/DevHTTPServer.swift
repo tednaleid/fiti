@@ -50,11 +50,15 @@ public final class DevHTTPServer {
             guard let self else { return }
             var buf = buffer
             if let d = data { buf.append(d) }
-            if let req = try? HTTPRequest.parse(buf) {
-                let response = self.router.handle(req).serialize()
-                connection.send(content: response, completion: .contentProcessed { _ in
-                    connection.cancel()
-                })
+            if self.isComplete(buf) {
+                if let req = try? HTTPRequest.parse(buf) {
+                    let response = self.router.handle(req).serialize()
+                    connection.send(content: response, completion: .contentProcessed { _ in
+                        connection.cancel()
+                    })
+                    return
+                }
+                connection.cancel()
                 return
             }
             if buf.count > Self.maxRequestBytes {
@@ -68,6 +72,23 @@ public final class DevHTTPServer {
             }
             self.readRequest(on: connection, buffer: buf)
         }
+    }
+
+    /// Returns true when the buffer contains a complete HTTP/1.1 request: headers
+    /// terminated by \r\n\r\n and at least Content-Length bytes of body (if declared).
+    private func isComplete(_ buf: Data) -> Bool {
+        guard let headerEnd = buf.range(of: Data("\r\n\r\n".utf8)) else { return false }
+        guard let headerText = String(data: Data(buf[..<headerEnd.lowerBound]), encoding: .utf8) else { return false }
+        let bodyStart = headerEnd.upperBound
+        if let contentLengthLine = headerText.components(separatedBy: "\r\n").first(where: {
+            $0.lowercased().hasPrefix("content-length:")
+        }) {
+            let value = contentLengthLine.dropFirst("content-length:".count).trimmingCharacters(in: .whitespaces)
+            if let length = Int(value) {
+                return buf.count >= bodyStart + length
+            }
+        }
+        return true
     }
 
     private func installRoutes() {
@@ -103,5 +124,43 @@ public final class DevHTTPServer {
             let ok = self.surface.eraseStroke(id)
             return .json(["erased": ok])
         }
+
+        router.add("POST", "/activate") { [weak self] _, _ in
+            self?.surface.activate()
+            return .ok()
+        }
+
+        router.add("POST", "/deactivate") { [weak self] _, _ in
+            self?.surface.deactivate()
+            return .ok()
+        }
+
+        router.add("POST", "/pointer") { [weak self] req, _ in
+            guard let self else { return .notFound() }
+            return self.handlePointer(req)
+        }
+    }
+
+    private func handlePointer(_ req: HTTPRequest) -> HTTPResponse {
+        guard let json = try? JSONSerialization.jsonObject(with: req.body) as? [String: Any],
+              let event = json["event"] as? String else {
+            return .badRequest("expected {event, x, y} body")
+        }
+        if event == "up" {
+            surface.pointerUp()
+            return .ok()
+        }
+        guard let x = (json["x"] as? Double) ?? (json["x"] as? Int).map(Double.init),
+              let y = (json["y"] as? Double) ?? (json["y"] as? Int).map(Double.init) else {
+            return .badRequest("missing x/y")
+        }
+        let pressure = (json["pressure"] as? Double) ?? 0.5
+        let point = StrokePoint(x: x, y: y, pressure: pressure)
+        switch event {
+        case "down": surface.pointerDown(point)
+        case "move": surface.pointerMoved(point)
+        default: return .badRequest("unknown event \(event)")
+        }
+        return .ok()
     }
 }

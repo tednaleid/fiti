@@ -15,6 +15,7 @@ public struct HTTPResponse: Sendable {
         var h = headers
         h["content-length"] = String(body.count)
         if h["content-type"] == nil { h["content-type"] = "text/plain; charset=utf-8" }
+        h["connection"] = "close"
         self.headers = h
         self.body = body
     }
