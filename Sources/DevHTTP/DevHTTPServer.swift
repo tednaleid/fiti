@@ -92,5 +92,16 @@ public final class DevHTTPServer {
             guard let self else { return .notFound() }
             return .json(encode: self.surface.doc)
         }
+
+        router.add("GET", "/strokes/:id") { [weak self] _, params in
+            guard let self, let id = params["id"], let stroke = self.surface.doc.strokes[id] else { return .notFound() }
+            return .json(encode: stroke)
+        }
+
+        router.add("POST", "/strokes/:id/erase") { [weak self] _, params in
+            guard let self, let id = params["id"] else { return .badRequest("missing id") }
+            let ok = self.surface.eraseStroke(id)
+            return .json(["erased": ok])
+        }
     }
 }
