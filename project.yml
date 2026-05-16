@@ -31,6 +31,8 @@ targets:
     platform: macOS
     sources:
       - path: Tests
+        excludes:
+          - AppKitTests
       - path: Sources/Core
       - path: Sources/DevHTTP
     settings:
