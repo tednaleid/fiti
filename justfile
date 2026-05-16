@@ -60,3 +60,24 @@ lint:
 # Full CI gate: test + lint + build. Run this before every commit.
 [group('check')]
 check: test lint build
+
+# ─── run ──────────────────────────────────────────────────────────────────
+
+# Build and launch the app in the foreground (--dev enables HTTP introspection)
+[group('run')]
+run: build
+    {{build_dir}}/Debug/Fiti.app/Contents/MacOS/Fiti --dev --port {{dev_port}}
+
+# Build and launch in the background, for scripted testing
+[group('run')]
+run-bg: build
+    @{{build_dir}}/Debug/Fiti.app/Contents/MacOS/Fiti --dev --port {{dev_port}} &
+    @sleep 1
+    @echo "fiti running in background. Use 'just stop' to quit."
+
+# Graceful quit (osascript); falls back to pkill if Apple Events fail
+[group('run')]
+stop:
+    @osascript -e 'tell application "Fiti" to quit' 2>/dev/null \
+        || pkill -f 'Fiti.app/Contents/MacOS/Fiti' 2>/dev/null \
+        || echo "fiti not running"
