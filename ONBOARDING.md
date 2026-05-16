@@ -2,7 +2,7 @@
 
 fiti is a native Swift macOS port of [telestrator](https://github.com/steveruizok/telestrator) — a transparent always-on-top drawing overlay. The current scope is a proof-of-concept that validates a hexagonal Core ↔ adapters split, a borderless transparent window with cursor click-through, and an HTTP dev surface so Claude Code can observe and drive the running app.
 
-**Status: POC complete.** All seven acceptance criteria from the design doc pass. The app launches via `just run-bg`, accepts pointer / state / history operations via the dev HTTP API on :9876, renders PNG snapshots, and `just check` is green. Next: shapes, fading, pen pressure, toolbar — see [Out of scope] in the design doc.
+**Status: POC + hardening complete.** All seven acceptance criteria from the POC design pass. The hardening plan (`docs/specs/2026-05-16-fiti-hardening-plan.md`) is also done: a `fiti-integration` test target covers the AppKit boundary, `Editor` and `AppController` are `@MainActor`-isolated, `CanvasView` uses a two-canvas split (committed strokes baked, in-progress drawn live), and `Cmd+Opt+Z` works globally when Accessibility permission is granted. Next: shapes, fading, pen pressure, toolbar — see [Out of scope] in the design doc.
 
 ## Stack
 
