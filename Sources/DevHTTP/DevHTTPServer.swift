@@ -139,6 +139,25 @@ public final class DevHTTPServer {
             guard let self else { return .notFound() }
             return self.handlePointer(req)
         }
+
+        installHistoryRoutes()
+    }
+
+    private func installHistoryRoutes() {
+        router.add("POST", "/clear") { [weak self] _, _ in
+            self?.surface.clear()
+            return .ok()
+        }
+
+        router.add("POST", "/undo") { [weak self] _, _ in
+            let did = self?.surface.undo() ?? false
+            return .json(["undid": did])
+        }
+
+        router.add("POST", "/redo") { [weak self] _, _ in
+            let did = self?.surface.redo() ?? false
+            return .json(["redid": did])
+        }
     }
 
     private func handlePointer(_ req: HTTPRequest) -> HTTPResponse {
