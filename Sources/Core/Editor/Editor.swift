@@ -71,6 +71,19 @@ public final class Editor {
         return true
     }
 
+    public func clear() {
+        guard !doc.strokeOrder.isEmpty else { return }
+        let entries: [StrokeRestoreEntry] = doc.strokeOrder.enumerated().compactMap { idx, id in
+            guard let s = doc.strokes[id] else { return nil }
+            return StrokeRestoreEntry(snapshot: s, atIndex: idx)
+        }
+        doc.strokes.removeAll()
+        doc.strokeOrder.removeAll()
+        if currentStrokeId != nil { currentStrokeId = nil }
+        pushUndo(.restoreStrokes(entries: entries))
+        emit(.local)
+    }
+
     // MARK: - Undo / redo
 
     @discardableResult
