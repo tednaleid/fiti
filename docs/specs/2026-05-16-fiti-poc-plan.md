@@ -509,6 +509,14 @@ opt_in_rules:
 # our architectural concern about platform imports, so the analyzer rule is
 # omitted here.
 
+# Single-char identifiers like r/g/b/a (color components) and x/y (geometry)
+# are conventional and appear throughout the codebase. Relax the default
+# minimum length so SwiftLint doesn't flag them.
+identifier_name:
+  min_length:
+    warning: 1
+    error: 1
+
 included:
   - Sources
   - Tests
@@ -766,7 +774,6 @@ Drop `Sources/Core/_CoreBootstrap.swift` at the first task that adds a real Core
 // ABOUTME: Phase 2.1 of the POC plan.
 
 import Testing
-@testable import fiti_unit
 
 @Suite("RGBA")
 struct RGBATests {
@@ -787,13 +794,7 @@ struct RGBATests {
 }
 ```
 
-Note on `@testable import fiti_unit`: xcodegen produces a module named `fiti_unit` for the test bundle (or `fiti` for app sources visible in the test target). When you run `just test` and see a "no such module" error, list available modules with:
-
-```bash
-xcodebuild -project fiti.xcodeproj -list
-```
-
-If sources show up under the `fiti` module (because both targets share `Sources/Core`), use `@testable import fiti` instead. **This may need adjustment per how xcodegen ends up linking the targets — confirm on first run and update accordingly.**
+Note on imports: the `fiti-unit` test target compiles `Sources/Core` directly alongside `Tests/`, so Core types live in the same compilation unit as the tests. No `@testable import` is needed (and would fail because there's no separate framework to import). Tests just `import Testing`; test doubles in `Tests/CoreTests/Doubles/` just `import Foundation`. This was confirmed during Task 2.1 (see commit `95220e8`).
 
 - [ ] **Step 2: Run the test, expect failure**
 
@@ -871,7 +872,6 @@ EOF
 // ABOUTME: Tests for the StrokePoint — (x, y, pressure) triple.
 
 import Testing
-@testable import fiti
 
 @Suite("StrokePoint")
 struct StrokePointTests {
@@ -951,7 +951,6 @@ Three tiny types in one task — each is a record with no behavior, so batching 
 // ABOUTME: Tests for Transform, Size, PointerType — the small model types.
 
 import Testing
-@testable import fiti
 
 @Suite("Transform")
 struct TransformTests {
@@ -1069,7 +1068,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for the Stroke value type.
 
 import Testing
-@testable import fiti
 
 @Suite("Stroke")
 struct StrokeTests {
@@ -1177,7 +1175,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for FitiDoc — the keyed-map + ordered-list document shape.
 
 import Testing
-@testable import fiti
 
 @Suite("FitiDoc")
 struct FitiDocTests {
@@ -1249,7 +1246,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: createdAt timestamps in Editor tests.
 
 import Testing
-@testable import fiti
 
 @Suite("VirtualClock")
 struct ClockTests {
@@ -1291,7 +1287,6 @@ public protocol Clock: AnyObject, Sendable {
 // ABOUTME: Deterministic Clock for tests. Time advances only on explicit calls.
 
 import Foundation
-@testable import fiti
 
 public final class VirtualClock: Clock, @unchecked Sendable {
     private var current: Double
@@ -1337,7 +1332,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for the SeededIdGenerator test double.
 
 import Testing
-@testable import fiti
 
 @Suite("SeededIdGenerator")
 struct IdGeneratorTests {
@@ -1381,7 +1375,6 @@ public protocol IdGenerator: AnyObject, Sendable {
 // ABOUTME: Returns "{prefix}-1", "{prefix}-2", ...
 
 import Foundation
-@testable import fiti
 
 public final class SeededIdGenerator: IdGenerator, @unchecked Sendable {
     private let prefix: String
@@ -1425,7 +1418,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: that describe how to reverse a doc mutation.
 
 import Testing
-@testable import fiti
 
 @Suite("InverseOp")
 struct InverseOpTests {
@@ -1504,7 +1496,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: with the supplied color/width/pointerType and an empty points array.
 
 import Testing
-@testable import fiti
 
 @Suite("Editor.startStroke")
 struct EditorStartStrokeTests {
@@ -1653,7 +1644,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for appendPoint + endStroke — the rest of the drawing path.
 
 import Testing
-@testable import fiti
 
 @Suite("Editor draw cycle")
 struct EditorDrawingTests {
@@ -1735,7 +1725,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for undo/redo of completed strokes — the round-trip.
 
 import Testing
-@testable import fiti
 
 @Suite("Editor undo / redo")
 struct EditorUndoRedoTests {
@@ -1885,7 +1874,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for eraseStroke — delete-by-id with undo support.
 
 import Testing
-@testable import fiti
 
 @Suite("Editor.eraseStroke")
 struct EditorEraseTests {
@@ -1972,7 +1960,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for clear — empties the doc but is undo-able.
 
 import Testing
-@testable import fiti
 
 @Suite("Editor.clear")
 struct EditorClearTests {
@@ -2056,7 +2043,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for the subscribe/unsubscribe lifecycle.
 
 import Testing
-@testable import fiti
 
 @Suite("Editor.subscribe")
 struct EditorSubscribeTests {
@@ -2118,7 +2104,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for the in-memory adapters used by AppController tests.
 
 import Testing
-@testable import fiti
 
 @Suite("Port doubles")
 struct PortDoublesTests {
@@ -2212,7 +2197,6 @@ public protocol InputSource: AnyObject {
 // ABOUTME: In-memory Renderer for tests. Captures every frame for assertion.
 
 import Foundation
-@testable import fiti
 
 public final class RecordingRenderer: Renderer {
     public private(set) var frames: [RenderFrame] = []
@@ -2226,7 +2210,6 @@ public final class RecordingRenderer: Renderer {
 // ABOUTME: In-memory WindowControl for AppController tests.
 
 import Foundation
-@testable import fiti
 
 public final class RecordingWindow: WindowControl {
     public private(set) var clickThroughHistory: [Bool] = []
@@ -2263,7 +2246,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for the RenderFrame.from(editor:canvasSize:) helper.
 
 import Testing
-@testable import fiti
 
 @Suite("RenderFrame.from(editor:)")
 struct RenderFrameFromTests {
@@ -2338,7 +2320,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: Tests for AppController mode transitions on activate/deactivate.
 
 import Testing
-@testable import fiti
 
 @Suite("AppController activation")
 struct ActivationTests {
@@ -2450,7 +2431,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 // ABOUTME: pointer events into Editor stroke calls based on current mode.
 
 import Testing
-@testable import fiti
 
 @Suite("AppController pointer routing")
 struct PointerRoutingTests {
@@ -3112,7 +3092,6 @@ Goal: an `NWListener`-based HTTP server on `localhost:9876` exposing the routes 
 
 import Testing
 import Foundation
-@testable import fiti
 
 @Suite("HTTP types")
 struct HTTPTypesTests {
@@ -3294,7 +3273,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 import Testing
 import Foundation
-@testable import fiti
 
 @Suite("DevHTTPServer")
 struct DevHTTPServerTests {
@@ -3469,7 +3447,6 @@ public final class DevHTTPServer {
 // ABOUTME: In-memory DevHTTPSurface for route tests. Records every method call.
 
 import Foundation
-@testable import fiti
 
 public final class FakeSurface: DevHTTPSurface {
     public var doc: FitiDoc = .empty
@@ -3543,7 +3520,6 @@ EOF
 
 import Testing
 import Foundation
-@testable import fiti
 
 @Suite("/state and /doc")
 struct StateAndDocTests {
@@ -3652,7 +3628,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 import Testing
 import Foundation
-@testable import fiti
 
 @Suite("/strokes/:id routes")
 struct StrokeRoutesTests {
@@ -3738,7 +3713,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 import Testing
 import Foundation
-@testable import fiti
 
 @Suite("Input routes")
 struct InputRoutesTests {
@@ -3849,7 +3823,6 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 import Testing
 import Foundation
-@testable import fiti
 
 @Suite("History routes")
 struct HistoryRoutesTests {
@@ -3929,7 +3902,6 @@ The snapshot route asks the surface for a PNG. The real surface (Phase 5) builds
 
 import Testing
 import Foundation
-@testable import fiti
 
 @Suite("/snapshot.png")
 struct SnapshotTests {
