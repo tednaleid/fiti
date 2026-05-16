@@ -36,3 +36,15 @@ build: generate
 clean:
     rm -rf {{build_dir}} fiti.xcodeproj DerivedData
     @echo "Clean complete."
+
+# ─── test ─────────────────────────────────────────────────────────────────
+
+# Run the Swift Testing test bundle
+[group('test')]
+test: generate
+    xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}}
+
+# Run a single test by name (e.g., just test-only swiftTestingIsWired)
+[group('test')]
+test-only NAME: generate
+    xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} -only-testing:'fiti-unit/{{NAME}}'
