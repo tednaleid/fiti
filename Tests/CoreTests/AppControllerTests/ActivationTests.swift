@@ -35,4 +35,22 @@ struct ActivationTests {
         #expect(c.mode == .inactive)
         #expect(w.clickThroughHistory.last == true)
     }
+
+    @Test("double-activate is idempotent")
+    func doubleActivate() {
+        let (c, w) = make()
+        c.activate()
+        c.activate()
+        #expect(c.mode == .activeIdle)
+        #expect(w.focusCount == 1)
+        #expect(w.clickThroughHistory == [false])
+    }
+
+    @Test("deactivate while already inactive is a no-op")
+    func doubleDeactivate() {
+        let (c, w) = make()
+        c.deactivate()
+        #expect(c.mode == .inactive)
+        #expect(w.clickThroughHistory.isEmpty)
+    }
 }
