@@ -163,6 +163,6 @@ public final class Editor {
     }
 
     private func emit(_ kind: ChangeKind) {
-        for listener in listeners.values { listener(kind) }
+        for listener in Array(listeners.values) { listener(kind) }
     }
 }
