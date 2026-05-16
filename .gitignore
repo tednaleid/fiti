@@ -1,1 +1,19 @@
 .llm
+
+# Xcode generated artifacts
+*.xcodeproj/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Build outputs (we keep them in /tmp, but be defensive)
+/build/
+*.app
+
+# Swift Package Manager
+.swiftpm/
+.build/
+Package.resolved
+
+# macOS
+.DS_Store

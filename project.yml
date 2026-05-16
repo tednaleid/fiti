@@ -1,0 +1,40 @@
+name: fiti
+options:
+  bundleIdPrefix: com.fiti
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    SWIFT_STRICT_CONCURRENCY: minimal
+
+targets:
+  fiti:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fiti.app
+        PRODUCT_NAME: Fiti
+        INFOPLIST_FILE: Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/fiti.entitlements
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+
+  fiti-unit:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests
+      - path: Sources/Core
+      - path: Sources/DevHTTP
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fiti.app.tests
+        GENERATE_INFOPLIST_FILE: "YES"
+        TEST_HOST: ""
