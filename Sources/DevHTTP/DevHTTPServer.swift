@@ -52,10 +52,15 @@ public final class DevHTTPServer {
             if let d = data { buf.append(d) }
             if self.isComplete(buf) {
                 if let req = try? HTTPRequest.parse(buf) {
-                    let response = self.router.handle(req).serialize()
-                    connection.send(content: response, completion: .contentProcessed { _ in
-                        connection.cancel()
-                    })
+                    // Handlers touch AppController/Editor/AppKit, all of which are
+                    // main-thread-only. Hop to main to dispatch, then come back.
+                    let router = self.router
+                    DispatchQueue.main.async {
+                        let response = router.handle(req).serialize()
+                        connection.send(content: response, completion: .contentProcessed { _ in
+                            connection.cancel()
+                        })
+                    }
                     return
                 }
                 connection.cancel()
