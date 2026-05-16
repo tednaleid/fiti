@@ -4,8 +4,8 @@
 import Foundation
 
 public struct RenderFrame: Equatable, Sendable {
-    public var strokes: [Stroke]            // committed, in strokeOrder
-    public var inProgress: Stroke?
+    public var strokes: [Stroke]            // all strokes in strokeOrder, including the in-progress one
+    public var inProgress: Stroke?          // also exposed separately for the live-layer redraw
     public var canvasSize: Size             // logical points
 
     public init(strokes: [Stroke], inProgress: Stroke?, canvasSize: Size) {
