@@ -24,25 +24,30 @@ public final class NSEventInputSource: InputSource {
         if let m = keyMonitor { NSEvent.removeMonitor(m) }
     }
 
+    /// Returns true if the event was consumed (caller should drop it).
+    public func handleKeyDown(_ event: NSEvent) -> Bool {
+        let chars = event.charactersIgnoringModifiers
+        let cmd = event.modifierFlags.contains(.command)
+        let opt = event.modifierFlags.contains(.option)
+        if chars == "z" && cmd && opt {
+            onActivate?()
+            return true
+        }
+        if chars == "k" && cmd && !opt {
+            onClear?()
+            return true
+        }
+        if event.keyCode == 53 {
+            onDeactivate?()
+            return true
+        }
+        return false
+    }
+
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
-            let chars = event.charactersIgnoringModifiers
-            let cmd = event.modifierFlags.contains(.command)
-            let opt = event.modifierFlags.contains(.option)
-            if chars == "z" && cmd && opt {
-                self.onActivate?()
-                return nil
-            }
-            if chars == "k" && cmd && !opt {
-                self.onClear?()
-                return nil
-            }
-            if event.keyCode == 53 {
-                self.onDeactivate?()
-                return nil
-            }
-            return event
+            return self.handleKeyDown(event) ? nil : event
         }
     }
 }
