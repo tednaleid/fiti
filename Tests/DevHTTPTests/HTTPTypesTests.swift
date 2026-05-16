@@ -37,6 +37,14 @@ struct HTTPTypesTests {
         #expect(text.contains("\"ok\":true") || text.contains("\"ok\": true"))
     }
 
+    @Test("parse throws on missing header terminator")
+    func parseMalformed() {
+        let raw = "GET /state HTTP/1.1\r\nHost: localhost\r\n"  // no \r\n\r\n
+        #expect(throws: HTTPRequest.ParseError.malformed) {
+            _ = try HTTPRequest.parse(Data(raw.utf8))
+        }
+    }
+
     @Test("HTTPResponse status codes serialize correctly")
     func responseStatus() {
         let resp = HTTPResponse.notFound("nope")

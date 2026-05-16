@@ -11,6 +11,11 @@ public struct HTTPRequest: Sendable {
 
     public enum ParseError: Error { case malformed }
 
+    /// Parse a complete HTTP/1.1 request from `data`. Assumes the caller has already
+    /// buffered the full message (request line, headers, and `Content-Length` worth
+    /// of body). The dev server (Task 4.2+) is responsible for that buffering before
+    /// calling this. Returns `.malformed` only on missing/garbled headers — body
+    /// length is not validated.
     public static func parse(_ data: Data) throws -> HTTPRequest {
         guard let split = data.range(of: Data("\r\n\r\n".utf8)) else { throw ParseError.malformed }
         let headerData = data[..<split.lowerBound]
