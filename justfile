@@ -44,9 +44,7 @@ clean:
 test: generate
     xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}}
 
-# Run a single test by name. Swift Testing identifiers include `()`, e.g.:
-#   just test-only 'swiftTestingIsWired()'                 # free @Test function
-#   just test-only 'RGBATests/equatable()'                 # @Test inside @Suite
+# Run one test by name. Swift Testing identifiers include `()`, e.g. 'swiftTestingIsWired()' or 'SmokeTests/myTest()'
 [group('test')]
 test-only NAME: generate
     xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} -only-testing:'fiti-unit/{{NAME}}'
