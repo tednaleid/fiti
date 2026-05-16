@@ -60,6 +60,17 @@ public final class Editor {
         emit(.local)
     }
 
+    @discardableResult
+    public func eraseStroke(_ id: StrokeId) -> Bool {
+        guard let stroke = doc.strokes[id] else { return false }
+        let atIndex = doc.strokeOrder.firstIndex(of: id) ?? doc.strokeOrder.count
+        doc.strokes.removeValue(forKey: id)
+        doc.strokeOrder.removeAll { $0 == id }
+        pushUndo(.restoreStroke(snapshot: stroke, atIndex: atIndex))
+        emit(.local)
+        return true
+    }
+
     // MARK: - Undo / redo
 
     @discardableResult
