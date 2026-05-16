@@ -49,6 +49,11 @@ test: generate
 test-only NAME: generate
     xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} -only-testing:'fiti-unit/{{NAME}}'
 
+# Run the AppKit / integration test bundle (slower; includes AppKit)
+[group('test')]
+test-integration: generate
+    xcodebuild -project fiti.xcodeproj -scheme fiti-integration -destination 'platform=macOS' test SYMROOT={{build_dir}}
+
 # ─── check ────────────────────────────────────────────────────────────────
 
 # Run SwiftLint plus the Sources/Core import-discipline check
@@ -57,9 +62,9 @@ lint:
     swiftlint lint --strict
     ./scripts/check-core-imports.sh
 
-# Full CI gate: test + lint + build. Run this before every commit.
+# Full CI gate: unit tests + integration tests + lint + build. Run this before every commit.
 [group('check')]
-check: test lint build
+check: test test-integration lint build
 
 # ─── run ──────────────────────────────────────────────────────────────────
 
