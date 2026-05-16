@@ -15,7 +15,7 @@ fiti is a native Swift macOS port of [telestrator](https://github.com/steveruizo
 
 ## Common commands
 
-These are the planned `just` recipes (see spec § Justfile):
+These `just` recipes run the project end-to-end:
 
 - Generate Xcode project: `just generate`
 - Build: `just build`
