@@ -33,19 +33,6 @@ public enum SnapshotRenderer {
         return pngData(from: cgImage)
     }
 
-    private static func drawStroke(_ stroke: Stroke, in ctx: CGContext) {
-        guard !stroke.points.isEmpty else { return }
-        ctx.setLineWidth(CGFloat(stroke.width))
-        ctx.setStrokeColor(red: CGFloat(stroke.color.r), green: CGFloat(stroke.color.g),
-                           blue: CGFloat(stroke.color.b), alpha: CGFloat(stroke.color.a))
-        let path = CGMutablePath()
-        let first = stroke.points[0]
-        path.move(to: CGPoint(x: first.x, y: first.y))
-        for p in stroke.points.dropFirst() { path.addLine(to: CGPoint(x: p.x, y: p.y)) }
-        ctx.addPath(path)
-        ctx.strokePath()
-    }
-
     private static func pngData(from image: CGImage) -> Data? {
         let buf = NSMutableData()
         guard let dest = CGImageDestinationCreateWithData(buf, UTType.png.identifier as CFString, 1, nil) else { return nil }
