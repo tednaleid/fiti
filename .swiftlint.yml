@@ -8,7 +8,11 @@ opt_in_rules:
   - explicit_init
   - first_where
   - sorted_imports
-  - unused_import
+# Note: `unused_import` is an analyzer-only rule (requires `swiftlint analyze`
+# with a compile-invocation log) and produces a miscategorization warning on
+# every `swiftlint lint` run. The check-core-imports.sh script already covers
+# our architectural concern about platform imports, so the analyzer rule is
+# omitted here.
 
 included:
   - Sources
