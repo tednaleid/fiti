@@ -794,7 +794,7 @@ struct RGBATests {
 }
 ```
 
-Note on imports: the `fiti-unit` test target compiles `Sources/Core` directly alongside `Tests/`, so Core types live in the same compilation unit as the tests. No `@testable import` is needed (and would fail because there's no separate framework to import). Tests just `import Testing`; test doubles in `Tests/CoreTests/Doubles/` just `import Foundation`. This was confirmed during Task 2.1 (see commit `95220e8`).
+Note on imports: the `fiti-unit` test target compiles `Sources/Core` directly alongside `Tests/`, so Core types live in the same compilation unit as the tests. No `@testable import` is needed (and would fail because there's no separate framework to import). Tests use `import Testing` plus whatever else they actually need — `import Foundation` is fine when a test uses `JSONEncoder`/`Date`/etc. (see Task 2.3's `PointerTypeTests` for an example). This was confirmed during Task 2.1 (see commit `95220e8`).
 
 - [ ] **Step 2: Run the test, expect failure**
 
