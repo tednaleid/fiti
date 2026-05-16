@@ -2,7 +2,7 @@
 
 fiti is a native Swift macOS port of [telestrator](https://github.com/steveruizok/telestrator) — a transparent always-on-top drawing overlay. The current scope is a proof-of-concept that validates a hexagonal Core ↔ adapters split, a borderless transparent window with cursor click-through, and an HTTP dev surface so Claude Code can observe and drive the running app.
 
-**Status: pre-implementation.** The design is committed at [`docs/specs/2026-05-16-fiti-poc-design.md`](./docs/specs/2026-05-16-fiti-poc-design.md); source code, project file, and justfile are not yet written. The commands listed below describe the planned recipes per the spec.
+**Status: bootstrap complete; domain code in progress.** The design is committed at [`docs/specs/2026-05-16-fiti-poc-design.md`](./docs/specs/2026-05-16-fiti-poc-design.md) and the implementation plan at [`docs/specs/2026-05-16-fiti-poc-plan.md`](./docs/specs/2026-05-16-fiti-poc-plan.md). `project.yml`, `justfile`, CI, and the Sources/ skeleton exist; `just check` is green. Phases 2–5 add the domain, AppKit shell, dev HTTP server, and end-to-end wiring.
 
 ## Stack
 
@@ -45,15 +45,15 @@ Undo / redo / per-stroke erase are HTTP-only in POC — use `just inspect-undo`,
 
 - `docs/specs/2026-05-16-fiti-poc-design.md` — POC design, authoritative
 - `.llm/telestrator/` — vendored MIT-licensed Electron reference (read-only, gitignored)
-- `Sources/Core/` — pure domain (planned)
-- `Sources/AppKit/` — macOS shell + renderer + input adapter (planned)
-- `Sources/DevHTTP/` — `NWListener`-based dev HTTP server (planned)
-- `Sources/App/` — `main.swift`, argv, dependency wiring (planned)
-- `Tests/CoreTests/` — pure-Swift tests against `Sources/Core` (planned)
-- `Tests/DevHTTPTests/` — HTTP route tests against a fake `AppController` (planned)
-- `Resources/Info.plist`, `Resources/fiti.entitlements` — bundle metadata (planned)
-- `project.yml` — xcodegen spec (planned)
-- `justfile` — task recipes (planned)
+- `Sources/Core/` — pure domain (skeleton — Phase 2+ fills in)
+- `Sources/AppKit/` — macOS shell + renderer + input adapter (skeleton — Phase 2+ fills in)
+- `Sources/DevHTTP/` — `NWListener`-based dev HTTP server (skeleton — Phase 2+ fills in)
+- `Sources/App/` — `main.swift`, argv, dependency wiring (skeleton — Phase 2+ fills in)
+- `Tests/CoreTests/` — pure-Swift tests against `Sources/Core` (skeleton — Phase 2+ fills in)
+- `Tests/DevHTTPTests/` — HTTP route tests against a fake `AppController` (skeleton — Phase 2+ fills in)
+- `Resources/Info.plist`, `Resources/fiti.entitlements` — bundle metadata
+- `project.yml` — xcodegen spec
+- `justfile` — task recipes
 
 ## Dig deeper
 
