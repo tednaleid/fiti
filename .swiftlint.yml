@@ -1,0 +1,19 @@
+disabled_rules:
+  - trailing_whitespace
+  - todo
+  - line_length
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - first_where
+  - sorted_imports
+  - unused_import
+
+included:
+  - Sources
+  - Tests
+
+excluded:
+  - .build
+  - fiti.xcodeproj
