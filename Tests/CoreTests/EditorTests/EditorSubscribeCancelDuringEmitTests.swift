@@ -4,6 +4,7 @@
 import Testing
 
 @Suite("Editor.subscribe cancel-during-emit")
+@MainActor
 struct EditorSubscribeCancelDuringEmitTests {
     @Test("a listener that unsubscribes itself does not crash emit")
     func cancelDuringEmit() {

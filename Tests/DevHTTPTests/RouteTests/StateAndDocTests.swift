@@ -5,6 +5,7 @@ import Foundation
 import Testing
 
 @Suite("/state and /doc")
+@MainActor
 struct StateAndDocTests {
     private func startServer(_ surface: FakeSurface) throws -> DevHTTPServer {
         let server = try DevHTTPServer(surface: surface, port: 0)

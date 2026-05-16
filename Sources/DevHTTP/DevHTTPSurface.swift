@@ -3,6 +3,7 @@
 
 import Foundation
 
+@MainActor
 public protocol DevHTTPSurface: AnyObject {
     var doc: FitiDoc { get }
     var mode: AppController.Mode { get }

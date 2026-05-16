@@ -5,6 +5,7 @@ import Foundation
 import Testing
 
 @Suite("/snapshot.png")
+@MainActor
 struct SnapshotTests {
     @Test("returns the surface's PNG bytes with image/png content type")
     func returnsPNG() async throws {

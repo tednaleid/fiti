@@ -7,6 +7,7 @@ import Testing
 @Suite("DevHTTPServer")
 struct DevHTTPServerTests {
     @Test("responds to GET / with 200")
+    @MainActor
     func smoke() async throws {
         let surface = FakeSurface()
         let server = try DevHTTPServer(surface: surface, port: 0)

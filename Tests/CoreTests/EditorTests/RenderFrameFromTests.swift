@@ -6,6 +6,7 @@ import Testing
 @Suite("RenderFrame.from(editor:)")
 struct RenderFrameFromTests {
     @Test("orders strokes by strokeOrder, exposes in-progress separately")
+    @MainActor
     func ordersStrokes() {
         let e = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
         _ = e.startStroke(color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
@@ -21,6 +22,7 @@ struct RenderFrameFromTests {
     }
 
     @Test("no in-progress when no current stroke")
+    @MainActor
     func noInProgress() {
         let e = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
         _ = e.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)

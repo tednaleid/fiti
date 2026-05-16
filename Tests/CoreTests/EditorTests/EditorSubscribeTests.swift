@@ -4,6 +4,7 @@
 import Testing
 
 @Suite("Editor.subscribe")
+@MainActor
 struct EditorSubscribeTests {
     @Test("notifies on local change")
     func notifies() {

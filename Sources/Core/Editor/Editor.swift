@@ -9,6 +9,7 @@ public enum ChangeKind: Sendable {
 
 public typealias Cancellable = () -> Void
 
+@MainActor
 public final class Editor {
     public private(set) var doc: FitiDoc = .empty
     public private(set) var undoStack: [InverseOp] = []

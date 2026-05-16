@@ -31,6 +31,7 @@ public final class AppController {
         window.focus()
     }
 
+    @MainActor
     public func deactivate() {
         guard mode != .inactive else { return }
         if mode == .activeDrawing { editor.endStroke() }
@@ -38,6 +39,7 @@ public final class AppController {
         window.setClickThrough(true)
     }
 
+    @MainActor
     public func pointerDown(_ point: StrokePoint) {
         guard mode == .activeIdle else { return }
         _ = editor.startStroke(color: currentColor, width: currentWidth, pointerType: .mouse)
@@ -45,17 +47,20 @@ public final class AppController {
         mode = .activeDrawing
     }
 
+    @MainActor
     public func pointerMoved(_ point: StrokePoint) {
         guard mode == .activeDrawing else { return }
         editor.appendPoint(point)
     }
 
+    @MainActor
     public func pointerUp() {
         guard mode == .activeDrawing else { return }
         editor.endStroke()
         mode = .activeIdle
     }
 
+    @MainActor
     public func clear() {
         // If a stroke is in progress, end it first so its points are committed
         // before they're cleared (matches the eraseStroke / undo invariant that
