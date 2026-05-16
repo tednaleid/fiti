@@ -2,7 +2,7 @@
 
 fiti is a native Swift macOS port of [telestrator](https://github.com/steveruizok/telestrator) — a transparent always-on-top drawing overlay. The current scope is a proof-of-concept that validates a hexagonal Core ↔ adapters split, a borderless transparent window with cursor click-through, and an HTTP dev surface so Claude Code can observe and drive the running app.
 
-**Status: AppKit shell complete; dev HTTP next.** Phases 1–3 are done. `just run` launches the transparent overlay; Cmd+Opt+Z activates drawing; Cmd+K clears; Esc deactivates. Phase 4 adds the dev HTTP server on :9876; Phase 5 wires it through and validates the seven acceptance criteria.
+**Status: dev HTTP complete; wiring next.** Phases 1–4 are done. The NWListener-based server exposes `/state`, `/doc`, `/strokes/:id`, `/pointer`, `/activate`, `/deactivate`, `/clear`, `/undo`, `/redo`, `/snapshot.png`. Phase 5 wires it into the real AppController + a CG-backed snapshot renderer.
 
 ## Stack
 
@@ -47,10 +47,10 @@ Undo / redo / per-stroke erase are HTTP-only in POC — use `just inspect-undo`,
 - `.llm/telestrator/` — vendored MIT-licensed Electron reference (read-only, gitignored)
 - `Sources/Core/` — pure domain (complete: Model + Editor + AppController + ports)
 - `Sources/AppKit/` — macOS shell + renderer + input adapter (complete — POC)
-- `Sources/DevHTTP/` — `NWListener`-based dev HTTP server (skeleton — Phase 4 fills in)
+- `Sources/DevHTTP/` — `NWListener`-based dev HTTP server (complete)
 - `Sources/App/` — `main.swift`, argv, dependency wiring (skeleton — Phase 5 fills in)
 - `Tests/CoreTests/` — pure-Swift tests against `Sources/Core` (complete)
-- `Tests/DevHTTPTests/` — HTTP route tests against a fake `AppController` (skeleton — Phase 4 fills in)
+- `Tests/DevHTTPTests/` — HTTP route tests against a fake `AppController` (complete)
 - `Resources/Info.plist`, `Resources/fiti.entitlements` — bundle metadata
 - `project.yml` — xcodegen spec
 - `justfile` — task recipes
