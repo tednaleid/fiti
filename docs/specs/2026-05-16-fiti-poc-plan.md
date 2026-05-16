@@ -127,9 +127,9 @@ xcodegen needs at least one source file per target to generate without warnings.
 - Create: `Sources/Core/Editor/.gitkeep`
 - Create: `Sources/Core/Control/.gitkeep`
 - Create: `Sources/Core/Ports/.gitkeep`
-- Create: `Sources/Core/_Bootstrap.swift` (placeholder so xcodegen finds at least one Swift file)
-- Create: `Sources/AppKit/_Bootstrap.swift`
-- Create: `Sources/DevHTTP/_Bootstrap.swift`
+- Create: `Sources/Core/_CoreBootstrap.swift` (placeholder so xcodegen finds at least one Swift file; basename must be unique across all `Sources/` subdirs to avoid Xcode's per-target basename collision)
+- Create: `Sources/AppKit/_AppKitBootstrap.swift`
+- Create: `Sources/DevHTTP/_DevHTTPBootstrap.swift`
 - Create: `Sources/App/main.swift`
 - Create: `Tests/CoreTests/SmokeTests.swift`
 - Create: `Tests/DevHTTPTests/.gitkeep`
@@ -144,7 +144,7 @@ touch Sources/Core/Model/.gitkeep Sources/Core/Editor/.gitkeep Sources/Core/Cont
 touch Tests/DevHTTPTests/.gitkeep
 ```
 
-- [ ] **Step 2: Create `Sources/Core/_Bootstrap.swift`**
+- [ ] **Step 2: Create `Sources/Core/_CoreBootstrap.swift`**
 
 ```swift
 // ABOUTME: Placeholder so xcodegen has at least one source in the Core module.
@@ -155,7 +155,7 @@ import Foundation
 internal enum FitiCoreBootstrap {}
 ```
 
-Repeat the same pattern for `Sources/AppKit/_Bootstrap.swift` (rename the enum to `FitiAppKitBootstrap` and add `import AppKit` instead of `Foundation`) and `Sources/DevHTTP/_Bootstrap.swift` (rename to `FitiDevHTTPBootstrap`, `import Foundation` only).
+Repeat the same pattern for `Sources/AppKit/_AppKitBootstrap.swift` (rename the enum to `FitiAppKitBootstrap` and add `import AppKit` instead of `Foundation`) and `Sources/DevHTTP/_DevHTTPBootstrap.swift` (rename to `FitiDevHTTPBootstrap`, `import Foundation` only). Filename basenames must be unique within a target — Xcode/swiftc disambiguates by basename, so all three must NOT share the same `_Bootstrap.swift` name.
 
 - [ ] **Step 3: Create `Sources/App/main.swift`**
 
@@ -745,14 +745,14 @@ git log --oneline | head -15  # 10 new commits (1.1 through 1.10) on top of the 
 
 Goal: a fully tested `FitiCore` (Model + Ports + Editor + AppController) compiled into both targets, with every behavior covered by Swift Testing cases. No AppKit or networking code. At phase end, `just test` runs ~40 tests in under 1 second, and the Editor + AppController together model the spec's `FitiDoc` semantics.
 
-Drop `Sources/Core/_Bootstrap.swift` at the first task that adds a real Core file (it's no longer needed).
+Drop `Sources/Core/_CoreBootstrap.swift` at the first task that adds a real Core file (it's no longer needed).
 
 ### Task 2.1: `RGBA` model
 
 **Files:**
 - Create: `Sources/Core/Model/RGBA.swift`
 - Create: `Tests/CoreTests/ModelTests/RGBATests.swift`
-- Delete: `Sources/Core/_Bootstrap.swift`
+- Delete: `Sources/Core/_CoreBootstrap.swift`
 
 - [ ] **Step 1: Write the failing test**
 
@@ -826,7 +826,7 @@ public struct RGBA: Equatable, Codable, Sendable {
 - [ ] **Step 4: Delete the bootstrap stub**
 
 ```bash
-git rm Sources/Core/_Bootstrap.swift
+git rm Sources/Core/_CoreBootstrap.swift
 ```
 
 - [ ] **Step 5: Run the test, expect pass**
@@ -844,7 +844,7 @@ git add Sources/Core/Model/RGBA.swift Tests/CoreTests/ModelTests/RGBATests.swift
 git commit -m "$(cat <<'EOF'
 Add RGBA model
 
-sRGB color stored on every Stroke. Drop the _Bootstrap.swift stub
+sRGB color stored on every Stroke. Drop the _CoreBootstrap.swift stub
 now that real Core code exists.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
@@ -2657,7 +2657,7 @@ These adapters live in `Sources/AppKit/`, which is **not** compiled into the tes
 
 **Files:**
 - Create: `Sources/AppKit/TransparentWindow.swift`
-- Delete: `Sources/AppKit/_Bootstrap.swift`
+- Delete: `Sources/AppKit/_AppKitBootstrap.swift`
 
 - [ ] **Step 1: Implement**
 
@@ -2707,7 +2707,7 @@ public final class TransparentWindow: NSWindow, WindowControl {
 - [ ] **Step 2: Drop the bootstrap stub**
 
 ```bash
-git rm Sources/AppKit/_Bootstrap.swift
+git rm Sources/AppKit/_AppKitBootstrap.swift
 ```
 
 - [ ] **Step 3: Verify build**
@@ -3278,7 +3278,7 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 - Create: `Sources/DevHTTP/DevHTTPSurface.swift`
 - Create: `Sources/DevHTTP/Router.swift`
 - Create: `Sources/DevHTTP/DevHTTPServer.swift`
-- Delete: `Sources/DevHTTP/_Bootstrap.swift`
+- Delete: `Sources/DevHTTP/_DevHTTPBootstrap.swift`
 - Create: `Tests/DevHTTPTests/Doubles/FakeSurface.swift`
 - Create: `Tests/DevHTTPTests/DevHTTPServerTests.swift`
 
@@ -3503,7 +3503,7 @@ public final class FakeSurface: DevHTTPSurface {
 - [ ] **Step 4: Drop bootstrap, run, expect pass**
 
 ```bash
-git rm Sources/DevHTTP/_Bootstrap.swift
+git rm Sources/DevHTTP/_DevHTTPBootstrap.swift
 just test
 ```
 
