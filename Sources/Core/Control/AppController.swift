@@ -37,4 +37,33 @@ public final class AppController {
         mode = .inactive
         window.setClickThrough(true)
     }
+
+    public func pointerDown(_ point: StrokePoint) {
+        guard mode == .activeIdle else { return }
+        _ = editor.startStroke(color: currentColor, width: currentWidth, pointerType: .mouse)
+        editor.appendPoint(point)
+        mode = .activeDrawing
+    }
+
+    public func pointerMoved(_ point: StrokePoint) {
+        guard mode == .activeDrawing else { return }
+        editor.appendPoint(point)
+    }
+
+    public func pointerUp() {
+        guard mode == .activeDrawing else { return }
+        editor.endStroke()
+        mode = .activeIdle
+    }
+
+    public func clear() {
+        // If a stroke is in progress, end it first so its points are committed
+        // before they're cleared (matches the eraseStroke / undo invariant that
+        // a snapshot of the doc is consistent after every public method returns).
+        if mode == .activeDrawing {
+            editor.endStroke()
+            mode = .activeIdle
+        }
+        editor.clear()
+    }
 }
