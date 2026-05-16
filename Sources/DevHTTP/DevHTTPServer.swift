@@ -74,5 +74,23 @@ public final class DevHTTPServer {
         router.add("GET", "/") { _, _ in
             HTTPResponse(status: 200, reason: "OK", body: Data("fiti dev API\n".utf8))
         }
+
+        router.add("GET", "/state") { [weak self] _, _ in
+            guard let self else { return .notFound() }
+            let payload: [String: Any] = [
+                "mode": String(describing: self.surface.mode),
+                "clickThrough": self.surface.clickThrough,
+                "canvasSize": ["width": self.surface.canvasSize.width, "height": self.surface.canvasSize.height],
+                "undoDepth": self.surface.undoDepth,
+                "redoDepth": self.surface.redoDepth,
+                "currentStrokeId": self.surface.currentStrokeId as Any
+            ]
+            return .json(payload)
+        }
+
+        router.add("GET", "/doc") { [weak self] _, _ in
+            guard let self else { return .notFound() }
+            return .json(encode: self.surface.doc)
+        }
     }
 }
