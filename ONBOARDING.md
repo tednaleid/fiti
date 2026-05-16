@@ -35,7 +35,7 @@ The document model is identity-bearing: each stroke has a stable `StrokeId`, poi
 
 ## Keyboard shortcuts (POC)
 
-- `Cmd+Opt+Z` — activate (capture cursor; click-through off)
+- `Cmd+Opt+Z` — activate (works globally if Accessibility permission is granted; otherwise only when fiti has focus)
 - `Esc` — deactivate (release cursor; click-through on; strokes remain visible)
 - `Cmd+K` — clear all strokes (only fires while the overlay has key focus)
 
