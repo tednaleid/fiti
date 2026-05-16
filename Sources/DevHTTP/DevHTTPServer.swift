@@ -43,6 +43,8 @@ public final class DevHTTPServer {
         readRequest(on: connection, buffer: Data())
     }
 
+    private static let maxRequestBytes = 1024 * 1024  // 1 MB — generous for a dev API.
+
     private func readRequest(on connection: NWConnection, buffer: Data) {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1024) { [weak self] data, _, isComplete, error in
             guard let self else { return }
@@ -53,6 +55,11 @@ public final class DevHTTPServer {
                 connection.send(content: response, completion: .contentProcessed { _ in
                     connection.cancel()
                 })
+                return
+            }
+            if buf.count > Self.maxRequestBytes {
+                // Defensive: cap how long we'll keep accumulating an unparseable request.
+                connection.cancel()
                 return
             }
             if isComplete || error != nil {
