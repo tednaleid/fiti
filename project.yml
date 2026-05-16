@@ -38,3 +38,24 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.fiti.app.tests
         GENERATE_INFOPLIST_FILE: "YES"
         TEST_HOST: ""
+
+  fiti-integration:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Sources/Core
+      - path: Sources/AppKit
+      - path: Sources/App
+        excludes:
+          - main.swift
+      - path: Sources/DevHTTP
+      - path: Tests/CoreTests
+      - path: Tests/DevHTTPTests
+      - path: Tests/AppKitTests
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: "YES"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        TEST_HOST: ""
+    dependencies: []
