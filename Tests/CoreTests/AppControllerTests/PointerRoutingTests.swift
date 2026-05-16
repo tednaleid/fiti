@@ -4,6 +4,7 @@
 import Testing
 
 @Suite("AppController pointer routing")
+@MainActor
 struct PointerRoutingTests {
     private func make() -> AppController {
         let window = RecordingWindow()

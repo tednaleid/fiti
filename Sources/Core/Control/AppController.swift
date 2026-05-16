@@ -3,6 +3,7 @@
 
 import Foundation
 
+@MainActor
 public final class AppController {
     public enum Mode: Equatable, Sendable {
         case inactive

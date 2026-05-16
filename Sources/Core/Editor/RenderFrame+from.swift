@@ -4,6 +4,7 @@
 import Foundation
 
 public extension RenderFrame {
+    @MainActor
     static func from(editor: Editor, canvasSize: Size) -> RenderFrame {
         let strokes = editor.doc.strokeOrder.compactMap { editor.doc.strokes[$0] }
         let inProgress = editor.currentStrokeId.flatMap { editor.doc.strokes[$0] }

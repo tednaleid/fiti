@@ -4,6 +4,7 @@
 import Testing
 
 @Suite("Editor.eraseStroke")
+@MainActor
 struct EditorEraseTests {
     private func makeEditor() -> Editor {
         Editor(clock: VirtualClock(now: 0), ids: SeededIdGenerator(prefix: "s"))

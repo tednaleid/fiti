@@ -4,6 +4,7 @@
 import Testing
 
 @Suite("AppController activation")
+@MainActor
 struct ActivationTests {
     private func make() -> (AppController, RecordingWindow) {
         let window = RecordingWindow()

@@ -5,6 +5,7 @@ import Foundation
 import Testing
 
 @Suite("Input routes")
+@MainActor
 struct InputRoutesTests {
     private func post(_ server: DevHTTPServer, _ path: String, body: String? = nil) async throws -> Int {
         let port = try #require(server.boundPort)

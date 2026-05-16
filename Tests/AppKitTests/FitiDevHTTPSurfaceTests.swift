@@ -5,6 +5,7 @@ import Foundation
 import Testing
 
 @Suite("FitiDevHTTPSurface")
+@MainActor
 struct FitiDevHTTPSurfaceTests {
     private struct Rig {
         let bridge: FitiDevHTTPSurface

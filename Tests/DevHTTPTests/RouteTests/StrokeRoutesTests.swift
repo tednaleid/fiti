@@ -5,6 +5,7 @@ import Foundation
 import Testing
 
 @Suite("/strokes/:id routes")
+@MainActor
 struct StrokeRoutesTests {
     @Test("GET /strokes/{id} returns the stroke")
     func getStroke() async throws {

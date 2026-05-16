@@ -4,6 +4,7 @@
 import Testing
 
 @Suite("Editor.startStroke")
+@MainActor
 struct EditorStartStrokeTests {
     private struct Rig {
         let editor: Editor

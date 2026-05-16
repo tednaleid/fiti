@@ -4,6 +4,7 @@
 import Testing
 
 @Suite("Editor undo / redo")
+@MainActor
 struct EditorUndoRedoTests {
     private func makeEditor() -> Editor {
         Editor(clock: VirtualClock(now: 0), ids: SeededIdGenerator(prefix: "s"))

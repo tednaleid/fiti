@@ -56,7 +56,7 @@ public final class DevHTTPServer {
                     // main-thread-only. Hop to main to dispatch, then come back.
                     let router = self.router
                     DispatchQueue.main.async {
-                        let response = router.handle(req).serialize()
+                        let response = MainActor.assumeIsolated { router.handle(req).serialize() }
                         connection.send(content: response, completion: .contentProcessed { _ in
                             connection.cancel()
                         })
@@ -176,6 +176,7 @@ public final class DevHTTPServer {
         }
     }
 
+    @MainActor
     private func handlePointer(_ req: HTTPRequest) -> HTTPResponse {
         guard let json = try? JSONSerialization.jsonObject(with: req.body) as? [String: Any],
               let event = json["event"] as? String else {

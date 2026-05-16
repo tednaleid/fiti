@@ -5,6 +5,7 @@ import Foundation
 import Testing
 
 @Suite("History routes")
+@MainActor
 struct HistoryRoutesTests {
     @Test("clear / undo / redo route to surface")
     func all() async throws {

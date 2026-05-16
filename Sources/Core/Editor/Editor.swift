@@ -9,6 +9,7 @@ public enum ChangeKind: Sendable {
 
 public typealias Cancellable = () -> Void
 
+@MainActor
 public final class Editor {
     public private(set) var doc: FitiDoc = .empty
     public private(set) var undoStack: [InverseOp] = []
@@ -163,6 +164,6 @@ public final class Editor {
     }
 
     private func emit(_ kind: ChangeKind) {
-        for listener in listeners.values { listener(kind) }
+        for listener in Array(listeners.values) { listener(kind) }
     }
 }

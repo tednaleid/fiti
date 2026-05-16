@@ -1,11 +1,14 @@
 // ABOUTME: NSView that renders a RenderFrame via Core Graphics.
-// ABOUTME: Conforms to Renderer; called from the wiring layer on every editor change.
+// ABOUTME: Two-canvas split: committed strokes baked to a CGImage and
+// ABOUTME: redrawn only when strokeOrder changes; in-progress drawn live.
 
 import AppKit
 import CoreGraphics
 
 public final class CanvasView: NSView, Renderer {
-    private var currentFrame: RenderFrame?
+    private var lastFrame: RenderFrame?
+    private var committedImage: CGImage?
+    internal private(set) var committedSignature: [StrokeId] = []
 
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -15,26 +18,52 @@ public final class CanvasView: NSView, Renderer {
 
     required init?(coder: NSCoder) { fatalError("not supported") }
 
+    public override var isFlipped: Bool { true }
+
     // MARK: - Renderer
 
     public func render(_ frame: RenderFrame) {
-        currentFrame = frame
-        self.needsDisplay = true
+        let inProgressId = frame.inProgress?.id
+        let signature = frame.strokes.map(\.id).filter { $0 != inProgressId }
+        if signature != committedSignature {
+            committedImage = bakeCommitted(frame, exclude: inProgressId)
+            committedSignature = signature
+        }
+        lastFrame = frame
+        needsDisplay = true
     }
 
-    public override var isFlipped: Bool { true }
-
     public override func draw(_ dirtyRect: NSRect) {
-        guard let ctx = NSGraphicsContext.current?.cgContext, let frame = currentFrame else { return }
-
+        guard let ctx = NSGraphicsContext.current?.cgContext, let frame = lastFrame else { return }
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
+        if let image = committedImage {
+            let rect = CGRect(x: 0, y: 0, width: frame.canvasSize.width, height: frame.canvasSize.height)
+            ctx.draw(image, in: rect)
+        }
+        if let live = frame.inProgress, !live.points.isEmpty {
+            drawStroke(live, in: ctx)
+        }
+    }
 
-        for stroke in frame.strokes {
+    private func bakeCommitted(_ frame: RenderFrame, exclude: StrokeId?) -> CGImage? {
+        let width = Int(frame.canvasSize.width)
+        let height = Int(frame.canvasSize.height)
+        guard width > 0, height > 0 else { return nil }
+        let space = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
+                                  bytesPerRow: 0, space: space,
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+            return nil
+        }
+        // Top-origin in the bake matches the view's isFlipped.
+        ctx.translateBy(x: 0, y: CGFloat(height))
+        ctx.scaleBy(x: 1, y: -1)
+        ctx.setLineCap(.round)
+        ctx.setLineJoin(.round)
+        for stroke in frame.strokes where stroke.id != exclude {
             drawStroke(stroke, in: ctx)
         }
-        if let inProgress = frame.inProgress, !inProgress.points.isEmpty {
-            drawStroke(inProgress, in: ctx)
-        }
+        return ctx.makeImage()
     }
 }

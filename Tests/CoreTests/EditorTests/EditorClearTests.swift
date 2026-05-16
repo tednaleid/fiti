@@ -4,6 +4,7 @@
 import Testing
 
 @Suite("Editor.clear")
+@MainActor
 struct EditorClearTests {
     private func makeEditor() -> Editor {
         Editor(clock: VirtualClock(now: 0), ids: SeededIdGenerator(prefix: "s"))

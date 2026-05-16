@@ -4,7 +4,7 @@
 import Foundation
 
 public struct Router: Sendable {
-    public typealias Handler = (HTTPRequest, [String: String]) -> HTTPResponse
+    public typealias Handler = @MainActor (HTTPRequest, [String: String]) -> HTTPResponse
 
     private struct Route {
         let method: String
@@ -21,6 +21,7 @@ public struct Router: Sendable {
         routes.append(Route(method: method, pattern: parts, handler: handler))
     }
 
+    @MainActor
     public func handle(_ req: HTTPRequest) -> HTTPResponse {
         let parts = req.path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
         for route in routes where route.method == req.method && route.pattern.count == parts.count {
