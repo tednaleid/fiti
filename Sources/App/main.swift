@@ -1,26 +1,26 @@
-// ABOUTME: Phase 3 smoke wiring. Phase 5 will replace this with argv parsing
-// ABOUTME: and dev HTTP wiring; for now it just shows that the AppKit shell works.
+// ABOUTME: fiti entry point — argv → wiring → NSApplication.run().
+// ABOUTME: Sole place where AppKit + DevHTTP + Core concretes are stitched together.
 
 import AppKit
 import Foundation
 
-final class SmokeClock: Clock { func now() -> Double { Date().timeIntervalSince1970 } }
-final class SmokeIds: IdGenerator {
-    private var counter = 0
-    func newStrokeId() -> StrokeId { counter += 1; return "stroke-\(counter)" }
-}
+let args = Args.parse(CommandLine.arguments)
 
-final class SmokeAppDelegate: NSObject, NSApplicationDelegate {
+final class FitiAppDelegate: NSObject, NSApplicationDelegate {
+    let args: Args
     var window: TransparentWindow!
     var canvas: CanvasView!
+    var inputView: CanvasInputView!
     var input: NSEventInputSource!
     var controller: AppController!
     var editor: Editor!
-    var inputView: CanvasInputView!
+    var devServer: DevHTTPServer?
     var subscription: Cancellable?
 
+    init(args: Args) { self.args = args }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        editor = Editor(clock: SmokeClock(), ids: SmokeIds())
+        editor = Editor(clock: SystemClock(), ids: UUIDStrokeIds())
         window = TransparentWindow()
         let frame = window.contentLayoutRect
 
@@ -44,22 +44,33 @@ final class SmokeAppDelegate: NSObject, NSApplicationDelegate {
 
         subscription = editor.subscribe { [weak self] _ in
             guard let self else { return }
-            self.canvas.render(RenderFrame.from(editor: self.editor,
-                canvasSize: Size(width: Double(self.canvas.frame.width),
-                                 height: Double(self.canvas.frame.height))))
+            self.canvas.render(RenderFrame.from(editor: self.editor, canvasSize: self.canvasSize))
         }
 
-        // The local NSEvent key monitor only fires when this app is active.
-        // With .accessory policy and no Dock icon, the app won't activate on
-        // its own — so do it explicitly here. Phase 5 will replace this with
-        // proper argv-driven startup.
+        if args.dev {
+            let surface = FitiDevHTTPSurface(controller: controller,
+                                             canvasSize: { [weak self] in self?.canvasSize ?? Size(width: 0, height: 0) })
+            do {
+                let server = try DevHTTPServer(surface: surface, port: args.port)
+                try server.start()
+                devServer = server
+                NSLog("fiti dev HTTP listening on localhost:\(args.port)")
+            } catch {
+                NSLog("fiti dev HTTP failed to start: \(error)")
+            }
+        }
+
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
+    }
+
+    private var canvasSize: Size {
+        Size(width: Double(canvas.frame.width), height: Double(canvas.frame.height))
     }
 }
 
 let app = NSApplication.shared
-let delegate = SmokeAppDelegate()
+let delegate = FitiAppDelegate(args: args)
 app.delegate = delegate
 app.setActivationPolicy(.accessory)
 app.run()
