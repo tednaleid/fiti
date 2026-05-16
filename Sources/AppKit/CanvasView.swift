@@ -37,20 +37,4 @@ public final class CanvasView: NSView, Renderer {
             drawStroke(inProgress, in: ctx)
         }
     }
-
-    private func drawStroke(_ stroke: Stroke, in ctx: CGContext) {
-        guard !stroke.points.isEmpty else { return }
-        ctx.setLineWidth(CGFloat(stroke.width))
-        ctx.setStrokeColor(red: CGFloat(stroke.color.r), green: CGFloat(stroke.color.g),
-                           blue: CGFloat(stroke.color.b), alpha: CGFloat(stroke.color.a))
-
-        let path = CGMutablePath()
-        let first = stroke.points[0]
-        path.move(to: CGPoint(x: first.x, y: first.y))
-        for p in stroke.points.dropFirst() {
-            path.addLine(to: CGPoint(x: p.x, y: p.y))
-        }
-        ctx.addPath(path)
-        ctx.strokePath()
-    }
 }
