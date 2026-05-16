@@ -48,6 +48,18 @@ public final class Editor {
         return id
     }
 
+    public func appendPoint(_ point: StrokePoint) {
+        guard let id = currentStrokeId else { return }
+        doc.strokes[id]?.points.append(point)
+        emit(.local)
+    }
+
+    public func endStroke() {
+        guard currentStrokeId != nil else { return }
+        currentStrokeId = nil
+        emit(.local)
+    }
+
     // MARK: - Undo plumbing
 
     private func pushUndo(_ op: InverseOp) {
