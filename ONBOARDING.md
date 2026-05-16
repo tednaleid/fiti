@@ -33,6 +33,14 @@ Hexagonal. `Sources/Core/` is pure Swift — `FitiDoc`, `Stroke`, `Editor`, `App
 
 The document model is identity-bearing: each stroke has a stable `StrokeId`, points freeze at `endStroke`, and later mutations target a `transform` field. Undo/redo is an `InverseOp` stack applied as forward edits (not history rewinds), so the same pattern works whether the backing store is plain Swift or an Automerge doc later.
 
+## Keyboard shortcuts (POC)
+
+- `Cmd+Opt+Z` — activate (capture cursor; click-through off)
+- `Esc` — deactivate (release cursor; click-through on; strokes remain visible)
+- `Cmd+K` — clear all strokes (only fires while the overlay has key focus)
+
+Undo / redo / per-stroke erase are HTTP-only in POC — use `just inspect-undo`, `just inspect-redo`, `just inspect-erase ID`.
+
 ## Key paths
 
 - `docs/specs/2026-05-16-fiti-poc-design.md` — POC design, authoritative

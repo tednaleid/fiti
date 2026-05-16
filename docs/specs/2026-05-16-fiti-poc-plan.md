@@ -2199,6 +2199,7 @@ public protocol InputSource: AnyObject {
     var onPointerUp:    (() -> Void)?            { get set }
     var onActivate:     (() -> Void)?            { get set }
     var onDeactivate:   (() -> Void)?            { get set }
+    var onClear:        (() -> Void)?            { get set }
 }
 ```
 
@@ -2504,6 +2505,29 @@ struct PointerRoutingTests {
         #expect(c.editor.currentStrokeId == nil)
         #expect(c.editor.doc.strokes["s-1"]?.points.count == 2)  // both points retained
     }
+
+    @Test("clear() empties the editor doc")
+    func clearPassesThrough() {
+        let c = make()
+        c.activate()
+        c.pointerDown(StrokePoint(x: 0, y: 0))
+        c.pointerUp()
+        #expect(c.editor.doc.strokeOrder.count == 1)
+        c.clear()
+        #expect(c.editor.doc.strokeOrder.isEmpty)
+    }
+
+    @Test("clear() while drawing ends the in-progress stroke first")
+    func clearWhileDrawing() {
+        let c = make()
+        c.activate()
+        c.pointerDown(StrokePoint(x: 0, y: 0))
+        c.clear()
+        #expect(c.editor.currentStrokeId == nil)
+        #expect(c.editor.doc.strokeOrder.isEmpty)
+        // Mode goes back to activeIdle since we ended the stroke but didn't deactivate.
+        #expect(c.mode == .activeIdle)
+    }
 }
 ```
 
@@ -2531,6 +2555,17 @@ public func pointerUp() {
     editor.endStroke()
     mode = .activeIdle
 }
+
+public func clear() {
+    // If a stroke is in progress, end it first so its points are committed
+    // before they're cleared (matches the eraseStroke / undo invariant that
+    // a snapshot of the doc is consistent after every public method returns).
+    if mode == .activeDrawing {
+        editor.endStroke()
+        mode = .activeIdle
+    }
+    editor.clear()
+}
 ```
 
 - [ ] **Step 4: Run, expect pass**
@@ -2539,7 +2574,7 @@ public func pointerUp() {
 
 ```bash
 git add Sources/Core/Control/AppController.swift Tests/CoreTests/AppControllerTests/PointerRoutingTests.swift
-git commit -m "Add AppController pointer routing
+git commit -m "Add AppController pointer routing and clear() pass-through
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
@@ -2812,6 +2847,7 @@ public final class NSEventInputSource: InputSource {
     public var onPointerUp: (() -> Void)?
     public var onActivate: (() -> Void)?
     public var onDeactivate: (() -> Void)?
+    public var onClear: (() -> Void)?
 
     private let view: CanvasInputView
     private var keyMonitor: Any?
@@ -2829,11 +2865,17 @@ public final class NSEventInputSource: InputSource {
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
+            let chars = event.charactersIgnoringModifiers
+            let cmd = event.modifierFlags.contains(.command)
+            let opt = event.modifierFlags.contains(.option)
             // Cmd+Opt+Z → activate
-            if event.charactersIgnoringModifiers == "z"
-                && event.modifierFlags.contains(.command)
-                && event.modifierFlags.contains(.option) {
+            if chars == "z" && cmd && opt {
                 self.onActivate?()
+                return nil
+            }
+            // Cmd+K → clear (no Option). Matches terminal muscle memory.
+            if chars == "k" && cmd && !opt {
+                self.onClear?()
                 return nil
             }
             // Esc → deactivate
@@ -2968,6 +3010,7 @@ final class SmokeAppDelegate: NSObject, NSApplicationDelegate {
         input.onPointerUp     = { [weak self] in self?.controller.pointerUp() }
         input.onActivate      = { [weak self] in self?.controller.activate() }
         input.onDeactivate    = { [weak self] in self?.controller.deactivate() }
+        input.onClear         = { [weak self] in self?.controller.clear() }
 
         subscription = editor.subscribe { [weak self] _ in
             guard let self else { return }
@@ -3005,7 +3048,8 @@ Expected:
 - Process launches (no errors in console).
 - The screen looks normal because the window is transparent and click-through is on by default.
 - `Cmd+Opt+Z` activates: the cursor is now captured by the (still-transparent) window. Click-and-drag should draw a translucent cyan line.
-- `Esc` deactivates: the window goes back to click-through; you can interact with the desktop normally.
+- `Cmd+K` (while active) clears the canvas immediately.
+- `Esc` deactivates: the window goes back to click-through; you can interact with the desktop normally. Anything you drew stays visible on screen.
 
 If the activation shortcut doesn't fire, the window isn't key — make sure `NSApp.activate(ignoringOtherApps: true)` ran (it's in `TransparentWindow.focus()`).
 
@@ -4412,6 +4456,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         input.onPointerUp     = { [weak self] in self?.controller.pointerUp() }
         input.onActivate      = { [weak self] in self?.controller.activate() }
         input.onDeactivate    = { [weak self] in self?.controller.deactivate() }
+        input.onClear         = { [weak self] in self?.controller.clear() }
 
         subscription = editor.subscribe { [weak self] _ in
             guard let self else { return }
@@ -4541,6 +4586,8 @@ just inspect-doc | jq '.strokeOrder'   # expect []
 just inspect-undo
 just inspect-doc | jq '.strokeOrder'   # expect 2 ids again, same order
 ```
+
+Bonus check (manual, requires the window to be key-focused): with the overlay active, press `Cmd+K`. The canvas should clear and `just inspect-doc` should show `strokeOrder: []`. This exercises the keyboard path for clear; the HTTP path is what tests cover automatically.
 
 - [ ] **AC6: Deactivate reverts click-through**
 

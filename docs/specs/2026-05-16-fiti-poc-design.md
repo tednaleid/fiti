@@ -20,7 +20,8 @@ This is intentionally narrow. Shapes, fading, pen pressure, perfect-freehand-qua
 - Pressure-sensitive variable-width strokes / perfect-freehand port. POC uses uniform CGPath strokes.
 - Pen and touch input — pointer events come from the mouse only.
 - A toolbar, color picker, size selector. One hardcoded color, one hardcoded width.
-- Global activation shortcut via accessibility permissions. POC's `Cmd+Opt+Z` only works when the window has focus.
+- Keyboard shortcuts beyond `Cmd+Opt+Z` (activate), `Esc` (deactivate), and `Cmd+K` (clear). No undo/redo on the keyboard for POC — those go through HTTP.
+- Global activation shortcut via accessibility permissions. POC's `Cmd+Opt+Z` only works when the window has focus. Same caveat for `Cmd+K`.
 - `.app` bundling for distribution beyond development. xcodegen produces an .app, but we don't sign, notarize, or ship it.
 - Multi-display awareness. POC targets the main display.
 - Automerge / CRDT sync. The `FitiDoc` shape is CRDT-shaped so we can swap an Automerge impl in later without changing the `Editor` or HTTP API surface, but the POC's backing store is a plain Swift struct.
@@ -220,6 +221,8 @@ public final class AppController {
     public func pointerDown(_ p: StrokePoint)
     public func pointerMoved(_ p: StrokePoint)
     public func pointerUp()
+
+    public func clear()              // pass-through to editor.clear()
 }
 ```
 
@@ -273,7 +276,7 @@ public struct Size: Equatable, Codable {
 
 - **`TransparentWindow: NSWindow`** — borderless, `level = .floating`, `isOpaque = false`, `backgroundColor = .clear`, occupies main screen. Conforms to `WindowControl`: `setClickThrough` toggles `ignoresMouseEvents`; `focus()` calls `makeKeyAndOrderFront(nil)`.
 - **`CanvasView: NSView`** — owns two layers (committed marks, in-progress) and implements `Renderer`. Each `render(frame)` clears the in-progress layer and redraws the current stroke; if `strokes` differs from last frame it redraws the committed layer too (only on stroke completion / undo / redo / clear, so the committed layer is cheap).
-- **`NSEventInputSource: InputSource`** — overrides `mouseDown` / `mouseDragged` / `mouseUp` on `CanvasView`; uses `NSEvent.addLocalMonitorForEvents` for `Cmd+Opt+Z` (activate) and `Esc` (deactivate). No global monitor → no accessibility permission required for POC.
+- **`NSEventInputSource: InputSource`** — overrides `mouseDown` / `mouseDragged` / `mouseUp` on `CanvasView`; uses `NSEvent.addLocalMonitorForEvents` for `Cmd+Opt+Z` (activate), `Esc` (deactivate), and `Cmd+K` (clear). No global monitor → no accessibility permission required for POC. The local monitor only fires when our app is key-focused; `Cmd+K` therefore requires the overlay to be active (or at least frontmost), unlike `Cmd+Opt+Z` which is the entry point.
 
 ### `Sources/DevHTTP`
 
@@ -506,3 +509,4 @@ The POC is done when, with `just dev` running and no human input:
 - **2026-05-16 — Punt Automerge.** `FitiDoc` shape is CRDT-shaped (keyed map + ordered list, identity-bearing strokes, frozen points + transform field) so the migration is purely internal to `Editor`. POC remains scope-focused.
 - **2026-05-16 — Punt perfect-freehand port.** POC uses uniform CGPath strokes. `Stroke.pressureEnabled` and `Stroke.pointerType` exist in the model so a future renderer can switch on them without restructuring.
 - **2026-05-16 — Eraser-by-id and undo/redo are in the data model from day one even though the POC UI doesn't expose them.** Exercised via HTTP routes and tests. Avoids restructuring when the toolbar arrives.
+- **2026-05-16 — `Cmd+K` clears the screen.** Matches terminal muscle memory (iTerm / Terminal.app). Three keyboard shortcuts in POC: `Cmd+Opt+Z` (activate), `Esc` (deactivate), `Cmd+K` (clear). Undo / redo / erase stay HTTP-only. The `Cmd+K` local monitor only fires when our app is key-focused, so clearing from click-through mode requires `Cmd+Opt+Z` first.
