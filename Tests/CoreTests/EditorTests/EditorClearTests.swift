@@ -40,4 +40,18 @@ struct EditorClearTests {
         e.clear()
         #expect(e.undoStack.isEmpty)
     }
+
+    @Test("clear while a stroke is in progress finalizes currentStrokeId")
+    func clearMidStroke() {
+        let e = makeEditor()
+        _ = e.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
+        e.appendPoint(StrokePoint(x: 1, y: 1))
+        #expect(e.currentStrokeId == "s-1")
+        e.clear()
+        #expect(e.currentStrokeId == nil)
+        #expect(e.doc.strokes.isEmpty)
+        // Should be able to start a fresh stroke immediately (no precondition trip)
+        _ = e.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
+        #expect(e.currentStrokeId == "s-2")
+    }
 }
