@@ -60,6 +60,69 @@ public final class Editor {
         emit(.local)
     }
 
+    // MARK: - Undo / redo
+
+    @discardableResult
+    public func undo() -> Bool {
+        guard let op = undoStack.popLast() else { return false }
+        if let inverse = applyInverse(op) {
+            redoStack.append(inverse)
+        }
+        emit(.local)
+        return true
+    }
+
+    @discardableResult
+    public func redo() -> Bool {
+        guard let op = redoStack.popLast() else { return false }
+        if let inverse = applyInverse(op) {
+            undoStack.append(inverse)
+        }
+        emit(.local)
+        return true
+    }
+
+    private func applyInverse(_ op: InverseOp) -> InverseOp? {
+        switch op {
+        case .deleteStroke(let id):
+            guard let stroke = doc.strokes[id] else { return nil }
+            let atIndex = doc.strokeOrder.firstIndex(of: id) ?? doc.strokeOrder.count
+            doc.strokes.removeValue(forKey: id)
+            doc.strokeOrder.removeAll { $0 == id }
+            return .restoreStroke(snapshot: stroke, atIndex: atIndex)
+
+        case .restoreStroke(let snapshot, let atIndex):
+            doc.strokes[snapshot.id] = snapshot
+            let insertAt = max(0, min(atIndex, doc.strokeOrder.count))
+            doc.strokeOrder.insert(snapshot.id, at: insertAt)
+            return .deleteStroke(snapshot.id)
+
+        case .deleteStrokes(let ids):
+            var entries: [StrokeRestoreEntry] = []
+            for id in ids {
+                guard let stroke = doc.strokes[id] else { continue }
+                let idx = doc.strokeOrder.firstIndex(of: id) ?? doc.strokeOrder.count
+                entries.append(StrokeRestoreEntry(snapshot: stroke, atIndex: idx))
+            }
+            for id in ids {
+                doc.strokes.removeValue(forKey: id)
+                doc.strokeOrder.removeAll { $0 == id }
+            }
+            return .restoreStrokes(entries: entries)
+
+        case .restoreStrokes(let entries):
+            // Re-insert in original deletion order so each atIndex is meaningful relative
+            // to the strokeOrder state it was captured against.
+            let reversed = Array(entries.reversed())
+            for entry in reversed {
+                doc.strokes[entry.snapshot.id] = entry.snapshot
+                let insertAt = max(0, min(entry.atIndex, doc.strokeOrder.count))
+                doc.strokeOrder.insert(entry.snapshot.id, at: insertAt)
+            }
+            return .deleteStrokes(entries.map { $0.snapshot.id })
+        }
+    }
+
     // MARK: - Undo plumbing
 
     private func pushUndo(_ op: InverseOp) {
