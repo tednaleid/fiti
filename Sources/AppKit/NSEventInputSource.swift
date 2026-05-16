@@ -1,5 +1,5 @@
-// ABOUTME: AppKit InputSource — wraps an NSView's mouse callbacks and a local
-// ABOUTME: NSEvent key monitor (Cmd+Opt+Z to activate, Esc to deactivate).
+// ABOUTME: AppKit InputSource — wraps an NSView's mouse callbacks and local/global
+// ABOUTME: NSEvent key monitors (Cmd+Opt+Z global to activate, Esc local to deactivate).
 
 import AppKit
 
@@ -13,6 +13,7 @@ public final class NSEventInputSource: InputSource {
 
     private let view: CanvasInputView
     private var keyMonitor: Any?
+    private var globalMonitor: Any?
 
     public init(view: CanvasInputView) {
         self.view = view
@@ -22,6 +23,7 @@ public final class NSEventInputSource: InputSource {
 
     deinit {
         if let m = keyMonitor { NSEvent.removeMonitor(m) }
+        if let m = globalMonitor { NSEvent.removeMonitor(m) }
     }
 
     /// Returns true if the event was consumed (caller should drop it).
@@ -45,9 +47,21 @@ public final class NSEventInputSource: InputSource {
     }
 
     private func installKeyMonitor() {
+        // Local monitor handles all three shortcuts when fiti is focused.
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             return self.handleKeyDown(event) ? nil : event
+        }
+        // Global monitor handles Cmd+Opt+Z only — Esc and Cmd+K stay local
+        // because they only make sense while fiti is the focused app.
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return }
+            let chars = event.charactersIgnoringModifiers
+            let cmd = event.modifierFlags.contains(.command)
+            let opt = event.modifierFlags.contains(.option)
+            if chars == "z" && cmd && opt {
+                self.onActivate?()
+            }
         }
     }
 }
