@@ -1,5 +1,6 @@
 // ABOUTME: Pixel-level tests for drawStroke against a CGBitmapContext.
-// ABOUTME: Asserts specific points are non-white and line width is correct.
+// ABOUTME: With perfect-freehand polygon-fill rendering, asserts fill presence
+// ABOUTME: along the stroke path and absence far from it (shape-agnostic).
 
 import CoreGraphics
 import Foundation
@@ -32,23 +33,29 @@ struct StrokeDrawingTests {
         let stroke = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 1,
                             transform: .identity, points: [], pointerType: .mouse,
                             pressureEnabled: false, createdAt: 0)
-        drawStroke(stroke, in: ctx)
+        drawStroke(stroke, in: ctx, isInProgress: false)
         let px = pixel(ctx, x: 5, y: 5)
         #expect(px.r == 255 && px.g == 255 && px.b == 255)
     }
 
-    @Test("draws red pixels along a horizontal line")
+    @Test("draws red pixels along a horizontal stroke")
     func horizontalLine() {
-        let ctx = makeContext(width: 100, height: 10)
-        let stroke = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 4,
+        let ctx = makeContext(width: 100, height: 30)
+        // Use enough points and a generous width so the perfect-freehand
+        // polygon definitively covers the centerline at x = 50.
+        let stroke = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 10,
                             transform: .identity,
-                            points: [StrokePoint(x: 10, y: 5), StrokePoint(x: 90, y: 5)],
+                            points: [StrokePoint(x: 10, y: 15),
+                                     StrokePoint(x: 50, y: 15),
+                                     StrokePoint(x: 90, y: 15)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        drawStroke(stroke, in: ctx)
-        let onLine = pixel(ctx, x: 50, y: 5)
+        drawStroke(stroke, in: ctx, isInProgress: false)
+        // Somewhere along the stroke's middle should be red-dominant.
+        let onLine = pixel(ctx, x: 50, y: 15)
         #expect(onLine.r > 200)
         #expect(onLine.g < 50)
         #expect(onLine.b < 50)
+        // Far above the stroke should remain white (untouched).
         let offLine = pixel(ctx, x: 50, y: 0)
         #expect(offLine.r == 255 && offLine.g == 255 && offLine.b == 255)
     }

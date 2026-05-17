@@ -70,7 +70,7 @@ public final class CanvasView: NSView, Renderer {
             ctx.restoreGState()
         }
         if let live = frame.inProgress, !live.points.isEmpty {
-            drawStroke(live, in: ctx)
+            drawStroke(live, in: ctx, isInProgress: true)
         }
     }
 
@@ -95,7 +95,7 @@ public final class CanvasView: NSView, Renderer {
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
         for stroke in frame.strokes where stroke.id != exclude {
-            drawStroke(stroke, in: ctx)
+            drawStroke(stroke, in: ctx, isInProgress: false)
         }
         return ctx.makeImage()
     }

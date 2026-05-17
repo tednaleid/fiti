@@ -26,8 +26,8 @@ public enum SnapshotRenderer {
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
 
-        for stroke in frame.strokes { drawStroke(stroke, in: ctx) }
-        if let inProgress = frame.inProgress { drawStroke(inProgress, in: ctx) }
+        for stroke in frame.strokes { drawStroke(stroke, in: ctx, isInProgress: false) }
+        if let inProgress = frame.inProgress { drawStroke(inProgress, in: ctx, isInProgress: true) }
 
         guard let cgImage = ctx.makeImage() else { return nil }
         return pngData(from: cgImage)

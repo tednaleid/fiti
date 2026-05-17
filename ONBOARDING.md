@@ -75,3 +75,9 @@ Per-stroke erase is HTTP-only — use `just inspect-erase ID`.
 - [`docs/specs/2026-05-16-fiti-poc-design.md`](./docs/specs/2026-05-16-fiti-poc-design.md) — POC design, scope, ports, HTTP routes, decision log
 - [`.llm/telestrator/renderer/lib/state.ts`](./.llm/telestrator/renderer/lib/state.ts) — telestrator's state machine (the conceptual ancestor)
 - [`CLAUDE.md`](./CLAUDE.md) — project rules
+
+## Acknowledgments
+
+This project uses a Swift port of [perfect-freehand](https://github.com/steveruizok/perfect-freehand) (MIT, Steve Ruiz) for stroke rendering. See `Packages/PerfectFreehand/LICENSE`.
+
+If you ever need to regenerate the cross-language test fixtures for the port (after upgrading upstream or to investigate a parity failure): `brew install bun`, then `just regen-pf-fixtures`.

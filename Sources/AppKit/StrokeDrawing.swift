@@ -1,22 +1,25 @@
 // ABOUTME: Shared stroke-rendering function used by CanvasView and
-// ABOUTME: SnapshotRenderer. Top-origin coords; uniform-width CGPath.
+// ABOUTME: SnapshotRenderer. Fills a perfect-freehand polygon outline.
 
 import CoreGraphics
 import Foundation
+import PerfectFreehand
 
-public func drawStroke(_ stroke: Stroke, in ctx: CGContext) {
+public func drawStroke(_ stroke: Stroke, in ctx: CGContext, isInProgress: Bool) {
     guard !stroke.points.isEmpty else { return }
-    ctx.setLineWidth(CGFloat(stroke.width))
-    ctx.setStrokeColor(red: CGFloat(stroke.color.r),
-                       green: CGFloat(stroke.color.g),
-                       blue: CGFloat(stroke.color.b),
-                       alpha: CGFloat(stroke.color.a))
+    let opts = FitiStrokeOptions.make(width: stroke.width, last: !isInProgress)
+    let polygon = getStroke(points: stroke.points.perfectFreehandInputs, options: opts)
+    guard polygon.count >= 3 else { return }
+    ctx.setFillColor(red: CGFloat(stroke.color.r),
+                     green: CGFloat(stroke.color.g),
+                     blue: CGFloat(stroke.color.b),
+                     alpha: CGFloat(stroke.color.a))
     let path = CGMutablePath()
-    let first = stroke.points[0]
-    path.move(to: CGPoint(x: first.x, y: first.y))
-    for point in stroke.points.dropFirst() {
-        path.addLine(to: CGPoint(x: point.x, y: point.y))
+    path.move(to: CGPoint(x: polygon[0].x, y: polygon[0].y))
+    for v in polygon.dropFirst() {
+        path.addLine(to: CGPoint(x: v.x, y: v.y))
     }
+    path.closeSubpath()
     ctx.addPath(path)
-    ctx.strokePath()
+    ctx.fillPath()
 }

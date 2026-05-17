@@ -40,17 +40,17 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 ## High-quality: stroke rendering
 
 ### Perfect-freehand Swift port
-- [ ] Real reason to do this: uniform-width `CGPath` strokes look amateurish; perfect-freehand gives you the tapered, velocity-aware curves that make annotations feel like ink instead of pixel art.
-- [ ] Reference TS source: `node_modules/perfect-freehand` in scratch (MIT-licensed). The web app wraps it in `packages/web/src/canvas/strokePath.ts` with these options worth keeping:
+- [x] Real reason to do this: uniform-width `CGPath` strokes look amateurish; perfect-freehand gives you the tapered, velocity-aware curves that make annotations feel like ink instead of pixel art.
+- [x] Reference TS source: `node_modules/perfect-freehand` in scratch (MIT-licensed). The web app wraps it in `packages/web/src/canvas/strokePath.ts` with these options worth keeping:
   ```ts
   { smoothing: 0.5, thinning: 0.5, streamline: 0.5,
     simulatePressure: true,
     start: { taper: 0, cap: true },
     end:   { taper: 0, cap: true } }
   ```
-- [ ] `simulatePressure: true` is the key for mouse input — synthesises pressure from velocity so even a non-stylus stroke tapers naturally. Stylus / trackpad real pressure overrides the sim. `Stroke.pressureEnabled` already exists in the model for this distinction.
-- [ ] Implementation lives in `Sources/Core/` (it's pure math, no AppKit). The TS lib is ~600 lines of geometry; a direct port is feasible. Tests can compare outputs against checked-in TS-generated fixtures for byte-level confidence.
-- [ ] The two-canvas split assumes uniform-width `addLine` paths. Perfect-freehand outputs a closed polygon to fill, not a path to stroke. The bake/blit pipeline still works — the `drawStroke` helper changes from "stroke a path" to "fill a polygon." Same call site, different internals.
+- [x] `simulatePressure: true` is the key for mouse input — synthesises pressure from velocity so even a non-stylus stroke tapers naturally. Stylus / trackpad real pressure overrides the sim. `Stroke.pressureEnabled` already exists in the model for this distinction.
+- [x] Implementation lives in `Sources/Core/` (it's pure math, no AppKit). The TS lib is ~600 lines of geometry; a direct port is feasible. Tests can compare outputs against checked-in TS-generated fixtures for byte-level confidence.
+- [x] The two-canvas split assumes uniform-width `addLine` paths. Perfect-freehand outputs a closed polygon to fill, not a path to stroke. The bake/blit pipeline still works — the `drawStroke` helper changes from "stroke a path" to "fill a polygon." Same call site, different internals.
 
 ### Expose perfect-freehand options in the toolbar
 - [ ] v1 ships with `smoothing/thinning/streamline = 0.5` and `simulatePressure: true` hardcoded (matches scratch's defaults). If any of those feel wrong in real use — too laggy, too jittery, taper too aggressive — promote one or more to a toolbar slider rather than tweaking the constants in place. Likely candidates if anything turns out wrong: a single "smoothness" slider that scales `smoothing + streamline` together, then `thinning` if the velocity-taper feels off.
