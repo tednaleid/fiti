@@ -81,7 +81,9 @@ public func dispatchKey(_ event: NSEvent,
                         onDeactivate: (() -> Void)?,
                         onUndo: (() -> Void)?,
                         onRedo: (() -> Void)?) -> Bool {
-    let chars = event.charactersIgnoringModifiers
+    // charactersIgnoringModifiers preserves Shift, so Cmd+Shift+Z arrives with
+    // chars == "Z". Lowercase before matching so Shift-bearing combos still hit.
+    let chars = event.charactersIgnoringModifiers?.lowercased()
     let cmd = event.modifierFlags.contains(.command)
     let opt = event.modifierFlags.contains(.option)
     let shift = event.modifierFlags.contains(.shift)

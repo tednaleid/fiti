@@ -67,7 +67,9 @@ struct NSEventInputSourceTests {
     func cmdShiftZ() throws {
         var undone = false
         var redone = false
-        let event = try #require(makeKeyDown(chars: "z", flags: [.command, .shift]))
+        // Real Shift+Z events arrive with charactersIgnoringModifiers = "Z",
+        // not "z" — Shift affects the character even though Cmd/Option don't.
+        let event = try #require(makeKeyDown(chars: "Z", flags: [.command, .shift]))
         let consumed = dispatchKey(event,
                                    onActivate: nil,
                                    onClear: nil,
