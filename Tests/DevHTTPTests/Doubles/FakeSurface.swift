@@ -11,6 +11,9 @@ public final class FakeSurface: DevHTTPSurface {
     public var undoDepth: Int = 0
     public var redoDepth: Int = 0
     public var currentStrokeId: StrokeId?
+    public var currentColor: RGBA = RGBA(r: 1, g: 0, b: 0, a: 1)
+    public var currentWidth: Double = 6
+    public var drawingsVisible: Bool = true
 
     public var activateCalls = 0
     public var deactivateCalls = 0
@@ -33,4 +36,7 @@ public final class FakeSurface: DevHTTPSurface {
     public func redo() -> Bool { redoCalls += 1; return true }
     public func eraseStroke(_ id: StrokeId) -> Bool { erasedIds.append(id); return true }
     public func snapshotPNG() -> Data? { snapshotPNGReturn }
+    public func setColor(_ color: RGBA) { currentColor = color }
+    public func setWidth(_ width: Double) { currentWidth = width }
+    public func setDrawingsVisible(_ visible: Bool) { drawingsVisible = visible }
 }

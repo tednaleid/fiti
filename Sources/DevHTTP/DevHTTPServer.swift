@@ -114,7 +114,13 @@ public final class DevHTTPServer: @unchecked Sendable {
                 "canvasSize": ["width": self.surface.canvasSize.width, "height": self.surface.canvasSize.height],
                 "undoDepth": self.surface.undoDepth,
                 "redoDepth": self.surface.redoDepth,
-                "currentStrokeId": self.surface.currentStrokeId as Any
+                "currentStrokeId": self.surface.currentStrokeId as Any,
+                "color": ["r": self.surface.currentColor.r,
+                          "g": self.surface.currentColor.g,
+                          "b": self.surface.currentColor.b,
+                          "a": self.surface.currentColor.a],
+                "width": self.surface.currentWidth,
+                "drawingsVisible": self.surface.drawingsVisible
             ]
             return .json(payload)
         }
@@ -150,8 +156,31 @@ public final class DevHTTPServer: @unchecked Sendable {
             return self.handlePointer(req)
         }
 
+        installToolbarRoutes()
         installHistoryRoutes()
         installSnapshotRoute()
+    }
+
+    private func installToolbarRoutes() {
+        router.add("POST", "/color") { [weak self] req, _ in
+            guard let self else { return .notFound() }
+            return self.handleSetColor(req)
+        }
+
+        router.add("POST", "/width") { [weak self] req, _ in
+            guard let self else { return .notFound() }
+            return self.handleSetWidth(req)
+        }
+
+        router.add("POST", "/drawings/show") { [weak self] _, _ in
+            self?.surface.setDrawingsVisible(true)
+            return .ok()
+        }
+
+        router.add("POST", "/drawings/hide") { [weak self] _, _ in
+            self?.surface.setDrawingsVisible(false)
+            return .ok()
+        }
     }
 
     private func installSnapshotRoute() {
@@ -202,6 +231,29 @@ public final class DevHTTPServer: @unchecked Sendable {
         case "move": surface.pointerMoved(point)
         default: return .badRequest("unknown event \(event)")
         }
+        return .ok()
+    }
+
+    @MainActor
+    private func handleSetColor(_ req: HTTPRequest) -> HTTPResponse {
+        guard let json = try? JSONSerialization.jsonObject(with: req.body) as? [String: Any],
+              let r = (json["r"] as? Double) ?? (json["r"] as? Int).map(Double.init),
+              let g = (json["g"] as? Double) ?? (json["g"] as? Int).map(Double.init),
+              let b = (json["b"] as? Double) ?? (json["b"] as? Int).map(Double.init),
+              let a = (json["a"] as? Double) ?? (json["a"] as? Int).map(Double.init) else {
+            return .badRequest("expected {r, g, b, a} body, each in 0..1")
+        }
+        surface.setColor(RGBA(r: r, g: g, b: b, a: a))
+        return .ok()
+    }
+
+    @MainActor
+    private func handleSetWidth(_ req: HTTPRequest) -> HTTPResponse {
+        guard let json = try? JSONSerialization.jsonObject(with: req.body) as? [String: Any],
+              let w = (json["width"] as? Double) ?? (json["width"] as? Int).map(Double.init) else {
+            return .badRequest("expected {width: Double} body")
+        }
+        surface.setWidth(w)
         return .ok()
     }
 }

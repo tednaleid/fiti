@@ -173,3 +173,23 @@ inspect-deactivate:
 [group('inspect')]
 inspect-erase id:
     @curl -sf -X POST localhost:{{dev_port}}/strokes/{{id}}/erase | jq .
+
+[group('inspect')]
+inspect-set-color r g b a:
+    @curl -sf -X POST localhost:{{dev_port}}/color \
+        -H 'Content-Type: application/json' \
+        -d '{"r":{{r}},"g":{{g}},"b":{{b}},"a":{{a}}}'
+
+[group('inspect')]
+inspect-set-width w:
+    @curl -sf -X POST localhost:{{dev_port}}/width \
+        -H 'Content-Type: application/json' \
+        -d '{"width":{{w}}}'
+
+[group('inspect')]
+inspect-show:
+    @curl -sf -X POST localhost:{{dev_port}}/drawings/show
+
+[group('inspect')]
+inspect-hide:
+    @curl -sf -X POST localhost:{{dev_port}}/drawings/hide

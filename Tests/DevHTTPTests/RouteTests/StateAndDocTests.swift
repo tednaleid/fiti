@@ -29,6 +29,9 @@ struct StateAndDocTests {
         surface.clickThrough = false
         surface.undoDepth = 3
         surface.redoDepth = 1
+        surface.currentColor = RGBA(r: 0.25, g: 0.5, b: 0.75, a: 1)
+        surface.currentWidth = 4
+        surface.drawingsVisible = true
         let server = try startServer(surface); defer { server.stop() }
         let (status, json) = try await get(server, "/state")
         #expect(status == 200)
@@ -36,6 +39,13 @@ struct StateAndDocTests {
         #expect((json["clickThrough"] as? Bool) == false)
         #expect((json["undoDepth"] as? Int) == 3)
         #expect((json["redoDepth"] as? Int) == 1)
+        let color = try #require(json["color"] as? [String: Any])
+        #expect(color["r"] as? Double == 0.25)
+        #expect(color["g"] as? Double == 0.5)
+        #expect(color["b"] as? Double == 0.75)
+        #expect(color["a"] as? Double == 1)
+        #expect(json["width"] as? Double == 4)
+        #expect(json["drawingsVisible"] as? Bool == true)
     }
 
     @Test("/doc returns FitiDoc JSON")

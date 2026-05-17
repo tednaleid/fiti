@@ -20,9 +20,16 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
     public var undoDepth: Int { controller.editor.undoStack.count }
     public var redoDepth: Int { controller.editor.redoStack.count }
     public var currentStrokeId: StrokeId? { controller.editor.currentStrokeId }
+    public var currentColor: RGBA { controller.currentColor }
+    public var currentWidth: Double { controller.currentWidth }
+    public var drawingsVisible: Bool { controller.drawingsVisible }
 
     public func activate() { controller.activate() }
     public func deactivate() { controller.deactivate() }
+
+    public func setColor(_ color: RGBA) { controller.currentColor = color }
+    public func setWidth(_ width: Double) { controller.currentWidth = width }
+    public func setDrawingsVisible(_ visible: Bool) { controller.drawingsVisible = visible }
 
     // HTTP routes bypass the activation gate. Auto-activate so the dev client
     // can drive drawing without first POSTing /activate.

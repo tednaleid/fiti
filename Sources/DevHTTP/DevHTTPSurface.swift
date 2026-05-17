@@ -12,6 +12,9 @@ public protocol DevHTTPSurface: AnyObject {
     var undoDepth: Int { get }
     var redoDepth: Int { get }
     var currentStrokeId: StrokeId? { get }
+    var currentColor: RGBA { get }
+    var currentWidth: Double { get }
+    var drawingsVisible: Bool { get }
 
     func activate()
     func deactivate()
@@ -23,4 +26,7 @@ public protocol DevHTTPSurface: AnyObject {
     func redo() -> Bool
     func eraseStroke(_ id: StrokeId) -> Bool
     func snapshotPNG() -> Data?
+    func setColor(_ color: RGBA)
+    func setWidth(_ width: Double)
+    func setDrawingsVisible(_ visible: Bool)
 }
