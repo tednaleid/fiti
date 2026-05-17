@@ -14,6 +14,8 @@ public final class Editor {
     public private(set) var doc: FitiDoc = .empty
     public private(set) var undoStack: [InverseOp] = []
     public private(set) var redoStack: [InverseOp] = []
+    public var canUndo: Bool { !undoStack.isEmpty }
+    public var canRedo: Bool { !redoStack.isEmpty }
     public private(set) var currentStrokeId: StrokeId?
 
     private let clock: Clock
