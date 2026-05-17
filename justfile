@@ -1,8 +1,9 @@
 # ABOUTME: fiti — native Swift telestrator POC
 # ABOUTME: All commands route through this file. Use `just <recipe>`, never the underlying tool directly.
 
-build_dir := "/tmp/fiti-build"
-dev_port  := "9876"
+build_dir   := "/tmp/fiti-build"
+install_dir := env_var('HOME') / "Applications"
+dev_port    := "9876"
 
 # List available recipes
 default:
@@ -31,11 +32,19 @@ install-hooks:
 build: generate
     xcodebuild -project fiti.xcodeproj -scheme fiti -configuration Debug build SYMROOT={{build_dir}}
 
+# Copy the built .app to ~/Applications/Fiti.app (stable path for Accessibility grants)
+[group('build')]
+install: build
+    @rm -rf "{{install_dir}}/Fiti.app"
+    @mkdir -p "{{install_dir}}"
+    @cp -R {{build_dir}}/Debug/Fiti.app "{{install_dir}}/Fiti.app"
+    @echo "Installed: {{install_dir}}/Fiti.app"
+
 # Remove build artifacts and the generated Xcode project
 [group('build')]
 clean:
     rm -rf {{build_dir}} fiti.xcodeproj DerivedData
-    @echo "Clean complete."
+    @echo "Clean complete. (~/Applications/Fiti.app left in place — remove manually if desired.)"
 
 # ─── test ─────────────────────────────────────────────────────────────────
 
@@ -68,15 +77,17 @@ check: test test-integration lint build
 
 # ─── run ──────────────────────────────────────────────────────────────────
 
-# Build and launch the app in the foreground (--dev enables HTTP introspection)
+# Build, install to ~/Applications, and launch in foreground (--dev enables HTTP introspection).
+# `open -W` launches via Launch Services (not as a shell child) so macOS attributes
+# Accessibility requests to Fiti.app itself, not to the terminal that ran `just`.
 [group('run')]
-run: build
-    {{build_dir}}/Debug/Fiti.app/Contents/MacOS/Fiti --dev --port {{dev_port}}
+run: install
+    open -W "{{install_dir}}/Fiti.app" --args --dev --port {{dev_port}}
 
-# Build and launch in the background, for scripted testing
+# Build, install, and launch in the background, for scripted testing
 [group('run')]
-run-bg: build
-    @{{build_dir}}/Debug/Fiti.app/Contents/MacOS/Fiti --dev --port {{dev_port}} &
+run-bg: install
+    @open "{{install_dir}}/Fiti.app" --args --dev --port {{dev_port}}
     @sleep 1
     @echo "fiti running in background. Use 'just stop' to quit."
 
@@ -87,17 +98,24 @@ stop:
         || pkill -f 'Fiti.app/Contents/MacOS/Fiti' 2>/dev/null \
         || echo "fiti not running"
 
-# Open Privacy & Security → Accessibility so you can grant Fiti the global Cmd+Opt+Z hotkey
+# Wipe Fiti's Accessibility TCC entry so the next launch re-prompts cleanly
 [group('run')]
-grant-accessibility:
+reset-accessibility:
+    @tccutil reset Accessibility com.fiti.app
+    @echo "TCC entry reset. Next 'just run-bg' will trigger a fresh permission dialog."
+
+# Install + open Privacy & Security → Accessibility so you can grant Fiti the global Cmd+Opt+Z hotkey
+[group('run')]
+grant-accessibility: install
     @open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-    @open -R "{{build_dir}}/Debug/Fiti.app" 2>/dev/null || echo "(Fiti.app not built yet — run 'just build' first)"
+    @open -R "{{install_dir}}/Fiti.app"
     @echo ""
     @echo "Drag Fiti.app from the revealed Finder window into the Accessibility list,"
     @echo "or use the + button and Cmd+Shift+G with this path:"
-    @echo "  {{build_dir}}/Debug/Fiti.app"
+    @echo "  {{install_dir}}/Fiti.app"
     @echo ""
-    @echo "Then toggle Fiti on. Ad-hoc signed builds may need re-toggling after each rebuild."
+    @echo "Then toggle Fiti on. After future rebuilds the cdhash changes; if Cmd+Opt+Z"
+    @echo "stops working, toggle Fiti off and back on in the same Accessibility list."
 
 # ─── inspect (dev HTTP @ localhost:9876) ──────────────────────────────────
 
