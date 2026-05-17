@@ -52,6 +52,9 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 - [ ] Implementation lives in `Sources/Core/` (it's pure math, no AppKit). The TS lib is ~600 lines of geometry; a direct port is feasible. Tests can compare outputs against checked-in TS-generated fixtures for byte-level confidence.
 - [ ] The two-canvas split assumes uniform-width `addLine` paths. Perfect-freehand outputs a closed polygon to fill, not a path to stroke. The bake/blit pipeline still works — the `drawStroke` helper changes from "stroke a path" to "fill a polygon." Same call site, different internals.
 
+### Expose perfect-freehand options in the toolbar
+- [ ] v1 ships with `smoothing/thinning/streamline = 0.5` and `simulatePressure: true` hardcoded (matches scratch's defaults). If any of those feel wrong in real use — too laggy, too jittery, taper too aggressive — promote one or more to a toolbar slider rather than tweaking the constants in place. Likely candidates if anything turns out wrong: a single "smoothness" slider that scales `smoothing + streamline` together, then `thinning` if the velocity-taper feels off.
+
 ## Distribution prereqs
 
 ### Real code signing
