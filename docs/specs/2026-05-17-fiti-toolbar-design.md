@@ -103,7 +103,17 @@ public var drawingsVisible: Bool = true {
 
 Mirror of the `onModeChanged` pattern already established. Single emission point via `didSet`.
 
-`currentColor: RGBA` and `currentWidth: Double` already exist as `public var`s. The toolbar writes them directly; no callback needed since the only reader (the in-progress stroke construction in `startStroke`) reads them at stroke-start time, not reactively.
+`currentColor: RGBA` and `currentWidth: Double` already exist as `public var`s. The toolbar writes them directly; we add `didSet`-published callbacks (`onCurrentColorChanged`, `onCurrentWidthChanged`) so HTTP-driven changes (`POST /color`, `POST /width`) can update the toolbar widgets and the menubar HTTP API can drive the toolbar from outside the UI:
+
+```swift
+public var onCurrentColorChanged: ((RGBA) -> Void)?
+public var onCurrentWidthChanged: ((Double) -> Void)?
+
+public var currentColor: RGBA = ... { didSet { if oldValue != currentColor { onCurrentColorChanged?(currentColor) } } }
+public var currentWidth: Double = 6 { didSet { if oldValue != currentWidth { onCurrentWidthChanged?(currentWidth) } } }
+```
+
+The toolbar subscribes to both and updates its widgets (color well, sliders) when an external write happens.
 
 ### CanvasView change
 
@@ -176,6 +186,34 @@ static let quickPickRGB: [(r: Double, g: Double, b: Double)] = [
 ```
 
 Rendered as a 2×4 grid of `NSButton`s with `bezelStyle = .regularSquare` and a custom background color set per button. Clicking sets `controller.currentColor = RGBA(r:..., g:..., b:..., a: controller.currentColor.a)`.
+
+### Dev HTTP surface
+
+The hexagonal contract is that every state the toolbar reads/writes is also reachable via the dev HTTP API. So:
+
+`DevHTTPSurface` gains:
+- `var currentColor: RGBA { get }`
+- `var currentWidth: Double { get }`
+- `var drawingsVisible: Bool { get }`
+- `func setColor(_ color: RGBA)`
+- `func setWidth(_ width: Double)`
+- `func setDrawingsVisible(_ visible: Bool)`
+
+`FitiDevHTTPSurface` implements these as pass-throughs to `AppController`.
+
+New / updated routes:
+- `GET /state` — extends current payload with `color: {r,g,b,a}`, `width: Double`, `drawingsVisible: Bool`
+- `POST /color` — body `{"r": 0..1, "g": 0..1, "b": 0..1, "a": 0..1}` → `setColor(...)`
+- `POST /width` — body `{"width": Double}` → `setWidth(...)`
+- `POST /drawings/show` — `setDrawingsVisible(true)`
+- `POST /drawings/hide` — `setDrawingsVisible(false)`
+
+New `just inspect-*` recipes:
+- `just inspect-set-color R G B A` (each in 0..1)
+- `just inspect-set-width W`
+- `just inspect-show` / `just inspect-hide`
+
+This means the toolbar's state can be observed (`just inspect-state | jq .color`) or driven (`just inspect-set-color 0 1 0 0.5`) externally, and any HTTP-driven change is immediately reflected in the toolbar widgets (because both surfaces read/write the same AppController state).
 
 ### Wiring in main.swift
 
