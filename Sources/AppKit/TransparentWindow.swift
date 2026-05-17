@@ -4,10 +4,12 @@
 import AppKit
 
 public final class TransparentWindow: NSWindow, WindowControl {
-    /// The application that was frontmost when `focus()` was last called.
-    /// Captured before fiti steals focus so `releaseFocus()` can hand it
-    /// back on deactivate. Nil between deactivate and the next activate.
+    /// The most-recent non-fiti application to be frontmost. Maintained by a
+    /// `NSWorkspace.didActivateApplicationNotification` observer so it's always
+    /// current regardless of how fiti was activated (hotkey, menubar, or HTTP).
+    /// `releaseFocus()` restores to this on deactivate.
     private var previousApp: NSRunningApplication?
+    private var activationObserver: NSObjectProtocol?
 
     public init() {
         let frame = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
@@ -25,6 +27,28 @@ public final class TransparentWindow: NSWindow, WindowControl {
         self.ignoresMouseEvents = true   // start in click-through state
         self.acceptsMouseMovedEvents = true
         self.setFrame(frame, display: true)
+
+        // Continuously track the most-recent non-fiti frontmost app. Whoever
+        // was on top right before fiti's hotkey or menubar fires is what
+        // releaseFocus() returns to.
+        let ownBundle = Bundle.main.bundleIdentifier
+        activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] notification in
+            guard let self else { return }
+            guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
+            if app.bundleIdentifier != ownBundle {
+                self.previousApp = app
+            }
+        }
+    }
+
+    isolated deinit {
+        if let token = activationObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(token)
+        }
     }
 
     public override var canBecomeKey: Bool { true }
@@ -37,14 +61,6 @@ public final class TransparentWindow: NSWindow, WindowControl {
     }
 
     public func focus() {
-        // Capture BEFORE we activate ourselves; otherwise frontmostApplication
-        // would already be fiti. Skip self-capture (happens if the user invokes
-        // activate from our menubar, which makes fiti frontmost first).
-        let ownBundle = Bundle.main.bundleIdentifier
-        if let current = NSWorkspace.shared.frontmostApplication,
-           current.bundleIdentifier != ownBundle {
-            previousApp = current
-        }
         self.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
     }
