@@ -21,7 +21,17 @@ const files = readdirSync(here).filter(f => f.endsWith('.json') && f !== 'packag
 for (const file of files) {
     const path = join(here, file)
     const fixture: FixtureFile = JSON.parse(await Bun.file(path).text())
-    const polygon = getStroke(fixture.input, fixture.options)
+    // The Swift port's `StrokeInputPoint` is object-shaped, which means a
+    // missing pressure in TS gets defaulted to DEFAULT_PRESSURE (0.5) for
+    // EVERY point including the first — TS's array path defaults the first
+    // point to DEFAULT_FIRST_PRESSURE (0.25) instead. To match the Swift
+    // port's behaviour byte-for-byte we feed upstream object-shape inputs.
+    const objectInput = fixture.input.map(row => ({
+        x: row[0],
+        y: row[1],
+        pressure: row.length > 2 ? row[2] : undefined,
+    }))
+    const polygon = getStroke(objectInput, fixture.options)
     fixture.expected = polygon
     writeFileSync(path, JSON.stringify(fixture, null, 2) + '\n')
     console.log(`✓ ${file} — ${polygon.length} vertices`)

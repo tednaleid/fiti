@@ -9,9 +9,19 @@ let package = Package(
     ],
     targets: [
         .target(name: "PerfectFreehand", path: "Sources/PerfectFreehand"),
-        .testTarget(name: "PerfectFreehandTests",
-                    dependencies: ["PerfectFreehand"],
-                    path: "Tests/PerfectFreehandTests",
-                    exclude: ["Fixtures"])
+        .testTarget(
+            name: "PerfectFreehandTests",
+            dependencies: ["PerfectFreehand"],
+            path: "Tests/PerfectFreehandTests",
+            exclude: [
+                "Fixtures/regenerate.ts",
+                "Fixtures/package.json",
+                "Fixtures/tsconfig.json",
+                "Fixtures/node_modules",
+                "Fixtures/bun.lock",
+                "Fixtures/bun.lockb"
+            ],
+            resources: [.copy("Fixtures")]
+        )
     ]
 )
