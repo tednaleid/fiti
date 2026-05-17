@@ -38,4 +38,98 @@ struct ToolbarControllerTests {
         toolbar.updateVisibility(for: .inactive)
         #expect(toolbar.panel.isVisible == false)
     }
+
+    @Test("clicking a quick-pick color sets controller.currentColor RGB but preserves alpha")
+    func quickPickPreservesAlpha() throws {
+        let (toolbar, controller, _) = make()
+        controller.currentColor = RGBA(r: 0, g: 0, b: 0, a: 0.5)
+        try toolbar.testOnly_clickQuickPick(at: 1)
+        #expect(controller.currentColor.r == 134.0 / 255.0)
+        #expect(controller.currentColor.g == 142.0 / 255.0)
+        #expect(controller.currentColor.b == 150.0 / 255.0)
+        #expect(controller.currentColor.a == 0.5, "alpha should be preserved")
+    }
+
+    @Test("opacity slider writes controller.currentColor.a but preserves rgb")
+    func opacityPreservesRGB() {
+        let (toolbar, controller, _) = make()
+        controller.currentColor = RGBA(r: 0.2, g: 0.4, b: 0.6, a: 1.0)
+        toolbar.testOnly_setOpacity(0.3)
+        #expect(controller.currentColor.a == 0.3)
+        #expect(controller.currentColor.r == 0.2)
+        #expect(controller.currentColor.g == 0.4)
+        #expect(controller.currentColor.b == 0.6)
+    }
+
+    @Test("width slider writes controller.currentWidth")
+    func widthSlider() {
+        let (toolbar, controller, _) = make()
+        toolbar.testOnly_setWidth(12)
+        #expect(controller.currentWidth == 12)
+    }
+
+    @Test("hide button toggles controller.drawingsVisible")
+    func hideButton() {
+        let (toolbar, controller, _) = make()
+        #expect(controller.drawingsVisible == true)
+        toolbar.testOnly_toggleHide()
+        #expect(controller.drawingsVisible == false)
+        toolbar.testOnly_toggleHide()
+        #expect(controller.drawingsVisible == true)
+    }
+
+    @Test("persisted color/width override defaults at init")
+    func persistedOverrides() {
+        let suite = UserDefaults(suiteName: UUID().uuidString)!
+        suite.set(0.1, forKey: "fiti.color.r")
+        suite.set(0.2, forKey: "fiti.color.g")
+        suite.set(0.3, forKey: "fiti.color.b")
+        suite.set(0.4, forKey: "fiti.color.a")
+        suite.set(11.0, forKey: "fiti.width")
+        let window = RecordingWindow()
+        let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
+        let controller = AppController(editor: editor, window: window)
+        _ = ToolbarController(controller: controller, defaults: suite)
+        #expect(controller.currentColor == RGBA(r: 0.1, g: 0.2, b: 0.3, a: 0.4))
+        #expect(controller.currentWidth == 11)
+    }
+
+    @Test("widget changes write through to UserDefaults")
+    func widgetChangesPersist() {
+        let suite = UserDefaults(suiteName: UUID().uuidString)!
+        let window = RecordingWindow()
+        let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
+        let controller = AppController(editor: editor, window: window)
+        let toolbar = ToolbarController(controller: controller, defaults: suite)
+        toolbar.testOnly_setWidth(9)
+        toolbar.testOnly_setOpacity(0.6)
+        #expect(suite.double(forKey: "fiti.width") == 9)
+        #expect(suite.double(forKey: "fiti.color.a") == 0.6)
+    }
+
+    @Test("external write to currentColor updates the color well")
+    func externalColorWriteUpdatesWidget() {
+        let (toolbar, controller, _) = make()
+        controller.currentColor = RGBA(r: 0.0, g: 1.0, b: 0.0, a: 1.0)
+        let c = toolbar.testOnly_colorWellColor
+        #expect(abs(c.redComponent - 0.0) < 0.01)
+        #expect(abs(c.greenComponent - 1.0) < 0.01)
+        #expect(abs(c.blueComponent - 0.0) < 0.01)
+    }
+
+    @Test("external write to currentWidth updates the width slider")
+    func externalWidthWriteUpdatesWidget() {
+        let (toolbar, controller, _) = make()
+        controller.currentWidth = 17
+        #expect(toolbar.testOnly_widthSliderValue == 17)
+    }
+
+    @Test("external write to drawingsVisible updates the hide button glyph")
+    func externalHideWriteUpdatesGlyph() {
+        let (toolbar, controller, _) = make()
+        controller.drawingsVisible = false
+        #expect(toolbar.testOnly_hideButtonGlyphName == "eye.slash")
+        controller.drawingsVisible = true
+        #expect(toolbar.testOnly_hideButtonGlyphName == "eye")
+    }
 }
