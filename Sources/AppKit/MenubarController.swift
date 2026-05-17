@@ -4,16 +4,56 @@
 import AppKit
 
 @MainActor
-public final class MenubarController {
+public final class MenubarController: NSObject {
     private let controller: AppController
     private let editor: Editor
     private let statusItem: NSStatusItem
+    internal let menu: NSMenu
     internal private(set) var currentSymbolName: String = ""
+
+    private let activateItem: NSMenuItem
+    private let deactivateItem: NSMenuItem
+    private let undoItem: NSMenuItem
+    private let redoItem: NSMenuItem
 
     public init(controller: AppController, editor: Editor) {
         self.controller = controller
         self.editor = editor
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        self.menu = NSMenu()
+
+        self.activateItem = NSMenuItem(title: "Activate", action: #selector(activate), keyEquivalent: "z")
+        self.deactivateItem = NSMenuItem(title: "Deactivate", action: #selector(deactivate), keyEquivalent: "\u{1b}")
+        let clearItem = NSMenuItem(title: "Clear", action: #selector(clearAll), keyEquivalent: "k")
+        self.undoItem = NSMenuItem(title: "Undo", action: #selector(undo), keyEquivalent: "z")
+        self.redoItem = NSMenuItem(title: "Redo", action: #selector(redo), keyEquivalent: "z")
+        let quitItem = NSMenuItem(title: "Quit fiti", action: #selector(quit), keyEquivalent: "q")
+
+        super.init()
+
+        activateItem.keyEquivalentModifierMask = [.command, .option]
+        deactivateItem.keyEquivalentModifierMask = []
+        clearItem.keyEquivalentModifierMask = [.command]
+        undoItem.keyEquivalentModifierMask = [.command]
+        redoItem.keyEquivalentModifierMask = [.command, .shift]
+        quitItem.keyEquivalentModifierMask = [.command]
+
+        for item in [activateItem, deactivateItem, undoItem, redoItem, clearItem, quitItem] {
+            item.target = self
+        }
+
+        menu.addItem(activateItem)
+        menu.addItem(deactivateItem)
+        menu.addItem(.separator())
+        menu.addItem(clearItem)
+        menu.addItem(undoItem)
+        menu.addItem(redoItem)
+        menu.addItem(.separator())
+        menu.addItem(quitItem)
+
+        menu.delegate = self
+        statusItem.menu = menu
+
         updateIcon(for: controller.mode)
         controller.onModeChanged = { [weak self] mode in self?.updateIcon(for: mode) }
     }
@@ -29,5 +69,22 @@ public final class MenubarController {
         let image = NSImage(systemSymbolName: name, accessibilityDescription: "fiti")
         image?.isTemplate = true
         statusItem.button?.image = image
+    }
+
+    @objc private func activate() { controller.activate() }
+    @objc private func deactivate() { controller.deactivate() }
+    @objc private func clearAll() { controller.clear() }
+    @objc private func undo() { _ = editor.undo() }
+    @objc private func redo() { _ = editor.redo() }
+    @objc private func quit() { NSApplication.shared.terminate(nil) }
+}
+
+extension MenubarController: NSMenuDelegate {
+    public func menuNeedsUpdate(_ menu: NSMenu) {
+        let active = controller.mode != .inactive
+        activateItem.isEnabled = !active
+        deactivateItem.isEnabled = active
+        undoItem.isEnabled = editor.canUndo
+        redoItem.isEnabled = editor.canRedo
     }
 }
