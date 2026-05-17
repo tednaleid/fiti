@@ -11,7 +11,13 @@ public final class AppController {
         case activeDrawing
     }
 
-    public private(set) var mode: Mode = .inactive
+    public var onModeChanged: ((Mode) -> Void)?
+
+    public private(set) var mode: Mode = .inactive {
+        didSet {
+            if oldValue != mode { onModeChanged?(mode) }
+        }
+    }
     public let editor: Editor
     private let window: WindowControl
 
