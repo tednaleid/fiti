@@ -81,4 +81,20 @@ struct ActivationTests {
         c.toggle()
         #expect(c.mode == .inactive)
     }
+
+    @Test("deactivate releases focus back to the previously-frontmost app")
+    func deactivateReleasesFocus() {
+        let (c, w) = make()
+        c.activate()
+        #expect(w.releaseFocusCount == 0)
+        c.deactivate()
+        #expect(w.releaseFocusCount == 1)
+    }
+
+    @Test("deactivate while already inactive does not call releaseFocus")
+    func inactiveDeactivateSkipsReleaseFocus() {
+        let (c, w) = make()
+        c.deactivate()
+        #expect(w.releaseFocusCount == 0)
+    }
 }

@@ -67,6 +67,7 @@ public final class AppController {
         if mode == .activeDrawing { editor.endStroke() }
         mode = .inactive
         window.setClickThrough(true)
+        window.releaseFocus()
     }
 
     public func toggle() {
