@@ -2,6 +2,7 @@
 
 import Testing
 
+@MainActor
 @Suite("Port doubles")
 struct PortDoublesTests {
     @Test("RecordingRenderer captures every frame")

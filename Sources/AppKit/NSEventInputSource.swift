@@ -28,22 +28,7 @@ public final class NSEventInputSource: InputSource {
 
     /// Returns true if the event was consumed (caller should drop it).
     public func handleKeyDown(_ event: NSEvent) -> Bool {
-        let chars = event.charactersIgnoringModifiers
-        let cmd = event.modifierFlags.contains(.command)
-        let opt = event.modifierFlags.contains(.option)
-        if chars == "z" && cmd && opt {
-            onActivate?()
-            return true
-        }
-        if chars == "k" && cmd && !opt {
-            onClear?()
-            return true
-        }
-        if event.keyCode == 53 {
-            onDeactivate?()
-            return true
-        }
-        return false
+        dispatchKey(event, onActivate: onActivate, onClear: onClear, onDeactivate: onDeactivate)
     }
 
     private func installKeyMonitor() {
@@ -76,6 +61,35 @@ extension NSEventInputSource: CanvasInputDelegate {
     public func canvasInput(_ view: CanvasInputView, mouseUpAt point: CGPoint) {
         onPointerUp?()
     }
+}
+
+// MARK: - Pure key dispatch (testable without installing NSEvent monitors)
+
+/// Inspect a `keyDown` event and invoke whichever callback matches; returns
+/// `true` if the event was consumed. Pure logic — no AppKit side effects beyond
+/// reading the event. Lifted out of `NSEventInputSource` so tests can exercise
+/// dispatch without instantiating the class (which would install real
+/// `NSEvent` monitors as a side effect).
+public func dispatchKey(_ event: NSEvent,
+                        onActivate: (() -> Void)?,
+                        onClear: (() -> Void)?,
+                        onDeactivate: (() -> Void)?) -> Bool {
+    let chars = event.charactersIgnoringModifiers
+    let cmd = event.modifierFlags.contains(.command)
+    let opt = event.modifierFlags.contains(.option)
+    if chars == "z" && cmd && opt {
+        onActivate?()
+        return true
+    }
+    if chars == "k" && cmd && !opt {
+        onClear?()
+        return true
+    }
+    if event.keyCode == 53 {
+        onDeactivate?()
+        return true
+    }
+    return false
 }
 
 // MARK: - Companion view

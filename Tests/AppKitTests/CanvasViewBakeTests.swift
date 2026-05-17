@@ -4,6 +4,7 @@
 import AppKit
 import Testing
 
+@MainActor
 @Suite("CanvasView bake invariant")
 struct CanvasViewBakeTests {
     @Test("first render bakes the committed signature")

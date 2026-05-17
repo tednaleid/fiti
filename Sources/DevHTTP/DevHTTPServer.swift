@@ -4,7 +4,12 @@
 import Foundation
 import Network
 
-public final class DevHTTPServer {
+// `@unchecked Sendable` because the mutable state (`router`, `boundPort`) is
+// only touched from the dev-HTTP DispatchQueue or via short-lived reads from
+// the start() busy-wait. A POC concession; a proper fix would actor-isolate
+// the class or replace the busy-wait with a semaphore signaled from the
+// NWListener state handler.
+public final class DevHTTPServer: @unchecked Sendable {
     private let surface: DevHTTPSurface
     private var router: Router
     private let listener: NWListener

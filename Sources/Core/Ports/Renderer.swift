@@ -2,6 +2,7 @@
 
 import Foundation
 
+@MainActor
 public protocol Renderer: AnyObject {
     func render(_ frame: RenderFrame)
 }
