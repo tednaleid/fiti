@@ -10,6 +10,12 @@ public final class CanvasView: NSView, Renderer {
     private var committedImage: CGImage?
     internal private(set) var committedSignature: [StrokeId] = []
 
+    public var drawingsVisible: Bool = true {
+        didSet {
+            if oldValue != drawingsVisible { needsDisplay = true }
+        }
+    }
+
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         self.wantsLayer = true
@@ -35,6 +41,7 @@ public final class CanvasView: NSView, Renderer {
 
     public override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext, let frame = lastFrame else { return }
+        guard drawingsVisible else { return }
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
         if let image = committedImage {
