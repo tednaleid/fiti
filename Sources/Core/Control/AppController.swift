@@ -18,13 +18,37 @@ public final class AppController {
             if oldValue != mode { onModeChanged?(mode) }
         }
     }
+
+    public var onDrawingsVisibilityChanged: ((Bool) -> Void)?
+
+    public var drawingsVisible: Bool = true {
+        didSet {
+            if oldValue != drawingsVisible { onDrawingsVisibilityChanged?(drawingsVisible) }
+        }
+    }
+
     public let editor: Editor
     private let window: WindowControl
 
-    // Drawing parameters used while in POC. Hardcoded here; the toolbar that
-    // mutates these lands in a later phase.
-    public var currentColor: RGBA = RGBA(r: 0.20, g: 0.80, b: 0.94, a: 1.0)
-    public var currentWidth: Double = 6
+    // Drawing parameters. Each has a didSet publisher so HTTP writes and
+    // toolbar-widget writes both notify other adapters that need to react
+    // (toolbar widgets, snapshot consumers, etc.).
+    public var onCurrentColorChanged: ((RGBA) -> Void)?
+    public var onCurrentWidthChanged: ((Double) -> Void)?
+
+    // Default: red #e03131 from the toolbar's quick-pick palette, at 0.8
+    // opacity so the slider is immediately discoverable. UserDefaults
+    // overrides this when the toolbar reads persisted state at launch.
+    public var currentColor: RGBA = RGBA(r: 224.0 / 255.0, g: 49.0 / 255.0, b: 49.0 / 255.0, a: 0.8) {
+        didSet {
+            if oldValue != currentColor { onCurrentColorChanged?(currentColor) }
+        }
+    }
+    public var currentWidth: Double = 6 {
+        didSet {
+            if oldValue != currentWidth { onCurrentWidthChanged?(currentWidth) }
+        }
+    }
 
     public init(editor: Editor, window: WindowControl) {
         self.editor = editor
