@@ -17,3 +17,6 @@ Package.resolved
 
 # macOS
 .DS_Store
+
+# Local environment overrides (code-signing identity, etc. — see .env.example)
+.env

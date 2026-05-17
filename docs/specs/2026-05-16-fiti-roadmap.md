@@ -49,9 +49,9 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 ## Distribution prereqs
 
 ### Real code signing
-- [ ] Currently ad-hoc signed → `/tmp` rejection → `~/Applications/Fiti.app` workaround codified in justfile. None of that is acceptable for a shipped app.
-- [ ] Path: enroll in Apple Developer Program (yearly fee), generate a Developer ID Application cert, configure xcodegen `signing` in `project.yml`, plumb the team identifier through `xcodebuild`. Result: stable cdhash across builds for users (per-developer team ID is the key macOS uses for accessibility grants when not ad-hoc), no more "toggle off and back on after each build."
-- [ ] Once signed: notarization, then either drag-to-Applications DMG or Homebrew cask.
+- [x] **Local dev signing done.** `FITI_CODE_SIGN_IDENTITY` in `.env` configures a stable signing identity (e.g. a Developer ID Application cert). Justfile reads it and passes to every `xcodebuild` invocation; ad-hoc remains the default fallback. With a stable identity the TCC grant persists across rebuilds. See ONBOARDING.md > Code signing.
+- [ ] **Notarization** for distribution. With a real Developer ID Application cert, the binary can be submitted to Apple's notary service so Gatekeeper accepts it without `/tmp` workarounds and without `~/Applications/Fiti.app` install dance. Required before any drag-to-Applications DMG or Homebrew cask.
+- [ ] **Reproducible builds for CI.** Right now `.env` is per-developer. CI builds will use ad-hoc unless we provide a way to inject a signing identity from CI secrets — separate spec when we have CI.
 
 ### Gate the dev HTTP surface behind a build config
 - [ ] `DevHTTPServer` listens on `localhost:9876` whenever launched with `--dev`. That's fine in dev. For a shipped build, the `--dev` flag should be guarded by a build configuration (e.g. only compile `Sources/DevHTTP/` into Debug builds) so a release binary can't be driven by anything on `localhost`.

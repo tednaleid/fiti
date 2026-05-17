@@ -1,9 +1,16 @@
 # ABOUTME: fiti — native Swift telestrator POC
 # ABOUTME: All commands route through this file. Use `just <recipe>`, never the underlying tool directly.
 
-build_dir   := "/tmp/fiti-build"
-install_dir := env_var('HOME') / "Applications"
-dev_port    := "9876"
+set dotenv-load := true
+
+build_dir     := "/tmp/fiti-build"
+install_dir   := env_var('HOME') / "Applications"
+dev_port      := "9876"
+# Code-signing identity (override via FITI_CODE_SIGN_IDENTITY in .env or shell).
+# "-" means ad-hoc; the cdhash changes per build and Accessibility grants get
+# invalidated after each rebuild. Set a stable identity to fix that — see
+# .env.example.
+sign_identity := env_var_or_default("FITI_CODE_SIGN_IDENTITY", "-")
 
 # List available recipes
 default:
@@ -30,7 +37,7 @@ install-hooks:
 # Build the app (Debug); output in /tmp/fiti-build to avoid Dropbox/iCloud codesign issues
 [group('build')]
 build: generate
-    xcodebuild -project fiti.xcodeproj -scheme fiti -configuration Debug build SYMROOT={{build_dir}}
+    xcodebuild -project fiti.xcodeproj -scheme fiti -configuration Debug build SYMROOT={{build_dir}} CODE_SIGN_IDENTITY="{{sign_identity}}"
 
 # Copy the built .app to ~/Applications/Fiti.app (stable path for Accessibility grants)
 [group('build')]
@@ -51,17 +58,17 @@ clean:
 # Run the Swift Testing test bundle
 [group('test')]
 test: generate
-    xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}}
+    xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} CODE_SIGN_IDENTITY="{{sign_identity}}"
 
 # Run one test by name. Swift Testing identifiers include `()`, e.g. 'swiftTestingIsWired()' or 'SmokeTests/myTest()'
 [group('test')]
 test-only NAME: generate
-    xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} -only-testing:'fiti-unit/{{NAME}}'
+    xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} CODE_SIGN_IDENTITY="{{sign_identity}}" -only-testing:'fiti-unit/{{NAME}}'
 
 # Run the AppKit / integration test bundle (slower; includes AppKit)
 [group('test')]
 test-integration: generate
-    xcodebuild -project fiti.xcodeproj -scheme fiti-integration -destination 'platform=macOS' test SYMROOT={{build_dir}}
+    xcodebuild -project fiti.xcodeproj -scheme fiti-integration -destination 'platform=macOS' test SYMROOT={{build_dir}} CODE_SIGN_IDENTITY="{{sign_identity}}"
 
 # ─── check ────────────────────────────────────────────────────────────────
 
@@ -114,8 +121,9 @@ grant-accessibility: install
     @echo "or use the + button and Cmd+Shift+G with this path:"
     @echo "  {{install_dir}}/Fiti.app"
     @echo ""
-    @echo "Then toggle Fiti on. After future rebuilds the cdhash changes; if Cmd+Opt+Z"
-    @echo "stops working, toggle Fiti off and back on in the same Accessibility list."
+    @echo "Then toggle Fiti on. With a stable FITI_CODE_SIGN_IDENTITY in .env the grant"
+    @echo "persists across rebuilds. With ad-hoc signing it will need re-toggling after"
+    @echo "each rebuild — see ONBOARDING.md > Code signing."
 
 # ─── inspect (dev HTTP @ localhost:9876) ──────────────────────────────────
 

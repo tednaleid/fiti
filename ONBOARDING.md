@@ -27,6 +27,18 @@ These `just` recipes run the project end-to-end:
 - Clean: `just clean`
 - Install pre-commit hook (runs `just check`): `just install-hooks`
 
+## Code signing
+
+Builds default to ad-hoc signing (`-`), which works but invalidates macOS Accessibility grants every rebuild — you'd need to toggle Fiti off-and-on in System Settings → Privacy & Security → Accessibility after every `just install`.
+
+To make grants persist across rebuilds, set a stable signing identity:
+
+1. Copy `.env.example` to `.env` (gitignored).
+2. Set `FITI_CODE_SIGN_IDENTITY` to a code-signing identity available on your machine. List them with `security find-identity -v -p codesigning`. A real Developer ID Application cert (free with any paid Apple Developer membership) or a self-signed `Code Signing` cert from Keychain Access both work.
+3. Run `just install` once and grant Fiti Accessibility access. The grant persists across all future rebuilds with that identity.
+
+Without `.env`, the ad-hoc fallback is used — fine for CI and contributors who don't need the global Cmd+Opt+Z hotkey to survive rebuilds.
+
 ## Architecture
 
 Hexagonal. `Sources/Core/` is pure Swift — `FitiDoc`, `Stroke`, `Editor`, `AppController`, and the `Renderer` / `WindowControl` / `InputSource` / `Clock` / `IdGenerator` ports. `Sources/AppKit/` provides the transparent always-on-top `NSWindow`, the `CanvasView` renderer (two CGLayer-style buffers for committed + in-progress strokes), and the `NSEvent`-driven input source. `Sources/DevHTTP/` is the `NWListener` dev API on port 9876. `Sources/App/` is the only place that imports both AppKit and Core to wire ports to adapters.
