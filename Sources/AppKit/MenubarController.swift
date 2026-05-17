@@ -22,7 +22,7 @@ public final class MenubarController: NSObject {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.menu = NSMenu()
 
-        self.activateItem = NSMenuItem(title: "Activate", action: #selector(activate), keyEquivalent: "f")
+        self.activateItem = NSMenuItem(title: "Activate", action: #selector(activate), keyEquivalent: "g")
         self.deactivateItem = NSMenuItem(title: "Deactivate", action: #selector(deactivate), keyEquivalent: "\u{1b}")
         let clearItem = NSMenuItem(title: "Clear", action: #selector(clearAll), keyEquivalent: "k")
         self.undoItem = NSMenuItem(title: "Undo", action: #selector(undo), keyEquivalent: "z")

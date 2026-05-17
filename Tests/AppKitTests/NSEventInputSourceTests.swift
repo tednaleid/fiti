@@ -7,10 +7,10 @@ import Testing
 
 @Suite("dispatchKey")
 struct NSEventInputSourceTests {
-    @Test("Ctrl+F triggers onToggle")
-    func ctrlF() throws {
+    @Test("Ctrl+G triggers onToggle")
+    func ctrlG() throws {
         var toggled = false
-        let event = try #require(makeKeyDown(chars: "f", flags: [.control]))
+        let event = try #require(makeKeyDown(chars: "g", flags: [.control]))
         let consumed = dispatchKey(event,
                                    onToggle: { toggled = true },
                                    onClear: nil,
@@ -81,10 +81,10 @@ struct NSEventInputSourceTests {
         #expect(consumed)
     }
 
-    @Test("bare F passes through (no Ctrl)")
-    func bareF() throws {
+    @Test("bare G passes through (no Ctrl)")
+    func bareG() throws {
         var toggled = false
-        let event = try #require(makeKeyDown(chars: "f", flags: []))
+        let event = try #require(makeKeyDown(chars: "g", flags: []))
         let consumed = dispatchKey(event,
                                    onToggle: { toggled = true },
                                    onClear: nil,

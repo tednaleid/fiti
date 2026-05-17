@@ -1,5 +1,5 @@
 // ABOUTME: AppKit InputSource — wraps an NSView's mouse callbacks and local/global
-// ABOUTME: NSEvent key monitors (Ctrl+F global to toggle, Esc local to deactivate).
+// ABOUTME: NSEvent key monitors (Ctrl+G global to toggle, Esc local to deactivate).
 
 import AppKit
 
@@ -37,18 +37,18 @@ public final class NSEventInputSource: InputSource {
 
     private func installKeyMonitor() {
         // Local monitor handles every shortcut when fiti is focused (Esc, Cmd+K,
-        // Cmd+Z, Cmd+Shift+Z, Ctrl+F).
+        // Cmd+Z, Cmd+Shift+Z, Ctrl+G).
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             return self.handleKeyDown(event) ? nil : event
         }
-        // Global monitor handles Ctrl+F only — Esc / Cmd+K / undo / redo stay
+        // Global monitor handles Ctrl+G only — Esc / Cmd+K / undo / redo stay
         // local because they only make sense while fiti is the focused app.
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return }
             let chars = event.charactersIgnoringModifiers?.lowercased()
             let ctrl = event.modifierFlags.contains(.control)
-            if chars == "f" && ctrl {
+            if chars == "g" && ctrl {
                 self.onToggle?()
             }
         }
@@ -88,7 +88,7 @@ public func dispatchKey(_ event: NSEvent,
     let opt = event.modifierFlags.contains(.option)
     let ctrl = event.modifierFlags.contains(.control)
     let shift = event.modifierFlags.contains(.shift)
-    if chars == "f" && ctrl {
+    if chars == "g" && ctrl {
         onToggle?()
         return true
     }

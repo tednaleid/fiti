@@ -26,7 +26,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         // bundle identity — the OS suppresses repeat dialogs on its own, so we
         // can call this on every launch without becoming annoying.
         if !AccessibilityCheck.isTrusted(prompt: true) {
-            NSLog("fiti: accessibility permission not granted; Ctrl+F global hotkey will not work until granted in System Settings → Privacy & Security → Accessibility.")
+            NSLog("fiti: accessibility permission not granted; Ctrl+G global hotkey will not work until granted in System Settings → Privacy & Security → Accessibility.")
         }
 
         editor = Editor(clock: SystemClock(), ids: UUIDStrokeIds())

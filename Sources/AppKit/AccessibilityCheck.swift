@@ -1,5 +1,5 @@
 // ABOUTME: Checks Accessibility permission, the prerequisite for
-// ABOUTME: global NSEvent monitors (needed by the Ctrl+F hotkey).
+// ABOUTME: global NSEvent monitors (needed by the Ctrl+G hotkey).
 
 import AppKit
 import ApplicationServices
