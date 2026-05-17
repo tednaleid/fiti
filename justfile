@@ -91,9 +91,13 @@ stop:
 [group('run')]
 grant-accessibility:
     @open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-    @echo "If Fiti isn't listed, add it with the + button:"
+    @open -R "{{build_dir}}/Debug/Fiti.app" 2>/dev/null || echo "(Fiti.app not built yet — run 'just build' first)"
+    @echo ""
+    @echo "Drag Fiti.app from the revealed Finder window into the Accessibility list,"
+    @echo "or use the + button and Cmd+Shift+G with this path:"
     @echo "  {{build_dir}}/Debug/Fiti.app"
-    @echo "Then toggle it on. Ad-hoc signed builds may need re-toggling after each rebuild."
+    @echo ""
+    @echo "Then toggle Fiti on. Ad-hoc signed builds may need re-toggling after each rebuild."
 
 # ─── inspect (dev HTTP @ localhost:9876) ──────────────────────────────────
 
