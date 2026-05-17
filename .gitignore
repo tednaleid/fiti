@@ -20,3 +20,8 @@ Package.resolved
 
 # Local environment overrides (code-signing identity, etc. — see .env.example)
 .env
+
+# PerfectFreehand fixture regen (bun) — runtime never touches these
+Packages/PerfectFreehand/Tests/PerfectFreehandTests/Fixtures/node_modules/
+Packages/PerfectFreehand/Tests/PerfectFreehandTests/Fixtures/bun.lock
+Packages/PerfectFreehand/Tests/PerfectFreehandTests/Fixtures/bun.lockb

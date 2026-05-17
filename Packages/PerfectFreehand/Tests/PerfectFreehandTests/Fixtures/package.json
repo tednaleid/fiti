@@ -1,0 +1,9 @@
+{
+  "name": "perfect-freehand-fixtures",
+  "private": true,
+  "type": "module",
+  "packageManager": "bun@1.1.0",
+  "dependencies": {
+    "perfect-freehand": "1.2.3"
+  }
+}

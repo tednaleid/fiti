@@ -195,3 +195,21 @@ inspect-show:
 [group('inspect')]
 inspect-hide:
     @curl -sf -X POST localhost:{{dev_port}}/drawings/hide
+
+# ─── perfect-freehand fixture regen (dev-time only — runtime uses checked-in JSON) ───
+
+# Private guard: bail with a friendly install hint if bun isn't available.
+[private]
+ensure-bun:
+    @command -v bun >/dev/null 2>&1 || { \
+        echo "bun is required to regenerate PerfectFreehand fixtures."; \
+        echo "Install with: brew install bun"; \
+        exit 1; }
+
+[group('pf')]
+install-pf-deps: ensure-bun
+    @cd Packages/PerfectFreehand/Tests/PerfectFreehandTests/Fixtures && bun install
+
+[group('pf')]
+regen-pf-fixtures: install-pf-deps
+    @cd Packages/PerfectFreehand/Tests/PerfectFreehandTests/Fixtures && bun run regenerate.ts
