@@ -6,7 +6,7 @@ fiti is a native Swift macOS port of [telestrator](https://github.com/steveruizo
 
 ## Stack
 
-- Language: Swift 5+ (macOS 14+)
+- Language: Swift 6 language mode (macOS 14+), Xcode 26.5 / Swift 6.3.2 toolchain
 - Frameworks: AppKit (window, input), Core Graphics (rendering), Foundation, Network (dev HTTP via `NWListener`)
 - Build: xcodegen + xcodebuild — `project.yml` is the declarative spec, `*.xcodeproj` is generated, never committed
 - Task runner: [`just`](https://just.systems) (authoritative)

@@ -1,7 +1,7 @@
 # fiti POC — Native Swift Telestrator (Design)
 
 Date: 2026-05-16
-Status: Design — awaiting review before implementation plan
+Status: Implemented. Deltas captured in [`2026-05-16-fiti-hardening-plan.md`](./2026-05-16-fiti-hardening-plan.md) — notably the global `Cmd+Opt+Z` hotkey now works via an accessibility-permission check, contradicting two statements below (the out-of-scope bullet and the `NSEventInputSource` description). Stack also bumped to Swift 6 language mode.
 
 ## What this is
 
