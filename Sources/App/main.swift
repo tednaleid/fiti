@@ -17,6 +17,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     var devServer: DevHTTPServer?
     var subscription: Cancellable?
     var menubar: MenubarController!
+    var toolbar: ToolbarController!
 
     init(args: Args) { self.args = args }
 
@@ -43,6 +44,9 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
         controller = AppController(editor: editor, window: window)
         menubar = MenubarController(controller: controller, editor: editor)
+        toolbar = ToolbarController(controller: controller)
+        composeControllerCallbacks()
+
         input = NSEventInputSource(view: inputView)
         input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0) }
         input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0) }
@@ -75,6 +79,24 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
     private var canvasSize: Size {
         Size(width: Double(canvas.frame.width), height: Double(canvas.frame.height))
+    }
+
+    @MainActor
+    private func composeControllerCallbacks() {
+        // Compose onModeChanged: menubar (icon) + toolbar (panel visibility).
+        let menubarModeHandler = controller.onModeChanged
+        controller.onModeChanged = { [weak self] mode in
+            menubarModeHandler?(mode)
+            self?.toolbar.updateVisibility(for: mode)
+        }
+
+        // Compose onDrawingsVisibilityChanged: toolbar (eye glyph) + canvas
+        // (suppress drawing). The toolbar set this in its init; we wrap.
+        let toolbarVisibilityHandler = controller.onDrawingsVisibilityChanged
+        controller.onDrawingsVisibilityChanged = { [weak self] visible in
+            toolbarVisibilityHandler?(visible)
+            self?.canvas.drawingsVisible = visible
+        }
     }
 }
 
