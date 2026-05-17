@@ -16,6 +16,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     var editor: Editor!
     var devServer: DevHTTPServer?
     var subscription: Cancellable?
+    var menubar: MenubarController!
 
     init(args: Args) { self.args = args }
 
@@ -41,6 +42,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         window.contentView = container
 
         controller = AppController(editor: editor, window: window)
+        menubar = MenubarController(controller: controller, editor: editor)
         input = NSEventInputSource(view: inputView)
         input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0) }
         input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0) }
