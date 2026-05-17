@@ -87,6 +87,14 @@ stop:
         || pkill -f 'Fiti.app/Contents/MacOS/Fiti' 2>/dev/null \
         || echo "fiti not running"
 
+# Open Privacy & Security → Accessibility so you can grant Fiti the global Cmd+Opt+Z hotkey
+[group('run')]
+grant-accessibility:
+    @open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+    @echo "If Fiti isn't listed, add it with the + button:"
+    @echo "  {{build_dir}}/Debug/Fiti.app"
+    @echo "Then toggle it on. Ad-hoc signed builds may need re-toggling after each rebuild."
+
 # ─── inspect (dev HTTP @ localhost:9876) ──────────────────────────────────
 
 [group('inspect')]
