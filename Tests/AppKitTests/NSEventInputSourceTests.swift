@@ -14,7 +14,9 @@ struct NSEventInputSourceTests {
         let consumed = dispatchKey(event,
                                    onActivate: { activated = true },
                                    onClear: nil,
-                                   onDeactivate: nil)
+                                   onDeactivate: nil,
+                                   onUndo: nil,
+                                   onRedo: nil)
         #expect(activated)
         #expect(consumed)
     }
@@ -26,7 +28,9 @@ struct NSEventInputSourceTests {
         let consumed = dispatchKey(event,
                                    onActivate: nil,
                                    onClear: nil,
-                                   onDeactivate: { deactivated = true })
+                                   onDeactivate: { deactivated = true },
+                                   onUndo: nil,
+                                   onRedo: nil)
         #expect(deactivated)
         #expect(consumed)
     }
@@ -38,8 +42,56 @@ struct NSEventInputSourceTests {
         let consumed = dispatchKey(event,
                                    onActivate: nil,
                                    onClear: { cleared = true },
-                                   onDeactivate: nil)
+                                   onDeactivate: nil,
+                                   onUndo: nil,
+                                   onRedo: nil)
         #expect(cleared)
+        #expect(consumed)
+    }
+
+    @Test("Cmd+Z triggers onUndo")
+    func cmdZ() throws {
+        var undone = false
+        let event = try #require(makeKeyDown(chars: "z", flags: [.command]))
+        let consumed = dispatchKey(event,
+                                   onActivate: nil,
+                                   onClear: nil,
+                                   onDeactivate: nil,
+                                   onUndo: { undone = true },
+                                   onRedo: nil)
+        #expect(undone)
+        #expect(consumed)
+    }
+
+    @Test("Cmd+Shift+Z triggers onRedo (not onUndo)")
+    func cmdShiftZ() throws {
+        var undone = false
+        var redone = false
+        let event = try #require(makeKeyDown(chars: "z", flags: [.command, .shift]))
+        let consumed = dispatchKey(event,
+                                   onActivate: nil,
+                                   onClear: nil,
+                                   onDeactivate: nil,
+                                   onUndo: { undone = true },
+                                   onRedo: { redone = true })
+        #expect(redone)
+        #expect(undone == false)
+        #expect(consumed)
+    }
+
+    @Test("Cmd+Opt+Z still triggers onActivate, not onUndo")
+    func cmdOptZNotUndo() throws {
+        var activated = false
+        var undone = false
+        let event = try #require(makeKeyDown(chars: "z", flags: [.command, .option]))
+        let consumed = dispatchKey(event,
+                                   onActivate: { activated = true },
+                                   onClear: nil,
+                                   onDeactivate: nil,
+                                   onUndo: { undone = true },
+                                   onRedo: nil)
+        #expect(activated)
+        #expect(undone == false)
         #expect(consumed)
     }
 
@@ -49,7 +101,9 @@ struct NSEventInputSourceTests {
         let consumed = dispatchKey(event,
                                    onActivate: nil,
                                    onClear: nil,
-                                   onDeactivate: nil)
+                                   onDeactivate: nil,
+                                   onUndo: nil,
+                                   onRedo: nil)
         #expect(consumed == false)
     }
 

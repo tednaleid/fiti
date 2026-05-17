@@ -10,6 +10,8 @@ public final class NSEventInputSource: InputSource {
     public var onActivate: (() -> Void)?
     public var onDeactivate: (() -> Void)?
     public var onClear: (() -> Void)?
+    public var onUndo: (() -> Void)?
+    public var onRedo: (() -> Void)?
 
     private let view: CanvasInputView
     private var keyMonitor: Any?
@@ -28,7 +30,9 @@ public final class NSEventInputSource: InputSource {
 
     /// Returns true if the event was consumed (caller should drop it).
     public func handleKeyDown(_ event: NSEvent) -> Bool {
-        dispatchKey(event, onActivate: onActivate, onClear: onClear, onDeactivate: onDeactivate)
+        dispatchKey(event,
+                    onActivate: onActivate, onClear: onClear, onDeactivate: onDeactivate,
+                    onUndo: onUndo, onRedo: onRedo)
     }
 
     private func installKeyMonitor() {
@@ -65,6 +69,7 @@ extension NSEventInputSource: CanvasInputDelegate {
 
 // MARK: - Pure key dispatch (testable without installing NSEvent monitors)
 
+// swiftlint:disable function_parameter_count
 /// Inspect a `keyDown` event and invoke whichever callback matches; returns
 /// `true` if the event was consumed. Pure logic — no AppKit side effects beyond
 /// reading the event. Lifted out of `NSEventInputSource` so tests can exercise
@@ -73,12 +78,23 @@ extension NSEventInputSource: CanvasInputDelegate {
 public func dispatchKey(_ event: NSEvent,
                         onActivate: (() -> Void)?,
                         onClear: (() -> Void)?,
-                        onDeactivate: (() -> Void)?) -> Bool {
+                        onDeactivate: (() -> Void)?,
+                        onUndo: (() -> Void)?,
+                        onRedo: (() -> Void)?) -> Bool {
     let chars = event.charactersIgnoringModifiers
     let cmd = event.modifierFlags.contains(.command)
     let opt = event.modifierFlags.contains(.option)
+    let shift = event.modifierFlags.contains(.shift)
     if chars == "z" && cmd && opt {
         onActivate?()
+        return true
+    }
+    if chars == "z" && cmd && !opt && shift {
+        onRedo?()
+        return true
+    }
+    if chars == "z" && cmd && !opt && !shift {
+        onUndo?()
         return true
     }
     if chars == "k" && cmd && !opt {
@@ -91,6 +107,7 @@ public func dispatchKey(_ event: NSEvent,
     }
     return false
 }
+// swiftlint:enable function_parameter_count
 
 // MARK: - Companion view
 

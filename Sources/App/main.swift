@@ -54,6 +54,8 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         input.onActivate      = { [weak self] in self?.controller.activate() }
         input.onDeactivate    = { [weak self] in self?.controller.deactivate() }
         input.onClear         = { [weak self] in self?.controller.clear() }
+        input.onUndo          = { [weak self] in _ = self?.editor.undo() }
+        input.onRedo          = { [weak self] in _ = self?.editor.redo() }
 
         subscription = editor.subscribe { [weak self] _ in
             guard let self else { return }
