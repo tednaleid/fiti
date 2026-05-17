@@ -56,6 +56,16 @@ struct FixtureTests {
         "zigzag",
         "varying-pressure",
         "no-pressure-simulate-true",
+        "no-pressure-simulate-false",
+        "constant-pressure",
+        "streamline-0",
+        "streamline-1",
+        "thinning-0",
+        "thinning-1",
+        "taper-aggressive",
+        "empty-input",
+        "two-identical-points",
+        "very-small-size",
     ]
 
     static func loadFixture(_ name: String) throws -> Fixture {

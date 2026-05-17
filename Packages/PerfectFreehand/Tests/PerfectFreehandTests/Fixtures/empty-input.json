@@ -1,0 +1,21 @@
+{
+  "name": "empty-input",
+  "input": [],
+  "options": {
+    "size": 8,
+    "thinning": 0.5,
+    "smoothing": 0.5,
+    "streamline": 0.5,
+    "simulatePressure": true,
+    "start": {
+      "taper": 0,
+      "cap": true
+    },
+    "end": {
+      "taper": 0,
+      "cap": true
+    },
+    "last": true
+  },
+  "expected": []
+}
