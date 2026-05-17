@@ -15,7 +15,7 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 - [ ] Needs a new AppKit adapter wrapping `NSStatusBar`; the port should be a `StatusItem` protocol in `Sources/Core/Ports/` so the menubar surface stays adapter-side.
 
 ### Toolbar
-- [ ] A floating toolbar that appears when fiti is active (Cmd+Opt+Z), hides on Esc. Drag-positionable, remembers last position across launches.
+- [ ] A floating toolbar that appears when fiti is active (Ctrl+F), hides on Esc. Drag-positionable, remembers last position across launches.
 - [ ] Reference: `../scratch/scratch/packages/web/src/ui/Toolbar.tsx`. Tools we want, distilled from there:
   - Tool picker: pen, eraser. (Shape tools come later.)
   - Color quick-picks (the eight from scratch are a fine starting point: black `#000000`, gray `#868e96`, red `#e03131`, orange `#f76707`, amber `#f59f00`, green `#2f9e44`, blue `#1971c2`, purple `#9c36b5`).
@@ -30,6 +30,12 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 - [ ] Toolbar button + global hotkey to toggle stroke visibility without clearing. Strokes stay in the document; the renderer just stops drawing them. State should be a single boolean on `Editor` (or on `AppController`) so the existing snapshot listener can react.
 - [ ] Useful pattern: present to an audience, hide the marks during the next live demo, show them again when you go back to the slide.
 - [ ] Hotkey suggestion: `Cmd+Opt+H`. Same activate-style global monitor.
+
+### User-customizable activation hotkey
+- [ ] Today the activate/deactivate hotkey is hardcoded (Ctrl+F). Users should be able to rebind it.
+- [ ] macOS System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts can rebind a menu item's `keyEquivalent` by app + exact menu title, but it does NOT affect the global `NSEvent` monitor — so the menubar dropdown would show the user's combo, but pressing it while unfocused would still fire the original combo. Half-coverage; not useful on its own.
+- [ ] Real fix is an in-app Preferences/Settings window with a key-recorder control, persisting to UserDefaults (`fiti.shortcut.modifiers` + `fiti.shortcut.keyCode`). On launch, read it and pass to `NSEventInputSource` so both local and global monitors agree. Pattern: Raycast, Magnet, Alfred all do this.
+- [ ] Open question: do we also want a separate Preferences entry point (Cmd+, menu item, or NSStatusItem menu item)? Probably yes if we're already opening a Settings window.
 
 ## High-quality: stroke rendering
 

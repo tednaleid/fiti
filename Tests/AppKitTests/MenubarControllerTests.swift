@@ -64,12 +64,12 @@ struct MenubarControllerTests {
                            "Quit fiti"])
     }
 
-    @Test("Activate item key equivalent is Cmd+Opt+Z")
+    @Test("Activate item key equivalent is Ctrl+F")
     func activateShortcut() throws {
         let (menubar, _, _, _) = make()
         let item = try #require(menubar.menu.items.first { $0.title == "Activate" })
-        #expect(item.keyEquivalent == "z")
-        #expect(item.keyEquivalentModifierMask == [.command, .option])
+        #expect(item.keyEquivalent == "f")
+        #expect(item.keyEquivalentModifierMask == [.control])
     }
 
     @Test("Undo item key equivalent is Cmd+Z; Redo is Cmd+Shift+Z")

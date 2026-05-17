@@ -69,6 +69,10 @@ public final class AppController {
         window.setClickThrough(true)
     }
 
+    public func toggle() {
+        if mode == .inactive { activate() } else { deactivate() }
+    }
+
     public func pointerDown(_ point: StrokePoint) {
         guard mode == .activeIdle else { return }
         _ = editor.startStroke(color: currentColor, width: currentWidth, pointerType: .mouse)

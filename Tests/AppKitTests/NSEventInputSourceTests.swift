@@ -7,17 +7,17 @@ import Testing
 
 @Suite("dispatchKey")
 struct NSEventInputSourceTests {
-    @Test("Cmd+Opt+Z triggers onActivate")
-    func cmdOptZ() throws {
-        var activated = false
-        let event = try #require(makeKeyDown(chars: "z", flags: [.command, .option]))
+    @Test("Ctrl+F triggers onToggle")
+    func ctrlF() throws {
+        var toggled = false
+        let event = try #require(makeKeyDown(chars: "f", flags: [.control]))
         let consumed = dispatchKey(event,
-                                   onActivate: { activated = true },
+                                   onToggle: { toggled = true },
                                    onClear: nil,
                                    onDeactivate: nil,
                                    onUndo: nil,
                                    onRedo: nil)
-        #expect(activated)
+        #expect(toggled)
         #expect(consumed)
     }
 
@@ -26,7 +26,7 @@ struct NSEventInputSourceTests {
         var deactivated = false
         let event = try #require(makeKeyDown(chars: "", flags: [], keyCode: 53))
         let consumed = dispatchKey(event,
-                                   onActivate: nil,
+                                   onToggle: nil,
                                    onClear: nil,
                                    onDeactivate: { deactivated = true },
                                    onUndo: nil,
@@ -40,7 +40,7 @@ struct NSEventInputSourceTests {
         var cleared = false
         let event = try #require(makeKeyDown(chars: "k", flags: [.command]))
         let consumed = dispatchKey(event,
-                                   onActivate: nil,
+                                   onToggle: nil,
                                    onClear: { cleared = true },
                                    onDeactivate: nil,
                                    onUndo: nil,
@@ -54,7 +54,7 @@ struct NSEventInputSourceTests {
         var undone = false
         let event = try #require(makeKeyDown(chars: "z", flags: [.command]))
         let consumed = dispatchKey(event,
-                                   onActivate: nil,
+                                   onToggle: nil,
                                    onClear: nil,
                                    onDeactivate: nil,
                                    onUndo: { undone = true },
@@ -71,7 +71,7 @@ struct NSEventInputSourceTests {
         // not "z" — Shift affects the character even though Cmd/Option don't.
         let event = try #require(makeKeyDown(chars: "Z", flags: [.command, .shift]))
         let consumed = dispatchKey(event,
-                                   onActivate: nil,
+                                   onToggle: nil,
                                    onClear: nil,
                                    onDeactivate: nil,
                                    onUndo: { undone = true },
@@ -81,27 +81,25 @@ struct NSEventInputSourceTests {
         #expect(consumed)
     }
 
-    @Test("Cmd+Opt+Z still triggers onActivate, not onUndo")
-    func cmdOptZNotUndo() throws {
-        var activated = false
-        var undone = false
-        let event = try #require(makeKeyDown(chars: "z", flags: [.command, .option]))
+    @Test("bare F passes through (no Ctrl)")
+    func bareF() throws {
+        var toggled = false
+        let event = try #require(makeKeyDown(chars: "f", flags: []))
         let consumed = dispatchKey(event,
-                                   onActivate: { activated = true },
+                                   onToggle: { toggled = true },
                                    onClear: nil,
                                    onDeactivate: nil,
-                                   onUndo: { undone = true },
+                                   onUndo: nil,
                                    onRedo: nil)
-        #expect(activated)
-        #expect(undone == false)
-        #expect(consumed)
+        #expect(toggled == false)
+        #expect(consumed == false)
     }
 
     @Test("unrelated key passes through")
     func passthrough() throws {
         let event = try #require(makeKeyDown(chars: "a", flags: []))
         let consumed = dispatchKey(event,
-                                   onActivate: nil,
+                                   onToggle: nil,
                                    onClear: nil,
                                    onDeactivate: nil,
                                    onUndo: nil,

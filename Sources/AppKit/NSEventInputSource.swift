@@ -1,5 +1,5 @@
 // ABOUTME: AppKit InputSource — wraps an NSView's mouse callbacks and local/global
-// ABOUTME: NSEvent key monitors (Cmd+Opt+Z global to activate, Esc local to deactivate).
+// ABOUTME: NSEvent key monitors (Ctrl+F global to toggle, Esc local to deactivate).
 
 import AppKit
 
@@ -7,7 +7,7 @@ public final class NSEventInputSource: InputSource {
     public var onPointerDown: ((StrokePoint) -> Void)?
     public var onPointerMoved: ((StrokePoint) -> Void)?
     public var onPointerUp: (() -> Void)?
-    public var onActivate: (() -> Void)?
+    public var onToggle: (() -> Void)?
     public var onDeactivate: (() -> Void)?
     public var onClear: (() -> Void)?
     public var onUndo: (() -> Void)?
@@ -31,25 +31,25 @@ public final class NSEventInputSource: InputSource {
     /// Returns true if the event was consumed (caller should drop it).
     public func handleKeyDown(_ event: NSEvent) -> Bool {
         dispatchKey(event,
-                    onActivate: onActivate, onClear: onClear, onDeactivate: onDeactivate,
+                    onToggle: onToggle, onClear: onClear, onDeactivate: onDeactivate,
                     onUndo: onUndo, onRedo: onRedo)
     }
 
     private func installKeyMonitor() {
-        // Local monitor handles all three shortcuts when fiti is focused.
+        // Local monitor handles every shortcut when fiti is focused (Esc, Cmd+K,
+        // Cmd+Z, Cmd+Shift+Z, Ctrl+F).
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             return self.handleKeyDown(event) ? nil : event
         }
-        // Global monitor handles Cmd+Opt+Z only — Esc and Cmd+K stay local
-        // because they only make sense while fiti is the focused app.
+        // Global monitor handles Ctrl+F only — Esc / Cmd+K / undo / redo stay
+        // local because they only make sense while fiti is the focused app.
         globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return }
-            let chars = event.charactersIgnoringModifiers
-            let cmd = event.modifierFlags.contains(.command)
-            let opt = event.modifierFlags.contains(.option)
-            if chars == "z" && cmd && opt {
-                self.onActivate?()
+            let chars = event.charactersIgnoringModifiers?.lowercased()
+            let ctrl = event.modifierFlags.contains(.control)
+            if chars == "f" && ctrl {
+                self.onToggle?()
             }
         }
     }
@@ -76,7 +76,7 @@ extension NSEventInputSource: CanvasInputDelegate {
 /// dispatch without instantiating the class (which would install real
 /// `NSEvent` monitors as a side effect).
 public func dispatchKey(_ event: NSEvent,
-                        onActivate: (() -> Void)?,
+                        onToggle: (() -> Void)?,
                         onClear: (() -> Void)?,
                         onDeactivate: (() -> Void)?,
                         onUndo: (() -> Void)?,
@@ -86,9 +86,10 @@ public func dispatchKey(_ event: NSEvent,
     let chars = event.charactersIgnoringModifiers?.lowercased()
     let cmd = event.modifierFlags.contains(.command)
     let opt = event.modifierFlags.contains(.option)
+    let ctrl = event.modifierFlags.contains(.control)
     let shift = event.modifierFlags.contains(.shift)
-    if chars == "z" && cmd && opt {
-        onActivate?()
+    if chars == "f" && ctrl {
+        onToggle?()
         return true
     }
     if chars == "z" && cmd && !opt && shift {

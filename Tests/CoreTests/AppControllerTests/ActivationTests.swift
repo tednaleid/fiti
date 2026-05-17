@@ -54,4 +54,31 @@ struct ActivationTests {
         #expect(c.mode == .inactive)
         #expect(w.clickThroughHistory.isEmpty)
     }
+
+    @Test("toggle from inactive activates")
+    func toggleFromInactive() {
+        let (c, w) = make()
+        c.toggle()
+        #expect(c.mode == .activeIdle)
+        #expect(w.clickThroughHistory.last == false)
+    }
+
+    @Test("toggle from activeIdle deactivates")
+    func toggleFromActiveIdle() {
+        let (c, w) = make()
+        c.activate()
+        c.toggle()
+        #expect(c.mode == .inactive)
+        #expect(w.clickThroughHistory.last == true)
+    }
+
+    @Test("toggle from activeDrawing ends the stroke and deactivates")
+    func toggleFromActiveDrawing() {
+        let (c, _) = make()
+        c.activate()
+        c.pointerDown(StrokePoint(x: 0, y: 0))
+        #expect(c.mode == .activeDrawing)
+        c.toggle()
+        #expect(c.mode == .inactive)
+    }
 }

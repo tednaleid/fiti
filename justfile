@@ -111,7 +111,7 @@ reset-accessibility:
     @tccutil reset Accessibility com.fiti.app
     @echo "TCC entry reset. Next 'just run-bg' will trigger a fresh permission dialog."
 
-# Install + open Privacy & Security → Accessibility so you can grant Fiti the global Cmd+Opt+Z hotkey
+# Install + open Privacy & Security → Accessibility so you can grant Fiti the global Ctrl+F hotkey
 [group('run')]
 grant-accessibility: install
     @open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"

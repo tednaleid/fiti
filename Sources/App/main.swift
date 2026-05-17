@@ -26,7 +26,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         // bundle identity — the OS suppresses repeat dialogs on its own, so we
         // can call this on every launch without becoming annoying.
         if !AccessibilityCheck.isTrusted(prompt: true) {
-            NSLog("fiti: accessibility permission not granted; Cmd+Opt+Z global hotkey will not work until granted in System Settings → Privacy & Security → Accessibility.")
+            NSLog("fiti: accessibility permission not granted; Ctrl+F global hotkey will not work until granted in System Settings → Privacy & Security → Accessibility.")
         }
 
         editor = Editor(clock: SystemClock(), ids: UUIDStrokeIds())
@@ -51,7 +51,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0) }
         input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0) }
         input.onPointerUp     = { [weak self] in self?.controller.pointerUp() }
-        input.onActivate      = { [weak self] in self?.controller.activate() }
+        input.onToggle        = { [weak self] in self?.controller.toggle() }
         input.onDeactivate    = { [weak self] in self?.controller.deactivate() }
         input.onClear         = { [weak self] in self?.controller.clear() }
         input.onUndo          = { [weak self] in _ = self?.editor.undo() }
