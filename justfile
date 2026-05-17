@@ -59,6 +59,7 @@ clean:
 [group('test')]
 test: generate
     xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} CODE_SIGN_IDENTITY="{{sign_identity}}"
+    swift test --package-path Packages/PerfectFreehand
 
 # Run one test by name. Swift Testing identifiers include `()`, e.g. 'swiftTestingIsWired()' or 'SmokeTests/myTest()'
 [group('test')]
@@ -69,6 +70,7 @@ test-only NAME: generate
 [group('test')]
 test-integration: generate
     xcodebuild -project fiti.xcodeproj -scheme fiti-integration -destination 'platform=macOS' test SYMROOT={{build_dir}} CODE_SIGN_IDENTITY="{{sign_identity}}"
+    swift test --package-path Packages/PerfectFreehand
 
 # ─── check ────────────────────────────────────────────────────────────────
 

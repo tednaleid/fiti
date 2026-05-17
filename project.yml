@@ -11,6 +11,10 @@ settings:
     SWIFT_VERSION: "6.0"
     MACOSX_DEPLOYMENT_TARGET: "14.0"
 
+packages:
+  PerfectFreehand:
+    path: Packages/PerfectFreehand
+
 targets:
   fiti:
     type: application
@@ -24,6 +28,8 @@ targets:
         INFOPLIST_FILE: Resources/Info.plist
         CODE_SIGN_ENTITLEMENTS: Resources/fiti.entitlements
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
+    dependencies:
+      - package: PerfectFreehand
 
   fiti-unit:
     type: bundle.unit-test
@@ -39,6 +45,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.fiti.app.tests
         GENERATE_INFOPLIST_FILE: "YES"
         TEST_HOST: ""
+    dependencies:
+      - package: PerfectFreehand
 
   fiti-integration:
     type: bundle.unit-test
@@ -59,4 +67,5 @@ targets:
         GENERATE_INFOPLIST_FILE: "YES"
         BUNDLE_LOADER: "$(TEST_HOST)"
         TEST_HOST: ""
-    dependencies: []
+    dependencies:
+      - package: PerfectFreehand
