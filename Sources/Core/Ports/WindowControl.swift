@@ -2,6 +2,7 @@
 
 import Foundation
 
+@MainActor
 public protocol WindowControl: AnyObject {
     func setClickThrough(_ enabled: Bool)
     func focus()
