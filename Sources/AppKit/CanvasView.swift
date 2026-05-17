@@ -39,7 +39,15 @@ public final class CanvasView: NSView, Renderer {
         ctx.setLineJoin(.round)
         if let image = committedImage {
             let rect = CGRect(x: 0, y: 0, width: frame.canvasSize.width, height: frame.canvasSize.height)
+            // CGContext.draw(image:in:) is not isFlipped-aware: it always lays the
+            // image's bottom-left at rect.origin in CG-coords. In a flipped NSView
+            // that puts the image upside down. Locally undo the view's flip so the
+            // blit places the bake's top-origin pixels at the view's top.
+            ctx.saveGState()
+            ctx.translateBy(x: 0, y: rect.height)
+            ctx.scaleBy(x: 1, y: -1)
             ctx.draw(image, in: rect)
+            ctx.restoreGState()
         }
         if let live = frame.inProgress, !live.points.isEmpty {
             drawStroke(live, in: ctx)
