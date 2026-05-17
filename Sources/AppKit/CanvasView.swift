@@ -10,6 +10,17 @@ public final class CanvasView: NSView, Renderer {
     private var committedImage: CGImage?
     internal private(set) var committedSignature: [StrokeId] = []
 
+    private var backingScale: CGFloat = 1
+
+    // swiftlint:disable identifier_name
+    /// Test-only override for `window?.backingScaleFactor`. When set, replaces
+    /// the live window lookup in `render(_:)` so unit tests can simulate a
+    /// retina display without needing a real screen attached.
+    internal var testOnly_overrideBackingScale: CGFloat?
+
+    internal var testOnly_committedImage: CGImage? { committedImage }
+    // swiftlint:enable identifier_name
+
     public var drawingsVisible: Bool = true {
         didSet {
             if oldValue != drawingsVisible { needsDisplay = true }
@@ -31,7 +42,9 @@ public final class CanvasView: NSView, Renderer {
     public func render(_ frame: RenderFrame) {
         let inProgressId = frame.inProgress?.id
         let signature = frame.strokes.map(\.id).filter { $0 != inProgressId }
-        if signature != committedSignature {
+        let resolvedScale = testOnly_overrideBackingScale ?? window?.backingScaleFactor ?? 1
+        if signature != committedSignature || resolvedScale != backingScale {
+            backingScale = resolvedScale
             committedImage = bakeCommitted(frame, exclude: inProgressId)
             committedSignature = signature
         }
@@ -62,18 +75,23 @@ public final class CanvasView: NSView, Renderer {
     }
 
     private func bakeCommitted(_ frame: RenderFrame, exclude: StrokeId?) -> CGImage? {
-        let width = Int(frame.canvasSize.width)
-        let height = Int(frame.canvasSize.height)
-        guard width > 0, height > 0 else { return nil }
+        let pointWidth = Int(frame.canvasSize.width)
+        let pointHeight = Int(frame.canvasSize.height)
+        guard pointWidth > 0, pointHeight > 0 else { return nil }
+        let pixelWidth = Int((CGFloat(pointWidth) * backingScale).rounded())
+        let pixelHeight = Int((CGFloat(pointHeight) * backingScale).rounded())
         let space = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
-        guard let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
+        guard let ctx = CGContext(data: nil, width: pixelWidth, height: pixelHeight, bitsPerComponent: 8,
                                   bytesPerRow: 0, space: space,
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
             return nil
         }
-        // Top-origin in the bake matches the view's isFlipped.
-        ctx.translateBy(x: 0, y: CGFloat(height))
+        // Order matters: flip first (in pixel space — the CGContext is sized in
+        // pixels), then apply the scale CTM so drawStroke can keep using point
+        // coordinates as if the context were point-sized.
+        ctx.translateBy(x: 0, y: CGFloat(pixelHeight))
         ctx.scaleBy(x: 1, y: -1)
+        ctx.scaleBy(x: backingScale, y: backingScale)
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
         for stroke in frame.strokes where stroke.id != exclude {

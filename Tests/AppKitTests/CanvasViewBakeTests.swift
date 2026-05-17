@@ -66,4 +66,54 @@ struct CanvasViewBakeTests {
                                 canvasSize: Size(width: 100, height: 100)))
         #expect(view.committedSignature == ["a"])
     }
+
+    @Test("bake CGImage dimensions match canvas points × backingScale (default 1)")
+    func bakeDimensionsDefaultScale() throws {
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 50, height: 50))
+        let stroke = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 4,
+                            transform: .identity,
+                            points: [StrokePoint(x: 10, y: 25), StrokePoint(x: 40, y: 25)],
+                            pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        view.render(RenderFrame(strokes: [stroke], inProgress: nil,
+                                canvasSize: Size(width: 50, height: 50)))
+        let image = try #require(view.testOnly_committedImage)
+        #expect(image.width == 50)
+        #expect(image.height == 50)
+    }
+
+    @Test("bake CGImage dimensions scale with backingScale = 2")
+    func bakeDimensionsRetina() throws {
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 50, height: 50))
+        view.testOnly_overrideBackingScale = 2
+        let stroke = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 4,
+                            transform: .identity,
+                            points: [StrokePoint(x: 10, y: 25), StrokePoint(x: 40, y: 25)],
+                            pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        view.render(RenderFrame(strokes: [stroke], inProgress: nil,
+                                canvasSize: Size(width: 50, height: 50)))
+        let image = try #require(view.testOnly_committedImage)
+        #expect(image.width == 100)
+        #expect(image.height == 100)
+    }
+
+    @Test("changing backingScale invalidates the bake and re-bakes at new resolution")
+    func bakeRespondsToScaleChange() throws {
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 50, height: 50))
+        let stroke = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 4,
+                            transform: .identity,
+                            points: [StrokePoint(x: 10, y: 25), StrokePoint(x: 40, y: 25)],
+                            pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        let frame = RenderFrame(strokes: [stroke], inProgress: nil,
+                                canvasSize: Size(width: 50, height: 50))
+
+        view.testOnly_overrideBackingScale = 1
+        view.render(frame)
+        let firstImage = try #require(view.testOnly_committedImage)
+        #expect(firstImage.width == 50)
+
+        view.testOnly_overrideBackingScale = 2
+        view.render(frame)
+        let secondImage = try #require(view.testOnly_committedImage)
+        #expect(secondImage.width == 100)
+    }
 }
