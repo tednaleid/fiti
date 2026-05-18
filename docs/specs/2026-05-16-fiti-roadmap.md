@@ -87,6 +87,20 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 ### Settings / preferences storage
 - [ ] Color, width, opacity, toolbar position, hide-state — all need somewhere to live across launches. `UserDefaults` for prefs, separate from the document persistence above.
 
+### Launch at login
+- [ ] Daily-driver use case: fiti should start automatically when the user logs in so the hotkey is always live (no "open Fiti.app" step every reboot). Implementation: `SMAppService.mainApp` (macOS 13+) — opt-in toggle in the menubar or eventual Preferences UI, persisted in `UserDefaults`. Default off; user enables once. The app already has `LSUIElement = true` so it stays out of the Dock when auto-launched.
+
+### App icon
+- [ ] Fiti currently ships with the default macOS app placeholder icon. Even though `LSUIElement = true` keeps it out of the Dock, the icon still appears in Finder, the menubar status item (currently a system pencil glyph), and the cask "About" panel. Need a real icon. Reference: `../limn/scripts/generate-app-icon.py` (renders an `Assets.xcassets/AppIcon.appiconset` from a single source PNG/SVG via `sips` at all 10 required sizes). Mnemonic: "fiti" is short for graffiti — a brush/spraycan/marker silhouette would fit.
+
+### Hold-to-straighten gesture
+- [ ] Notability-style "draw a roughly-straight stroke, hold still to snap, then drag to fine-tune the angle/length." Three phases inside one stroke:
+  1. **Freehand draw** — normal `pointerDown` → `pointerMoved` flow. AppController runs a stationary timer that resets on every `pointerMoved` (with a small dead-zone so micro-jitter doesn't reset).
+  2. **Snap check** — timer fires (~0.8s stationary). Run a straightness rubric on the freehand path before snapping; if it fails, do nothing. Rubric to start with (tunable on implementation): `pathLength / euclideanDistance(start, end) <= ~1.20`. A perfect line is 1.0; a box or zigzag is much higher. This rejects "draw a box, pause" but accepts "draw a slightly wobbly line, pause." If it passes, replace the stroke's points with `[start, current]`, enter rubber-band mode.
+  3. **Rubber-band** — `pointerMoved` updates the stroke's endpoint in place (not appending). Cursor still shows the colored circle. The line follows the cursor until `pointerUp` commits.
+- [ ] Undo semantics: the whole stroke (freehand → snap → rubber-band → commit) is one undoable unit. No intermediate undo step for the snap itself.
+- [ ] Implementation surface: extend `AppController.Mode` (or add a parallel state) to distinguish `.activeDrawing(freehand)` vs `.activeDrawing(rubberBanding)`. `Editor` gains `straightenStroke(id:)` (replaces points with endpoints) and `moveStrokeEndpoint(id:to:)` (updates last point in place — no `InverseOp` per call, since the whole stroke is the undo unit). Stationary timer lives on `AppController`, not `Editor` (no platform deps).
+
 ## Code-level cleanup (not features)
 
 These are honest comments left in the code; not blockers, but worth a pass at some point.
