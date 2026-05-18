@@ -7,19 +7,20 @@ on:
 
 jobs:
   check:
-    runs-on: macos-14
+    runs-on: macos-26
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - name: Install just
-        uses: taiki-e/install-action@v2
+      - uses: taiki-e/install-action@v2
         with:
           tool: just
 
       - name: Install xcodegen and swiftlint
-        run: |
-          brew install xcodegen swiftlint
+        run: brew install xcodegen swiftlint
 
-      - name: Run check
+      - name: Generate Xcode project
+        run: just generate
+
+      - name: Check (test + integration + lint + build)
         run: just check

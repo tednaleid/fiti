@@ -1,0 +1,196 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "[0-9]*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-26
+    env:
+      APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: just
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: just generate
+
+      - name: Build Release
+        run: |
+          xcodebuild -project fiti.xcodeproj \
+            -scheme fiti -configuration Release \
+            build SYMROOT=/tmp/fiti-build \
+            CODE_SIGN_IDENTITY="-" CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=""
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      # -- Conditional Apple signing (only when secrets are configured) --
+
+      - name: Import signing certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          CERT_PATH="$RUNNER_TEMP/certificate.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 16)"
+
+          echo "$APPLE_CERTIFICATE" | base64 --decode > "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+      - name: Store notarization credentials
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        run: |
+          xcrun notarytool store-credentials "fiti-notarize" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_APP_SPECIFIC_PASSWORD"
+
+      - name: Re-sign app with Developer ID
+        if: env.APPLE_CERTIFICATE != ''
+        run: |
+          codesign --force --deep --sign "Developer ID Application" \
+            --options runtime \
+            --entitlements Resources/fiti.entitlements \
+            --timestamp \
+            /tmp/fiti-build/Release/Fiti.app
+
+      - name: Ad-hoc re-sign
+        if: env.APPLE_CERTIFICATE == ''
+        run: |
+          codesign --force --deep --sign - /tmp/fiti-build/Release/Fiti.app
+
+      # -- DMG creation --
+
+      - name: Create DMG
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DMG_PATH="/tmp/fiti-build/fiti-${VERSION}.dmg"
+          STAGING="$(mktemp -d)"
+
+          cp -R /tmp/fiti-build/Release/Fiti.app "$STAGING/Fiti.app"
+          ln -s /Applications "$STAGING/Applications"
+
+          hdiutil create \
+            -volname "Fiti" \
+            -srcfolder "$STAGING" \
+            -ov \
+            -format UDZO \
+            "$DMG_PATH"
+
+          rm -rf "$STAGING"
+          echo "DMG_PATH=$DMG_PATH" >> "$GITHUB_ENV"
+
+      - name: Sign DMG
+        if: env.APPLE_CERTIFICATE != ''
+        run: |
+          codesign --sign "Developer ID Application" --timestamp "$DMG_PATH"
+
+      - name: Notarize DMG
+        if: env.APPLE_CERTIFICATE != ''
+        run: |
+          xcrun notarytool submit "$DMG_PATH" \
+            --keychain-profile "fiti-notarize" \
+            --wait
+
+      - name: Staple notarization ticket
+        if: env.APPLE_CERTIFICATE != ''
+        run: |
+          xcrun stapler staple "$DMG_PATH"
+
+      # -- Upload --
+
+      - name: Extract release notes from tag
+        run: |
+          git fetch origin "refs/tags/$GITHUB_REF_NAME:refs/tags/$GITHUB_REF_NAME" --force
+          git cat-file tag "refs/tags/$GITHUB_REF_NAME" | sed '1,/^$/d' > /tmp/release-notes.txt
+
+      - name: Upload DMG to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: /tmp/release-notes.txt
+          files: ${{ env.DMG_PATH }}
+
+      # -- Update Homebrew cask --
+
+      - name: Compute DMG SHA-256
+        id: sha256
+        run: echo "sha256=$(shasum -a 256 "$DMG_PATH" | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Update Homebrew cask
+        if: env.HOMEBREW_TAP_TOKEN != ''
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256="${{ steps.sha256.outputs.sha256 }}"
+
+          git clone "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/tednaleid/homebrew-fiti.git" /tmp/homebrew-fiti
+          cd /tmp/homebrew-fiti
+
+          cat > Casks/fiti.rb << 'CASK'
+          cask "fiti" do
+            version "VERSION_PLACEHOLDER"
+            sha256 "SHA256_PLACEHOLDER"
+
+            url "https://github.com/tednaleid/fiti/releases/download/#{version}/fiti-#{version}.dmg"
+            name "fiti"
+            desc "Native macOS transparent drawing overlay (telestrator-style)"
+            homepage "https://github.com/tednaleid/fiti"
+
+            depends_on macos: ">= :sonoma"
+
+            app "Fiti.app"
+
+            zap trash: [
+              "~/Library/Preferences/com.fiti.app.plist",
+              "~/Library/Caches/com.fiti.app",
+            ]
+          end
+          CASK
+
+          sed -i '' "s/VERSION_PLACEHOLDER/${VERSION}/" Casks/fiti.rb
+          sed -i '' "s/SHA256_PLACEHOLDER/${SHA256}/" Casks/fiti.rb
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/fiti.rb
+          git diff --cached --quiet && echo "No cask changes" && exit 0
+          git commit -m "Update fiti to ${VERSION}"
+          git push
+
+      # -- Cleanup --
+
+      - name: Clean up keychain
+        if: always() && env.APPLE_CERTIFICATE != ''
+        run: |
+          security delete-keychain "$RUNNER_TEMP/signing.keychain-db" || true

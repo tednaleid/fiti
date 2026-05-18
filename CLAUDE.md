@@ -22,6 +22,8 @@ Every command goes through `just`. Do not invoke the underlying tool directly �
 
 **Build, test, lint.** Use `just check` before declaring work done; it is the CI gate and runs tests + lint + build. Individually: `just test` runs Swift Testing under `xcodebuild`, `just lint` runs SwiftLint plus the `Sources/Core/` import-discipline grep, `just build` produces the `.app` under `/tmp/fiti-build`. `just clean` removes build artifacts. `just generate` regenerates `fiti.xcodeproj` from `project.yml` — needed after editing `project.yml`.
 
+**Releasing.** `just bump <version>` (bare version, no `v` prefix) updates `Resources/Info.plist`, generates release notes from the commit log, creates an annotated tag, and pushes. The push triggers `.github/workflows/release.yml` which builds Release, conditionally signs/notarizes (when `APPLE_CERTIFICATE` secret is configured), creates a DMG, uploads it to the GitHub Release, and updates the Homebrew cask at `tednaleid/homebrew-fiti`. `just retag <version>` re-triggers the workflow for an existing tag, preserving the annotation.
+
 **Running the app.** `just run` launches in the foreground; `just run-bg` launches in the background and `just stop` quits it (graceful via `osascript`, falling back to `pkill`). Both pass `--dev --port 9876` so the introspection API is up.
 
 **Driving and inspecting the running app.** When you want to observe state or inject input, use the `inspect-*` recipes — not raw `curl`. Plain `curl localhost:9876/...` works but skips the `jq` formatting, the screenshot file-path convention (`.llm/inspect/screenshot-YYYYMMDD-HHMMSS.png`), and the consistency that makes scripted sessions reproducible.

@@ -26,6 +26,7 @@ These `just` recipes run the project end-to-end:
 - Inspect running app: `just inspect-state` / `inspect-doc` / `inspect-screenshot` / `inspect-pointer EVENT X Y` / `inspect-undo` / `inspect-redo` / `inspect-clear` / `inspect-activate` / `inspect-deactivate`
 - Clean: `just clean`
 - Install pre-commit hook (runs `just check`): `just install-hooks`
+- Release: `just bump <version>` tags + pushes, triggering `.github/workflows/release.yml` (sign + notarize + DMG + Homebrew cask update). `just retag <version>` re-triggers an existing tag's workflow.
 
 ## Code signing
 
