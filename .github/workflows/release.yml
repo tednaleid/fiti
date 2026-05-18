@@ -135,7 +135,7 @@ jobs:
           git cat-file tag "refs/tags/$GITHUB_REF_NAME" | sed '1,/^$/d' > /tmp/release-notes.txt
 
       - name: Upload DMG to GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body_path: /tmp/release-notes.txt
           files: ${{ env.DMG_PATH }}
