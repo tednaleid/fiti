@@ -13,6 +13,7 @@ public final class ToolbarController: NSObject {
     private let widthSlider: NSSlider
     private let opacitySlider: NSSlider
     private let hideButton: NSButton
+    private let autoFadeButton = NSButton(title: "", target: nil, action: nil)
     private var quickPickButtons: [NSButton] = []
 
     // swiftlint:disable large_tuple comma
@@ -53,6 +54,9 @@ public final class ToolbarController: NSObject {
         }
         controller.onDrawingsVisibilityChanged = { [weak self] visible in
             self?.updateHideButtonGlyph(visible: visible)
+        }
+        controller.onAutoFadeEnabledChanged = { [weak self] enabled in
+            self?.updateAutoFadeGlyph(enabled: enabled)
         }
     }
 
@@ -131,6 +135,13 @@ public final class ToolbarController: NSObject {
         updateHideButtonGlyph(visible: controller.drawingsVisible)
         stack.addArrangedSubview(hideButton)
 
+        autoFadeButton.target = self
+        autoFadeButton.action = #selector(autoFadeClicked(_:))
+        autoFadeButton.bezelStyle = .regularSquare
+        autoFadeButton.imagePosition = .imageOnly
+        updateAutoFadeGlyph(enabled: controller.autoFadeEnabled)
+        stack.addArrangedSubview(autoFadeButton)
+
         let container = NSView()
         container.addSubview(stack)
         NSLayoutConstraint.activate([
@@ -160,11 +171,18 @@ public final class ToolbarController: NSObject {
     }
 
     internal private(set) var currentHideGlyphName: String = "eye"
+    internal private(set) var currentAutoFadeGlyphName: String = "timer"
 
     private func updateHideButtonGlyph(visible: Bool) {
         let name = visible ? "eye" : "eye.slash"
         currentHideGlyphName = name
         hideButton.image = NSImage(systemSymbolName: name, accessibilityDescription: visible ? "Hide" : "Show")
+    }
+
+    private func updateAutoFadeGlyph(enabled: Bool) {
+        let name = enabled ? "timer.fill" : "timer"
+        currentAutoFadeGlyphName = name
+        autoFadeButton.image = NSImage(systemSymbolName: name, accessibilityDescription: "Auto-fade drawings")
     }
 
     // MARK: - Actions
@@ -198,6 +216,11 @@ public final class ToolbarController: NSObject {
         controller.drawingsVisible.toggle()
     }
 
+    @objc private func autoFadeClicked(_ sender: NSButton) {
+        controller.autoFadeEnabled.toggle()
+        defaults.set(controller.autoFadeEnabled, forKey: "fiti.autoFade")
+    }
+
     // MARK: - Persistence
 
     private func loadPersistedState() {
@@ -209,6 +232,9 @@ public final class ToolbarController: NSObject {
         }
         if let w = defaults.object(forKey: "fiti.width") as? Double {
             controller.currentWidth = w
+        }
+        if defaults.bool(forKey: "fiti.autoFade") {
+            controller.autoFadeEnabled = true
         }
     }
 
@@ -241,10 +267,15 @@ public final class ToolbarController: NSObject {
         toggleHide(hideButton)
     }
 
+    internal func testOnly_clickAutoFade() {
+        autoFadeClicked(autoFadeButton)
+    }
+
     // swiftlint:disable identifier_name
     internal var testOnly_colorWellColor: NSColor { colorWell.color }
     internal var testOnly_widthSliderValue: Double { widthSlider.doubleValue }
     internal var testOnly_hideButtonGlyphName: String { currentHideGlyphName }
+    internal var testOnly_autoFadeGlyphName: String { currentAutoFadeGlyphName }
     // swiftlint:enable identifier_name
 }
 

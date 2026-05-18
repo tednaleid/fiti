@@ -123,6 +123,10 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
             toolbarVisibilityHandler?(visible)
             self?.canvas.drawingsVisible = visible
         }
+
+        controller.onFadeOpacityChanged = { [weak self] opacity in
+            self?.canvas.setGlobalOpacity(opacity)
+        }
     }
 }
 

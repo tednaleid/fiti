@@ -151,3 +151,71 @@ struct ToolbarControllerTests {
         #expect(toolbar.testOnly_hideButtonGlyphName == "eye")
     }
 }
+
+@Suite("ToolbarController auto-fade toggle")
+@MainActor
+struct ToolbarControllerAutoFadeTests {
+    // swiftlint:disable:next large_tuple
+    private func make(defaults: UserDefaults) -> (ToolbarController, AppController, VirtualClock) {
+        let clock = VirtualClock()
+        let window = RecordingWindow()
+        let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
+        let controller = AppController(
+            editor: editor,
+            window: window,
+            detector: RecordingStationaryDetector(),
+            clock: clock,
+            ticker: RecordingFadeTicker()
+        )
+        let toolbar = ToolbarController(controller: controller, defaults: defaults)
+        return (toolbar, controller, clock)
+    }
+
+    private func uniqueDefaults() -> UserDefaults {
+        let suite = "fiti.tests.autoFade.\(UUID().uuidString)"
+        let d = UserDefaults(suiteName: suite)!
+        d.removePersistentDomain(forName: suite)
+        return d
+    }
+
+    @Test("button glyph is outline timer when auto-fade is off")
+    func glyphOff() {
+        let (toolbar, _, _) = make(defaults: uniqueDefaults())
+        #expect(toolbar.testOnly_autoFadeGlyphName == "timer")
+    }
+
+    @Test("button glyph swaps to filled timer when auto-fade is on")
+    func glyphOn() {
+        let (toolbar, controller, _) = make(defaults: uniqueDefaults())
+        controller.autoFadeEnabled = true
+        #expect(toolbar.testOnly_autoFadeGlyphName == "timer.fill")
+    }
+
+    @Test("clicking the button toggles controller.autoFadeEnabled")
+    func clickToggles() {
+        let (toolbar, controller, _) = make(defaults: uniqueDefaults())
+        #expect(controller.autoFadeEnabled == false)
+        toolbar.testOnly_clickAutoFade()
+        #expect(controller.autoFadeEnabled == true)
+        toolbar.testOnly_clickAutoFade()
+        #expect(controller.autoFadeEnabled == false)
+    }
+
+    @Test("toggle writes to UserDefaults under fiti.autoFade")
+    func togglePersists() {
+        let defaults = uniqueDefaults()
+        let (toolbar, _, _) = make(defaults: defaults)
+        toolbar.testOnly_clickAutoFade()
+        #expect(defaults.bool(forKey: "fiti.autoFade") == true)
+        toolbar.testOnly_clickAutoFade()
+        #expect(defaults.bool(forKey: "fiti.autoFade") == false)
+    }
+
+    @Test("init reads persisted state from UserDefaults")
+    func initReadsPersisted() {
+        let defaults = uniqueDefaults()
+        defaults.set(true, forKey: "fiti.autoFade")
+        let (_, controller, _) = make(defaults: defaults)
+        #expect(controller.autoFadeEnabled == true)
+    }
+}
