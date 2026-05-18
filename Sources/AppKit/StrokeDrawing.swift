@@ -7,7 +7,7 @@ import PerfectFreehand
 
 public func drawStroke(_ stroke: Stroke, in ctx: CGContext, isInProgress: Bool) {
     guard !stroke.points.isEmpty else { return }
-    let opts = FitiStrokeOptions.make(width: stroke.width, last: !isInProgress)
+    let opts = FitiStrokeOptions.make(width: stroke.width, last: !isInProgress || stroke.snappedToLine)
     let polygon = getStroke(points: stroke.points.perfectFreehandInputs, options: opts)
     guard polygon.count >= 3 else { return }
     ctx.setFillColor(red: CGFloat(stroke.color.r),

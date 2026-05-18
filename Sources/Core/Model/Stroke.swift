@@ -14,6 +14,10 @@ public struct Stroke: Equatable, Codable, Sendable {
     public let pointerType: PointerType
     public let pressureEnabled: Bool
     public let createdAt: Double  // seconds since epoch
+    // Marks strokes whose geometry is final and only the endpoint moves
+    // (e.g. hold-to-straighten rubber-banding). Drives `last: true` at render
+    // time so perfect-freehand does not trim the polygon end.
+    public var snappedToLine: Bool
 
     public init(
         id: StrokeId,
@@ -23,7 +27,8 @@ public struct Stroke: Equatable, Codable, Sendable {
         points: [StrokePoint],
         pointerType: PointerType,
         pressureEnabled: Bool,
-        createdAt: Double
+        createdAt: Double,
+        snappedToLine: Bool = false
     ) {
         self.id = id
         self.color = color
@@ -33,5 +38,6 @@ public struct Stroke: Equatable, Codable, Sendable {
         self.pointerType = pointerType
         self.pressureEnabled = pressureEnabled
         self.createdAt = createdAt
+        self.snappedToLine = snappedToLine
     }
 }

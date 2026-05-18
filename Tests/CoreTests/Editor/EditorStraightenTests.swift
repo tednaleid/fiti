@@ -26,6 +26,18 @@ struct EditorStraightenTests {
         #expect(pts.last == StrokePoint(x: 10, y: 0))
     }
 
+    @Test("straightenCurrentStroke marks the stroke snappedToLine")
+    func straightenSetsSnappedFlag() {
+        let e = make()
+        let red = RGBA(r: 1, g: 0, b: 0, a: 1)
+        let id = e.startStroke(color: red, width: 4, pointerType: .mouse)
+        e.appendPoint(StrokePoint(x: 0, y: 0))
+        e.appendPoint(StrokePoint(x: 10, y: 0))
+        #expect(e.doc.strokes[id]?.snappedToLine == false)
+        e.straightenCurrentStroke()
+        #expect(e.doc.strokes[id]?.snappedToLine == true)
+    }
+
     @Test("straightenCurrentStroke is a no-op when no stroke in progress")
     func straightenNoStroke() {
         let e = make()

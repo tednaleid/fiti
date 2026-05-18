@@ -61,6 +61,7 @@ public final class Editor {
         guard let id = currentStrokeId else { return }
         guard let stroke = doc.strokes[id], stroke.points.count >= 2 else { return }
         doc.strokes[id]?.points = [stroke.points.first!, stroke.points.last!]
+        doc.strokes[id]?.snappedToLine = true
         emit(.local)
     }
 
