@@ -8,30 +8,39 @@ import Testing
 @MainActor
 struct MenubarControllerTests {
     // swiftlint:disable:next large_tuple
-    private func make() -> (MenubarController, AppController, RecordingWindow, Editor) {
+    private func make() -> (MenubarController, AppController, RecordingWindow, Editor, PreferencesCounter) {
+        let counter = PreferencesCounter()
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
         let controller = AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
-        let menubar = MenubarController(controller: controller, editor: editor)
-        return (menubar, controller, window, editor)
+        let menubar = MenubarController(
+            controller: controller,
+            editor: editor,
+            onOpenPreferences: { counter.count += 1 }
+        )
+        return (menubar, controller, window, editor, counter)
+    }
+
+    private final class PreferencesCounter {
+        var count = 0
     }
 
     @Test("initial icon is the outlined symbol")
     func initialIcon() {
-        let (menubar, _, _, _) = make()
+        let (menubar, _, _, _, _) = make()
         #expect(menubar.currentSymbolName == "theatermask.and.paintbrush")
     }
 
     @Test("icon swaps to the filled symbol when controller becomes active")
     func activateSwapsIcon() {
-        let (menubar, controller, _, _) = make()
+        let (menubar, controller, _, _, _) = make()
         controller.activate()
         #expect(menubar.currentSymbolName == "theatermask.and.paintbrush.fill")
     }
 
     @Test("icon returns to outlined when controller becomes inactive")
     func deactivateRestoresIcon() {
-        let (menubar, controller, _, _) = make()
+        let (menubar, controller, _, _, _) = make()
         controller.activate()
         controller.deactivate()
         #expect(menubar.currentSymbolName == "theatermask.and.paintbrush")
@@ -39,7 +48,7 @@ struct MenubarControllerTests {
 
     @Test("activeDrawing stays on the filled icon")
     func drawingKeepsFilled() {
-        let (menubar, controller, _, _) = make()
+        let (menubar, controller, _, _, _) = make()
         controller.activate()
         controller.pointerDown(StrokePoint(x: 0, y: 0))
         #expect(menubar.currentSymbolName == "theatermask.and.paintbrush.fill")
@@ -57,24 +66,40 @@ struct MenubarControllerTests {
 
     @Test("menu has the expected items in order")
     func menuStructure() {
-        let (menubar, _, _, _) = make()
+        let (menubar, _, _, _, _) = make()
         let titles = menubar.menu.items.map(\.title)
         #expect(titles == ["Activate", "Deactivate", "",
+                           "Preferences...", "",
                            "Clear", "Undo", "Redo", "",
                            "Quit fiti"])
     }
 
     @Test("Activate item key equivalent is Opt+F")
     func activateShortcut() throws {
-        let (menubar, _, _, _) = make()
+        let (menubar, _, _, _, _) = make()
         let item = try #require(menubar.menu.items.first { $0.title == "Activate" })
         #expect(item.keyEquivalent == "f")
         #expect(item.keyEquivalentModifierMask == [.option])
     }
 
+    @Test("Preferences item has Cmd+, key equivalent")
+    func preferencesShortcut() throws {
+        let (menubar, _, _, _, _) = make()
+        let item = try #require(menubar.menu.items.first { $0.title == "Preferences..." })
+        #expect(item.keyEquivalent == ",")
+        #expect(item.keyEquivalentModifierMask == [.command])
+    }
+
+    @Test("Preferences menu action fires onOpenPreferences")
+    func preferencesAction() throws {
+        let (menubar, _, _, _, counter) = make()
+        try fire("Preferences...", in: menubar)
+        #expect(counter.count == 1)
+    }
+
     @Test("Undo item key equivalent is Cmd+Z; Redo is Cmd+Shift+Z")
     func undoRedoShortcuts() throws {
-        let (menubar, _, _, _) = make()
+        let (menubar, _, _, _, _) = make()
         let undo = try #require(menubar.menu.items.first { $0.title == "Undo" })
         let redo = try #require(menubar.menu.items.first { $0.title == "Redo" })
         #expect(undo.keyEquivalent == "z" && undo.keyEquivalentModifierMask == [.command])
@@ -83,7 +108,7 @@ struct MenubarControllerTests {
 
     @Test("menuNeedsUpdate enables Activate when inactive, disables Deactivate")
     func enabledStateInactive() {
-        let (menubar, _, _, _) = make()
+        let (menubar, _, _, _, _) = make()
         menubar.menuNeedsUpdate(menubar.menu)
         let activate = menubar.menu.items.first { $0.title == "Activate" }!
         let deactivate = menubar.menu.items.first { $0.title == "Deactivate" }!
@@ -93,7 +118,7 @@ struct MenubarControllerTests {
 
     @Test("menuNeedsUpdate enables Deactivate when active")
     func enabledStateActive() {
-        let (menubar, controller, _, _) = make()
+        let (menubar, controller, _, _, _) = make()
         controller.activate()
         menubar.menuNeedsUpdate(menubar.menu)
         let activate = menubar.menu.items.first { $0.title == "Activate" }!
@@ -104,7 +129,7 @@ struct MenubarControllerTests {
 
     @Test("menuNeedsUpdate ties Undo / Redo to Editor.canUndo / canRedo")
     func enabledStateUndoRedo() {
-        let (menubar, _, _, editor) = make()
+        let (menubar, _, _, editor, _) = make()
         menubar.menuNeedsUpdate(menubar.menu)
         let undo = menubar.menu.items.first { $0.title == "Undo" }!
         let redo = menubar.menu.items.first { $0.title == "Redo" }!
@@ -125,14 +150,14 @@ struct MenubarControllerTests {
 
     @Test("Activate menu action calls controller.activate()")
     func activateAction() throws {
-        let (menubar, controller, _, _) = make()
+        let (menubar, controller, _, _, _) = make()
         try fire("Activate", in: menubar)
         #expect(controller.mode == .activeIdle)
     }
 
     @Test("Clear menu action calls controller.clear()")
     func clearAction() throws {
-        let (menubar, _, _, editor) = make()
+        let (menubar, _, _, editor, _) = make()
         _ = editor.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
         editor.endStroke()
         try fire("Clear", in: menubar)
@@ -141,7 +166,7 @@ struct MenubarControllerTests {
 
     @Test("Undo menu action calls editor.undo()")
     func undoAction() throws {
-        let (menubar, _, _, editor) = make()
+        let (menubar, _, _, editor, _) = make()
         _ = editor.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
         editor.endStroke()
         try fire("Undo", in: menubar)

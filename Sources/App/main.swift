@@ -19,6 +19,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     #endif
     var subscription: Cancellable?
     var menubar: MenubarController!
+    var preferences: PreferencesController!
     var toolbar: ToolbarController!
     var hotkeys: KeyboardShortcutsHotkeys!
     var cursorRenderer: CursorRenderer!
@@ -40,7 +41,12 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         window.contentView = container
 
         controller = AppController(editor: editor, window: window, detector: TaskStationaryDetector())
-        menubar = MenubarController(controller: controller, editor: editor)
+        preferences = PreferencesController(launchAtLogin: SMAppServiceLaunchAtLogin())
+        menubar = MenubarController(
+            controller: controller,
+            editor: editor,
+            onOpenPreferences: { [weak self] in self?.preferences.show() }
+        )
         toolbar = ToolbarController(controller: controller)
         composeControllerCallbacks()
 
