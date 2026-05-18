@@ -28,7 +28,7 @@ struct CanvasViewGlobalOpacityTests {
         #expect(canvas.globalOpacity == 0.5)
     }
 
-    @Test("setGlobalOpacity clamps to provided value without rounding")
+    @Test("setGlobalOpacity stores each new distinct value")
     func setMultipleDistinctValues() {
         let canvas = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
         canvas.setGlobalOpacity(0.25)
