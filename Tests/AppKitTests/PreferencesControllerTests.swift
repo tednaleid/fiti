@@ -113,4 +113,15 @@ struct PreferencesControllerSwitchTests {
         #expect(controller.testOnly_switch.state == .off)
         #expect(lal.status == .disabled)
     }
+
+    @Test("switch reverts to on when on-to-off attempt throws")
+    func switchRevertsToOnWhenOffAttemptThrows() throws {
+        let lal = RecordingLaunchAtLogin()
+        try lal.setEnabled(true)
+        let controller = PreferencesController(launchAtLogin: lal)
+        lal.errorToThrow = RecordingLaunchAtLoginError.synthetic
+        controller.testOnly_toggleSwitch(to: .off)
+        #expect(controller.testOnly_switch.state == .on)
+        #expect(lal.status == .enabled)
+    }
 }
