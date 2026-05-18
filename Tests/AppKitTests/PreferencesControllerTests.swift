@@ -2,6 +2,7 @@
 // ABOUTME: identity, hotkey recorder binding, launch-at-login switch behaviour.
 
 import AppKit
+import KeyboardShortcuts
 import Testing
 
 @Suite("PreferencesWindow")
@@ -29,5 +30,33 @@ struct PreferencesWindowTests {
     func autosaveName() {
         let window = PreferencesWindow()
         #expect(window.frameAutosaveName == "fiti.preferences")
+    }
+}
+
+@Suite("PreferencesController hotkey recorder")
+@MainActor
+struct PreferencesControllerHotkeyTests {
+    @Test("controller has a recorder bound to .toggleActivation")
+    func recorderBinding() {
+        let lal = RecordingLaunchAtLogin()
+        let controller = PreferencesController(launchAtLogin: lal)
+        #expect(controller.testOnly_recorder.shortcutName == .toggleActivation)
+    }
+
+    @Test("show() makes the window visible")
+    func showOrdersFront() {
+        let lal = RecordingLaunchAtLogin()
+        let controller = PreferencesController(launchAtLogin: lal)
+        controller.show()
+        #expect(controller.testOnly_window.isVisible == true)
+    }
+
+    @Test("show() is idempotent — calling twice leaves window visible")
+    func showIdempotent() {
+        let lal = RecordingLaunchAtLogin()
+        let controller = PreferencesController(launchAtLogin: lal)
+        controller.show()
+        controller.show()
+        #expect(controller.testOnly_window.isVisible == true)
     }
 }
