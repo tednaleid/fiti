@@ -1,112 +1,93 @@
 # fiti Roadmap
 
-Date: 2026-05-16
+Date: 2026-05-16 (refreshed 2026-05-18)
 Status: Backlog. Items here are not committed scope. Each item becomes a brainstorm → design spec → implementation plan when it's time to land.
 
 ## What this is
 
 A running list of things that move fiti from "POC + hardened" to "an app I actually want to use." Items are roughly grouped by impact, not committed to an order. Anything that's a separate independent spec gets a checkbox so we can tick it off as work begins.
 
-## High-impact: visibility & interaction
+## Shipped
 
-### Menubar presence
-- [ ] A menubar (status bar) item that shows fiti is running, with a menu to activate/deactivate, clear, quit, and toggle drawing visibility. Status icon should change between "active" (capturing input) and "idle" (click-through) so you can tell at a glance.
-- [ ] Right now the only signal that fiti is running is the existence of strokes on screen or `pgrep`. There is no Dock icon (`LSUIElement = true`) and no menubar entry — the app is genuinely invisible until you draw.
-- [ ] Needs a new AppKit adapter wrapping `NSStatusBar`; the port should be a `StatusItem` protocol in `Sources/Core/Ports/` so the menubar surface stays adapter-side.
+- [x] Menubar status item (active/idle SF Symbol icons; menu for activate/deactivate, preferences, clear, undo, redo, quit) — `Sources/AppKit/MenubarController.swift`.
+- [x] Floating toolbar (color quick-picks, custom color, width slider, opacity slider, hide/show button) — `Sources/AppKit/ToolbarController.swift`.
+- [x] Hide / show drawings (toolbar button + `AppController.drawingsVisible` state). Global hotkey is still missing — see open items below.
+- [x] User-customizable activation hotkey via `sindresorhus/KeyboardShortcuts`. Default Opt+F. Preferences UI with `RecorderCocoa` ships in 0.2.0.
+- [x] Launch-at-login toggle via `SMAppService.mainApp` — Preferences UI in 0.2.0.
+- [x] Perfect-freehand Swift port (tapered, velocity-aware strokes). `simulatePressure: true` synthesises pressure from velocity for mouse input.
+- [x] Retina-correct two-canvas bake (`window.backingScaleFactor` multiplier + CTM compensation).
+- [x] Hold-to-straighten gesture (Notability-style draw-and-hold-to-snap, then rubber-band the endpoint).
+- [x] Real code signing (Developer ID Application cert via `FITI_CODE_SIGN_IDENTITY`), notarization in CI, reproducible CI builds via GitHub secrets.
+- [x] Dev HTTP surface gated behind `#if DEBUG` — Release binaries do not link Network or expose `localhost:9876`.
 
-### Toolbar
-- [ ] A floating toolbar that appears when fiti is active (Opt+F), hides on Esc. Drag-positionable, remembers last position across launches.
-- [ ] Reference: `../scratch/scratch/packages/web/src/ui/Toolbar.tsx`. Tools we want, distilled from there:
-  - Tool picker: pen, eraser. (Shape tools come later.)
-  - Color quick-picks (the eight from scratch are a fine starting point: black `#000000`, gray `#868e96`, red `#e03131`, orange `#f76707`, amber `#f59f00`, green `#2f9e44`, blue `#1971c2`, purple `#9c36b5`).
-  - Custom color via native color picker, for anything not in the quick-pick row.
-  - Width slider (1–20 with the rest of the proportional widths controlled by perfect-freehand's `size`).
-  - Opacity / transparency slider — independent from color so red-50% is still legibly red.
-  - Undo / redo / clear buttons.
-  - Hide/show toggle (also bound to a hotkey — see next item).
-- [ ] Open question: where to put the toolbar surface in the architecture. Probably a new `Sources/AppKit/Toolbar/` with its own `NSPanel`, and a `Toolbar` port in Core that the controller drives. The toolbar is *output* (Core tells it the current tool/color/width) and *input* (clicks become AppController calls). Two-way ports are awkward but not novel.
+## Open: visibility & interaction
 
-### Hide / show drawings
-- [ ] Toolbar button + global hotkey to toggle stroke visibility without clearing. Strokes stay in the document; the renderer just stops drawing them. State should be a single boolean on `Editor` (or on `AppController`) so the existing snapshot listener can react.
-- [ ] Useful pattern: present to an audience, hide the marks during the next live demo, show them again when you go back to the slide.
-- [ ] Hotkey suggestion: `Cmd+Opt+H`. Same activate-style global monitor.
+### Global hide/show hotkey
+- [ ] Toolbar already has a hide/show button; need a system-wide hotkey so you can toggle visibility without going through the toolbar. Suggested: `Cmd+Opt+H`. Wire through `KeyboardShortcuts.Name.toggleDrawingsVisible` so it gets the same rebind-in-Preferences treatment as the activation hotkey.
+- [ ] Open question: should the global hide-toggle work even when fiti is not capturing input? Probably yes — it's separate from activation — but that means the global monitor needs a second binding.
 
-### User-customizable activation hotkey
-- [x] Hotkey runs through `sindresorhus/KeyboardShortcuts` (`KeyboardShortcuts.Name.toggleActivation`), so persistence and rebinding APIs already exist. Default is Opt+F.
-- [ ] Build a Preferences/Settings window with `KeyboardShortcuts.Recorder` (their SwiftUI / AppKit picker) bound to `.toggleActivation`. Persistence to UserDefaults is automatic under the Name's slug.
-- [ ] Open question: separate Preferences entry point (Cmd+, menu item, or NSStatusItem menu item)? Probably yes if we're already opening a Settings window.
+### Disappearing drawings (auto-fade)
+- [ ] Opt-in mode where strokes auto-fade after N seconds (default 10s, configurable in Preferences). Fade is a brief opacity ramp at the end of the window (not the whole duration). New strokes drawn while older strokes are still visible reset the disappear timer for everything on screen, so a continuous annotation session keeps all marks present.
+- [ ] Toggle goes on the toolbar (eye-with-clock glyph) and on a keyboard shortcut (see Keyboard-driven tool use). Turning it on starts the fade for everything currently drawn; turning it off freezes whatever's still visible at full opacity.
+- [ ] Undo/redo integration: fade-out commits a "fade" entry on the undo stack. Cmd+Z resurrects all faded strokes back to full opacity and restarts the timer. A subsequent stroke continues normally (no double-revival).
+- [ ] Implementation: driven by `Editor.tick(now:)` against a `Clock` port so tests use `VirtualClock`. Do not drive from an AppKit display link directly. The fade ramp uses elapsed-time-since-last-input, not absolute timestamps — keeps the math local to the editor.
 
-## High-quality: stroke rendering
+### Keyboard-driven tool use
+- [ ] Make fiti heavily keyboard-driven while active. Most controls today require menubar or toolbar clicks. Initial bindings (subject to research before implementation):
+  - `1`–`8`: select quick-pick color (same eight as the toolbar's row).
+  - `c`: clear all (replaces `Cmd+K` as the primary; `Cmd+K` can stay as a redundant binding).
+  - `h`: hide/show drawings.
+  - `f`: toggle auto-fade (only if Disappearing drawings has shipped).
+  - `e`: eraser tool (only once Eraser as a UI tool has shipped).
+  - `p`: pen tool (the default; useful when switching back from eraser/select).
+  - `s` or `Space`: selection tool (only once selection has shipped; see below).
+  - `[` / `]`: decrement / increment width.
+  - `Cmd+Z` / `Cmd+Shift+Z`: undo / redo (already bound via menubar).
+- [ ] Research: survey what Notability, FreeForm, Goodnotes, OneNote, Telestrator, ZoomIt, Excalidraw use for tool bindings. Pick the most thumb-friendly conventions where they conflict. Document the chosen bindings in ONBOARDING.md.
+- [ ] Implementation: a `KeyCommands` port in `Sources/Core/Ports/` that maps key events to `AppController` calls; an `NSEvent.localMonitor`-based adapter in `Sources/AppKit/`. Bindings live in a single dictionary in Core so tests can exhaustively verify them. Must work mid-stroke (e.g., switching color during a stroke applies to subsequent strokes, not the current one).
 
-### Perfect-freehand Swift port
-- [x] Real reason to do this: uniform-width `CGPath` strokes look amateurish; perfect-freehand gives you the tapered, velocity-aware curves that make annotations feel like ink instead of pixel art.
-- [x] Reference TS source: `node_modules/perfect-freehand` in scratch (MIT-licensed). The web app wraps it in `packages/web/src/canvas/strokePath.ts` with these options worth keeping:
-  ```ts
-  { smoothing: 0.5, thinning: 0.5, streamline: 0.5,
-    simulatePressure: true,
-    start: { taper: 0, cap: true },
-    end:   { taper: 0, cap: true } }
-  ```
-- [x] `simulatePressure: true` is the key for mouse input — synthesises pressure from velocity so even a non-stylus stroke tapers naturally. Stylus / trackpad real pressure overrides the sim. `Stroke.pressureEnabled` already exists in the model for this distinction.
-- [x] Implementation lives in `Sources/Core/` (it's pure math, no AppKit). The TS lib is ~600 lines of geometry; a direct port is feasible. Tests can compare outputs against checked-in TS-generated fixtures for byte-level confidence.
-- [x] The two-canvas split assumes uniform-width `addLine` paths. Perfect-freehand outputs a closed polygon to fill, not a path to stroke. The bake/blit pipeline still works — the `drawStroke` helper changes from "stroke a path" to "fill a polygon." Same call site, different internals.
+### Selection tool
+- [ ] Selection / pointer tool that lets the user pick previously drawn strokes and manipulate them.
+  - Click on a stroke: select it (replaces previous selection).
+  - `Cmd`-click: add/remove from selection.
+  - Drag from empty area: rubber-band a marquee box; release selects all strokes whose bounding box intersects the marquee.
+  - Once selected, the selection bounding box renders with eight resize handles (corners and midpoints) and a separate rotation handle anchored above the top edge.
+  - Drag the body of the selection to translate. Drag a corner/edge handle to scale (Shift to lock aspect ratio). Drag the rotation handle to rotate around the selection center.
+  - `Esc` or click in empty space dismisses the selection.
+- [ ] Activated by the keyboard shortcut item above (`s` or `Space` press-and-hold, TBD). Returns to pen when shortcut released or another tool selected.
+- [ ] Implementation surface:
+  - New `AppController.Mode` case (`.activeSelecting`) or a parallel "current tool" state independent of mode. The latter scales better as more tools land.
+  - `Editor` gains `transformStrokes(ids:translate:scale:rotate:)` as a single undoable op so one drag = one undo entry.
+  - Hit-testing helper in Core: point-in-polygon for perfect-freehand strokes, distance-from-path within `width/2 + tolerance` for any legacy uniform strokes.
+  - Bounding-box / marquee math also in Core (testable without AppKit).
+  - Selection rendering (handles, marquee outline) lives in `Sources/AppKit/CanvasView.swift` since it's a presentation concern.
 
-### Expose perfect-freehand options in the toolbar
-- [ ] v1 ships with `smoothing/thinning/streamline = 0.5` and `simulatePressure: true` hardcoded (matches scratch's defaults). If any of those feel wrong in real use — too laggy, too jittery, taper too aggressive — promote one or more to a toolbar slider rather than tweaking the constants in place. Likely candidates if anything turns out wrong: a single "smoothness" slider that scales `smoothing + streamline` together, then `thinning` if the velocity-taper feels off.
+## Open: stroke rendering & tools
 
-## Distribution prereqs
-
-### Real code signing
-- [x] **Local dev signing done.** `FITI_CODE_SIGN_IDENTITY` in `.env` configures a stable signing identity (e.g. a Developer ID Application cert). Justfile reads it and passes to every `xcodebuild` invocation; ad-hoc remains the default fallback. With a stable identity the TCC grant persists across rebuilds. See ONBOARDING.md > Code signing.
-- [ ] **Notarization** for distribution. With a real Developer ID Application cert, the binary can be submitted to Apple's notary service so Gatekeeper accepts it without `/tmp` workarounds and without `~/Applications/Fiti.app` install dance. Required before any drag-to-Applications DMG or Homebrew cask.
-- [ ] **Reproducible builds for CI.** Right now `.env` is per-developer. CI builds will use ad-hoc unless we provide a way to inject a signing identity from CI secrets — separate spec when we have CI.
-
-### Gate the dev HTTP surface behind a build config
-- [ ] `DevHTTPServer` listens on `localhost:9876` whenever launched with `--dev`. That's fine in dev. For a shipped build, the `--dev` flag should be guarded by a build configuration (e.g. only compile `Sources/DevHTTP/` into Debug builds) so a release binary can't be driven by anything on `localhost`.
-- [ ] Right now anyone with shell access to your Mac while fiti is running can `curl localhost:9876/pointer`. Acceptable for dev. Not acceptable for distribution.
-
-## Lower priority
-
-### Mark fading
-- [ ] Strokes auto-fade after N seconds. Telestrator's signature feature; Ted has explicitly noted this is low-priority for fiti.
-- [ ] Note for whenever it does land: it must be driven by `Editor.tick(now:)` calls (Clock port) so it remains testable with `FixedClock`. Do not drive from a UIKit/AppKit display link directly.
+### Perfect-freehand option sliders
+- [ ] v1 ships with `smoothing/thinning/streamline = 0.5` and `simulatePressure: true` hardcoded. Promote one or more to toolbar sliders only if real use reveals the defaults feel wrong (too laggy, too jittery, taper too aggressive). Likely candidates if anything turns out wrong: a single "smoothness" slider scaling `smoothing + streamline` together, then `thinning` if the velocity-taper feels off.
 
 ### Shape tools
-- [ ] Rect, ellipse, arrow. Each becomes a `Stroke` variant with `kind: .rect | .ellipse | .arrow`. The model needs a discriminator; render path picks geometry by `kind`.
+- [ ] Rect, ellipse, arrow. Each becomes a `Stroke` variant with `kind: .rect | .ellipse | .arrow`. The model needs a discriminator; render path picks geometry by `kind`. Hit-testing for the selection tool also has to grow per-kind logic.
 
 ### Eraser as a UI tool
-- [ ] Pointer in eraser mode finds the topmost stroke under it (hit-test) and calls `eraseStroke(id)`. The data path already works via HTTP; the UI is missing.
-- [ ] Needs a hit-test helper. Hit-testing on perfect-freehand polygons is point-in-polygon; on `CGPath` strokes it's distance-from-path within `width/2 + tolerance`. Either way, lives in Core.
+- [ ] Pointer in eraser mode finds the topmost stroke under it (hit-test) and calls `eraseStroke(id)`. The data path already works via HTTP; the UI surface is what's missing. Shares the hit-test helper with the selection tool — land that first or in the same milestone.
 
-### Multi-display
-- [ ] One window per display, all sharing the same `Editor`. Strokes get a `displayId` or get coordinates resolved to a global space — open design question.
-
-### Persistence
-- [ ] Strokes don't survive app restart. For "real" usage we probably want a session that persists, with a "clear" that's separate from "quit." Could be as simple as JSON-encoding `FitiDoc` to `~/Library/Application Support/fiti/session.json` on every change.
-
-### Settings / preferences storage
-- [ ] Color, width, opacity, toolbar position, hide-state — all need somewhere to live across launches. `UserDefaults` for prefs, separate from the document persistence above.
-
-### Launch at login
-- [ ] Daily-driver use case: fiti should start automatically when the user logs in so the hotkey is always live (no "open Fiti.app" step every reboot). Implementation: `SMAppService.mainApp` (macOS 13+) — opt-in toggle in the menubar or eventual Preferences UI, persisted in `UserDefaults`. Default off; user enables once. The app already has `LSUIElement = true` so it stays out of the Dock when auto-launched.
+## Open: distribution & polish
 
 ### App icon
-- [ ] Fiti currently ships with the default macOS app placeholder icon. Even though `LSUIElement = true` keeps it out of the Dock, the icon still appears in Finder, the menubar status item (currently a system pencil glyph), and the cask "About" panel. Need a real icon. Reference: `../limn/scripts/generate-app-icon.py` (renders an `Assets.xcassets/AppIcon.appiconset` from a single source PNG/SVG via `sips` at all 10 required sizes). Mnemonic: "fiti" is short for graffiti — a brush/spraycan/marker silhouette would fit.
+- [ ] Fiti currently ships with the default macOS app placeholder icon. Even though `LSUIElement = true` keeps it out of the Dock, the icon still appears in Finder, the menubar status item (currently a system theatermask glyph), and the cask "About" panel. Reference: `../limn/scripts/generate-app-icon.py` renders an `Assets.xcassets/AppIcon.appiconset` from a single source PNG/SVG via `sips` at all 10 required sizes. Mnemonic: "fiti" is short for graffiti — a brush, spraycan, or marker silhouette would fit.
 
-### Hold-to-straighten gesture
-- [ ] Notability-style "draw a roughly-straight stroke, hold still to snap, then drag to fine-tune the angle/length." Three phases inside one stroke:
-  1. **Freehand draw** — normal `pointerDown` → `pointerMoved` flow. AppController runs a stationary timer that resets on every `pointerMoved` (with a small dead-zone so micro-jitter doesn't reset).
-  2. **Snap check** — timer fires (~0.8s stationary). Run a straightness rubric on the freehand path before snapping; if it fails, do nothing. Rubric to start with (tunable on implementation): `pathLength / euclideanDistance(start, end) <= ~1.20`. A perfect line is 1.0; a box or zigzag is much higher. This rejects "draw a box, pause" but accepts "draw a slightly wobbly line, pause." If it passes, replace the stroke's points with `[start, current]`, enter rubber-band mode.
-  3. **Rubber-band** — `pointerMoved` updates the stroke's endpoint in place (not appending). Cursor still shows the colored circle. The line follows the cursor until `pointerUp` commits.
-- [ ] Undo semantics: the whole stroke (freehand → snap → rubber-band → commit) is one undoable unit. No intermediate undo step for the snap itself.
-- [ ] Implementation surface: extend `AppController.Mode` (or add a parallel state) to distinguish `.activeDrawing(freehand)` vs `.activeDrawing(rubberBanding)`. `Editor` gains `straightenStroke(id:)` (replaces points with endpoints) and `moveStrokeEndpoint(id:to:)` (updates last point in place — no `InverseOp` per call, since the whole stroke is the undo unit). Stationary timer lives on `AppController`, not `Editor` (no platform deps).
+### Persistence
+- [ ] Strokes don't survive app restart. For real daily-driver usage we probably want a session that persists, with a "clear" that's separate from "quit." Could be as simple as JSON-encoding `FitiDoc` to `~/Library/Application Support/fiti/session.json` on every change. Needs a versioned doc shape so future schema changes are migratable.
+- [ ] Open question: persistence of toolbar position, hide-state, opacity — already in UserDefaults under `fiti.*` keys; doc persistence is a separate concern.
+
+### Multi-display
+- [ ] One window per display, all sharing the same `Editor`. Strokes get a `displayId` or get coordinates resolved to a global space — open design question. Affects how the selection tool's marquee behaves across displays.
 
 ## Code-level cleanup (not features)
 
-These are honest comments left in the code; not blockers, but worth a pass at some point.
-
 - [ ] `Sources/DevHTTP/DevHTTPServer.swift:12` — `@unchecked Sendable` is a Swift-6 concession. Proper fix: make `DevHTTPServer` an actor, or replace the `start()` busy-wait with a semaphore signaled from the NWListener state handler. Resolves the `boundPort` data race in the same step.
-- [ ] `docs/architecture.md` two-canvas split — bake uses points, not backing-store pixels. On retina the committed cache is half-res. Multiply by `window.backingScaleFactor` in the bake and use a CTM to compensate. Becomes visible when perfect-freehand lands and stroke edges have real detail to preserve.
 
 ## Out of scope (deliberately not on this list)
 
@@ -120,7 +101,6 @@ These are punted, not forgotten, but I'm not planning to revisit them soon:
 
 ## Open questions worth answering before picking anything up
 
-1. **Where should the toolbar live in process?** Same window, separate panel, separate window-group? Affects how hide/show interacts with capture state.
-2. **Should the global hide-toggle work even when fiti is not capturing input?** I think yes (it's separate from activation), but that means the global hotkey monitor needs a second binding.
-3. **What's the upgrade story when the document shape changes?** Persistence implies versioned doc; we should pick that scheme before writing the first version to disk.
-4. **Do we want a "presentation mode" preset?** One hotkey that activates, hides all previous marks, and resets the color/width to defaults — useful for "start a fresh annotation pass."
+1. **What's the upgrade story when the document shape changes?** Persistence implies versioned doc; we should pick that scheme before writing the first version to disk.
+2. **Do we want a "presentation mode" preset?** One hotkey that activates, hides all previous marks, and resets the color/width to defaults — useful for "start a fresh annotation pass." Becomes more interesting once keyboard shortcuts and disappearing drawings exist.
+3. **Should the keyboard-shortcut tool bindings be user-rebindable?** `KeyboardShortcuts` supports it, but doing N recorders in Preferences gets crowded. A flat hard-coded map is the simplest start; if real usage exposes a conflict, we revisit.
