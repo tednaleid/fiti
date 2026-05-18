@@ -44,7 +44,7 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
   - `[` / `]`: decrement / increment width.
   - `Cmd+Z` / `Cmd+Shift+Z`: undo / redo (already bound via menubar).
 - [ ] Research: survey what Notability, FreeForm, Goodnotes, OneNote, Telestrator, ZoomIt, Excalidraw use for tool bindings. Pick the most thumb-friendly conventions where they conflict. Document the chosen bindings in ONBOARDING.md.
-- [ ] Implementation: a `KeyCommands` port in `Sources/Core/Ports/` that maps key events to `AppController` calls; an `NSEvent.localMonitor`-based adapter in `Sources/AppKit/`. Bindings live in a single dictionary in Core so tests can exhaustively verify them. Must work mid-stroke (e.g., switching color during a stroke applies to subsequent strokes, not the current one).
+- [ ] Implementation: a `KeyCommands` port in `Sources/Core/Ports/` that maps key events to `AppController` calls; an `NSEvent.localMonitor`-based adapter in `Sources/AppKit/`. Bindings live in a single hard-coded dictionary in Core so tests can exhaustively verify them. **Not user-rebindable**: these only fire while fiti has key focus, so conflicts with other apps' shortcuts can't happen. Compare to `Opt+F` and the planned `Cmd+Opt+H`, which go through `sindresorhus/KeyboardShortcuts` because they fire system-wide and need a Preferences recorder to resolve real cross-app conflicts. Bindings must work mid-stroke (e.g., switching color during a stroke applies to subsequent strokes, not the current one).
 
 ### Selection tool
 - [ ] Selection / pointer tool that lets the user pick previously drawn strokes and manipulate them.
@@ -103,4 +103,3 @@ These are punted, not forgotten, but I'm not planning to revisit them soon:
 
 1. **What's the upgrade story when the document shape changes?** Persistence implies versioned doc; we should pick that scheme before writing the first version to disk.
 2. **Do we want a "presentation mode" preset?** One hotkey that activates, hides all previous marks, and resets the color/width to defaults — useful for "start a fresh annotation pass." Becomes more interesting once keyboard shortcuts and disappearing drawings exist.
-3. **Should the keyboard-shortcut tool bindings be user-rebindable?** `KeyboardShortcuts` supports it, but doing N recorders in Preferences gets crowded. A flat hard-coded map is the simplest start; if real usage exposes a conflict, we revisit.
