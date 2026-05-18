@@ -54,6 +54,8 @@ public final class AppController {
     private let clock: Clock
     private let ticker: FadeTicker
     private let stationaryDeadZone: Double = 2.0
+    private static let fadeWindowSeconds: Double = 10.0
+    private static let fadeRampSeconds: Double = 2.0
     private var lastTimerResetPoint: StrokePoint?
 
     public private(set) var isRubberBanding: Bool = false
@@ -144,6 +146,7 @@ public final class AppController {
     }
 
     public func pointerDown(_ point: StrokePoint) {
+        lastInputAt = clock.now()
         guard mode == .activeIdle else { return }
         _ = editor.startStroke(color: currentColor, width: currentWidth, pointerType: .mouse)
         editor.appendPoint(point)
@@ -153,6 +156,7 @@ public final class AppController {
     }
 
     public func pointerMoved(_ point: StrokePoint) {
+        lastInputAt = clock.now()
         guard mode == .activeDrawing else { return }
         if isRubberBanding {
             editor.moveCurrentStrokeEndpoint(to: point)
@@ -173,6 +177,7 @@ public final class AppController {
     }
 
     public func pointerUp() {
+        lastInputAt = clock.now()
         guard mode == .activeDrawing else { return }
         resetStrokeState()
         editor.endStroke()
@@ -217,6 +222,32 @@ public final class AppController {
     }
 
     private func handleTick(_ now: Double) {
-        // Task 4 fills this in. For now: no-op so the ticker doesn't crash.
+        guard autoFadeEnabled else { return }
+        guard mode != .activeDrawing else { return }
+
+        if editor.doc.strokes.isEmpty {
+            lastInputAt = nil
+            fadeOpacity = 1.0
+            return
+        }
+
+        if lastInputAt == nil {
+            lastInputAt = now
+            fadeOpacity = 1.0
+            return
+        }
+
+        let age = now - lastInputAt!
+        let rampStart = Self.fadeWindowSeconds - Self.fadeRampSeconds  // 8.0
+
+        if age >= Self.fadeWindowSeconds {
+            editor.clear()
+            lastInputAt = nil
+            fadeOpacity = 1.0
+        } else if age >= rampStart {
+            fadeOpacity = 1.0 - (age - rampStart) / Self.fadeRampSeconds
+        } else {
+            fadeOpacity = 1.0
+        }
     }
 }
