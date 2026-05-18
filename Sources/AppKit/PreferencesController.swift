@@ -10,15 +10,24 @@ public final class PreferencesController: NSObject {
     private let window: PreferencesWindow
     private let recorder: KeyboardShortcuts.RecorderCocoa
     private let launchSwitch: NSSwitch
+    private let statusField: NSTextField
+
+    private static let approvalHint = "Approve fiti in System Settings \u{2192} General \u{2192} Login Items."
 
     public init(launchAtLogin: LaunchAtLogin) {
         self.launchAtLogin = launchAtLogin
         self.window = PreferencesWindow()
         self.recorder = KeyboardShortcuts.RecorderCocoa(for: .toggleActivation)
         self.launchSwitch = NSSwitch()
+        self.statusField = NSTextField(labelWithString: "")
         super.init()
+        statusField.font = .systemFont(ofSize: 11)
+        statusField.textColor = .secondaryLabelColor
+        statusField.lineBreakMode = .byWordWrapping
+        statusField.maximumNumberOfLines = 2
+        statusField.isHidden = true
         buildContent()
-        syncSwitchFromStatus()
+        syncFromStatus()
     }
 
     public func show() {
@@ -39,6 +48,8 @@ public final class PreferencesController: NSObject {
         launchSwitch.target = self
         launchSwitch.action = #selector(launchSwitchToggled(_:))
         stack.addArrangedSubview(row(label: "Launch at login:", control: launchSwitch))
+
+        stack.addArrangedSubview(statusField)
 
         let container = NSView()
         container.addSubview(stack)
@@ -61,12 +72,27 @@ public final class PreferencesController: NSObject {
         return row
     }
 
-    private func syncSwitchFromStatus() {
+    private func syncFromStatus() {
         switch launchAtLogin.status {
-        case .enabled, .requiresApproval:
+        case .enabled:
             launchSwitch.state = .on
+            setStatusText(nil)
+        case .requiresApproval:
+            launchSwitch.state = .on
+            setStatusText(Self.approvalHint)
         case .disabled, .unavailable:
             launchSwitch.state = .off
+            setStatusText(nil)
+        }
+    }
+
+    private func setStatusText(_ text: String?) {
+        if let text {
+            statusField.stringValue = text
+            statusField.isHidden = false
+        } else {
+            statusField.stringValue = ""
+            statusField.isHidden = true
         }
     }
 
@@ -74,10 +100,12 @@ public final class PreferencesController: NSObject {
         let wantsEnabled = sender.state == .on
         do {
             try launchAtLogin.setEnabled(wantsEnabled)
-            syncSwitchFromStatus()
+            syncFromStatus()
         } catch {
-            // Spring back to the prior state on failure.
             sender.state = wantsEnabled ? .off : .on
+            let message = (error as? LocalizedError)?.errorDescription
+                ?? "Failed to update launch-at-login: \(error.localizedDescription)"
+            setStatusText(message)
         }
     }
 
@@ -92,5 +120,6 @@ public final class PreferencesController: NSObject {
     internal var testOnly_recorder: KeyboardShortcuts.RecorderCocoa { recorder }
     internal var testOnly_window: PreferencesWindow { window }
     internal var testOnly_switch: NSSwitch { launchSwitch }
+    internal var testOnly_statusField: NSTextField { statusField }
     // swiftlint:enable identifier_name
 }

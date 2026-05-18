@@ -125,3 +125,56 @@ struct PreferencesControllerSwitchTests {
         #expect(lal.status == .enabled)
     }
 }
+
+@Suite("PreferencesController status text")
+@MainActor
+struct PreferencesControllerStatusTextTests {
+    @Test("status field is hidden when launch-at-login is disabled")
+    func hiddenWhenDisabled() {
+        let lal = RecordingLaunchAtLogin()
+        let controller = PreferencesController(launchAtLogin: lal)
+        #expect(controller.testOnly_statusField.isHidden == true)
+    }
+
+    @Test("status field is hidden when launch-at-login is enabled")
+    func hiddenWhenEnabled() throws {
+        let lal = RecordingLaunchAtLogin()
+        try lal.setEnabled(true)
+        let controller = PreferencesController(launchAtLogin: lal)
+        #expect(controller.testOnly_statusField.isHidden == true)
+    }
+
+    @Test("status field shows the approval hint when requiresApproval")
+    func hintWhenRequiresApproval() throws {
+        let lal = RecordingLaunchAtLogin()
+        lal.simulateApprovalRequired = true
+        try lal.setEnabled(true)
+        let controller = PreferencesController(launchAtLogin: lal)
+        #expect(controller.testOnly_statusField.isHidden == false)
+        #expect(controller.testOnly_statusField.stringValue.contains("Login Items"))
+    }
+
+    @Test("status field shows the error message when setEnabled throws")
+    func errorMessage() {
+        struct NamedError: LocalizedError {
+            var errorDescription: String? { "Login Items registration failed" }
+        }
+        let lal = RecordingLaunchAtLogin()
+        lal.errorToThrow = NamedError()
+        let controller = PreferencesController(launchAtLogin: lal)
+        controller.testOnly_toggleSwitch(to: .on)
+        #expect(controller.testOnly_statusField.isHidden == false)
+        #expect(controller.testOnly_statusField.stringValue == "Login Items registration failed")
+    }
+
+    @Test("status field clears when a subsequent toggle succeeds")
+    func clearsOnSuccess() {
+        let lal = RecordingLaunchAtLogin()
+        lal.errorToThrow = RecordingLaunchAtLoginError.synthetic
+        let controller = PreferencesController(launchAtLogin: lal)
+        controller.testOnly_toggleSwitch(to: .on) // fails, field shows error
+        lal.errorToThrow = nil
+        controller.testOnly_toggleSwitch(to: .on) // succeeds
+        #expect(controller.testOnly_statusField.isHidden == true)
+    }
+}
