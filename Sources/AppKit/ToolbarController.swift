@@ -35,7 +35,7 @@ public final class ToolbarController: NSObject {
         self.defaults = defaults
         self.panel = ToolbarPanel()
         self.colorWell = NSColorWell()
-        self.widthSlider = NSSlider(value: controller.currentWidth, minValue: 1, maxValue: 20, target: nil, action: nil)
+        self.widthSlider = NSSlider(value: controller.currentWidth, minValue: 1, maxValue: 40, target: nil, action: nil)
         self.opacitySlider = NSSlider(value: controller.currentColor.a, minValue: 0, maxValue: 1, target: nil, action: nil)
         self.hideButton = NSButton(title: "", target: nil, action: nil)
         super.init()

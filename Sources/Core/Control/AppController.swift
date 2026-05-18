@@ -15,7 +15,10 @@ public final class AppController {
 
     public private(set) var mode: Mode = .inactive {
         didSet {
-            if oldValue != mode { onModeChanged?(mode) }
+            if oldValue != mode {
+                onModeChanged?(mode)
+                refreshCursor()
+            }
         }
     }
 
@@ -41,13 +44,40 @@ public final class AppController {
     // overrides this when the toolbar reads persisted state at launch.
     public var currentColor: RGBA = RGBA(r: 224.0 / 255.0, g: 49.0 / 255.0, b: 49.0 / 255.0, a: 0.8) {
         didSet {
-            if oldValue != currentColor { onCurrentColorChanged?(currentColor) }
+            if oldValue != currentColor {
+                onCurrentColorChanged?(currentColor)
+                refreshCursor()
+            }
         }
     }
     public var currentWidth: Double = 6 {
         didSet {
-            if oldValue != currentWidth { onCurrentWidthChanged?(currentWidth) }
+            if oldValue != currentWidth {
+                onCurrentWidthChanged?(currentWidth)
+                refreshCursor()
+            }
         }
+    }
+
+    // Cursor publisher. Adapters subscribe to keep the rendered NSCursor in sync
+    // with mode + currentColor + currentWidth. `nil` means inactive (system
+    // cursor returns). Initial state is nil; refreshCursor() only fires when
+    // the derived value diverges, so activeIdle ↔ activeDrawing transitions
+    // and writes-while-inactive don't generate spurious events. Subscribers
+    // that join after initialization should read `currentCursor` to sync.
+    public var onCursorChanged: ((CursorSpec?) -> Void)?
+    private var lastEmittedCursor: CursorSpec?
+
+    /// The cursor the AppKit adapter should render right now. Pure derived state.
+    public var currentCursor: CursorSpec? {
+        mode == .inactive ? nil : CursorSpec(color: currentColor, diameter: currentWidth)
+    }
+
+    private func refreshCursor() {
+        let next = currentCursor
+        guard lastEmittedCursor != next else { return }
+        lastEmittedCursor = next
+        onCursorChanged?(next)
     }
 
     public init(editor: Editor, window: WindowControl) {

@@ -104,6 +104,8 @@ public protocol CanvasInputDelegate: AnyObject {
 
 public final class CanvasInputView: NSView {
     public weak var delegate: CanvasInputDelegate?
+    private var fitiCursor: NSCursor?
+    private var cursorTrackingArea: NSTrackingArea?
 
     public override var isFlipped: Bool { true }
     public override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
@@ -119,5 +121,50 @@ public final class CanvasInputView: NSView {
     public override func mouseUp(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
         delegate?.canvasInput(self, mouseUpAt: p)
+    }
+
+    public override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let existing = cursorTrackingArea { removeTrackingArea(existing) }
+        let area = NSTrackingArea(
+            rect: .zero,
+            options: [.activeAlways, .inVisibleRect, .cursorUpdate, .mouseEnteredAndExited],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        cursorTrackingArea = area
+    }
+
+    public override func cursorUpdate(with event: NSEvent) {
+        if let cursor = fitiCursor {
+            cursor.set()
+        } else {
+            super.cursorUpdate(with: event)
+        }
+    }
+
+    public override func mouseEntered(with event: NSEvent) {
+        if let cursor = fitiCursor { cursor.set() }
+    }
+
+    /// Set the cursor that should appear over this view, or nil to revert to
+    /// the system default. If the mouse is currently over the view, apply
+    /// immediately so slider drags update the cursor live without requiring
+    /// the user to wiggle the mouse.
+    public func updateCursor(_ cursor: NSCursor?) {
+        fitiCursor = cursor
+        if let cursor, mouseIsInside {
+            cursor.set()
+        } else if cursor == nil {
+            NSCursor.arrow.set()
+        }
+    }
+
+    private var mouseIsInside: Bool {
+        guard let window, window.isVisible else { return false }
+        let mouseInWindow = window.mouseLocationOutsideOfEventStream
+        let mouseInView = convert(mouseInWindow, from: nil)
+        return bounds.contains(mouseInView)
     }
 }

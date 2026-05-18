@@ -19,6 +19,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     var menubar: MenubarController!
     var toolbar: ToolbarController!
     var hotkeys: KeyboardShortcutsHotkeys!
+    var cursorRenderer: CursorRenderer!
 
     init(args: Args) { self.args = args }
 
@@ -52,6 +53,9 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
         hotkeys = KeyboardShortcutsHotkeys()
         hotkeys.onActivation { [weak self] in self?.controller.toggle() }
+
+        cursorRenderer = CursorRenderer(view: inputView)
+        controller.onCursorChanged = { [weak self] spec in self?.cursorRenderer.setSpec(spec) }
 
         subscription = editor.subscribe { [weak self] _ in
             guard let self else { return }
