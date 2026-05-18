@@ -57,6 +57,20 @@ public final class Editor {
         emit(.local)
     }
 
+    public func straightenCurrentStroke() {
+        guard let id = currentStrokeId else { return }
+        guard let stroke = doc.strokes[id], stroke.points.count >= 2 else { return }
+        doc.strokes[id]?.points = [stroke.points.first!, stroke.points.last!]
+        emit(.local)
+    }
+
+    public func moveCurrentStrokeEndpoint(to point: StrokePoint) {
+        guard let id = currentStrokeId else { return }
+        guard let stroke = doc.strokes[id], !stroke.points.isEmpty else { return }
+        doc.strokes[id]?.points[stroke.points.count - 1] = point
+        emit(.local)
+    }
+
     public func endStroke() {
         guard currentStrokeId != nil else { return }
         currentStrokeId = nil
