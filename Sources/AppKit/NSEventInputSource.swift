@@ -126,9 +126,14 @@ public final class CanvasInputView: NSView {
     public override func updateTrackingAreas() {
         super.updateTrackingAreas()
         if let existing = cursorTrackingArea { removeTrackingArea(existing) }
+        // Explicit bounds rect + .mouseMoved + .cursorUpdate so we re-apply
+        // the cursor on every move WITHIN the area, not just on enter/exit.
+        // Without .mouseMoved, any external set() (toolbar interaction, window
+        // activation reset, NSColorPanel close) can leave us stuck on arrow
+        // until the mouse exits and re-enters.
         let area = NSTrackingArea(
-            rect: .zero,
-            options: [.activeAlways, .inVisibleRect, .cursorUpdate, .mouseEnteredAndExited],
+            rect: bounds,
+            options: [.activeAlways, .cursorUpdate, .mouseMoved, .mouseEnteredAndExited],
             owner: self,
             userInfo: nil
         )
@@ -148,23 +153,21 @@ public final class CanvasInputView: NSView {
         if let cursor = fitiCursor { cursor.set() }
     }
 
-    /// Set the cursor that should appear over this view, or nil to revert to
-    /// the system default. If the mouse is currently over the view, apply
-    /// immediately so slider drags update the cursor live without requiring
-    /// the user to wiggle the mouse.
-    public func updateCursor(_ cursor: NSCursor?) {
-        fitiCursor = cursor
-        if let cursor, mouseIsInside {
-            cursor.set()
-        } else if cursor == nil {
-            NSCursor.arrow.set()
-        }
+    public override func mouseMoved(with event: NSEvent) {
+        // Reapply on every move so external set()s (toolbar, color panel,
+        // activation reset) can't strand us on arrow once the mouse re-enters
+        // or moves within the canvas.
+        if let cursor = fitiCursor { cursor.set() }
     }
 
-    private var mouseIsInside: Bool {
-        guard let window, window.isVisible else { return false }
-        let mouseInWindow = window.mouseLocationOutsideOfEventStream
-        let mouseInView = convert(mouseInWindow, from: nil)
-        return bounds.contains(mouseInView)
+    /// Set the cursor that should appear over this view, or nil to revert to
+    /// the system default.
+    public func updateCursor(_ cursor: NSCursor?) {
+        fitiCursor = cursor
+        if let cursor {
+            cursor.set()
+        } else {
+            NSCursor.arrow.set()
+        }
     }
 }
