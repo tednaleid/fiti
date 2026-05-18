@@ -1328,7 +1328,7 @@ No code changes. Verify the visible-quality jump on actual hardware.
 just stop && just run-bg
 ```
 
-- [ ] **Step 2: Activate (Ctrl+G), draw slow and fast strokes**
+- [ ] **Step 2: Activate (Opt+F), draw slow and fast strokes**
 
 Draw a slow curve. Then a fast flick. Both should produce strokes that taper at the ends (start and end) — the slow stroke shows the taper most clearly; the fast flick shows it more aggressively due to velocity-driven pressure synthesis.
 

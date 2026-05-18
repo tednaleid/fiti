@@ -14,6 +14,9 @@ settings:
 packages:
   PerfectFreehand:
     path: Packages/PerfectFreehand
+  KeyboardShortcuts:
+    url: https://github.com/sindresorhus/KeyboardShortcuts
+    from: "2.4.0"
 
 targets:
   fiti:
@@ -30,6 +33,7 @@ targets:
         LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/../Frameworks"
     dependencies:
       - package: PerfectFreehand
+      - package: KeyboardShortcuts
 
   fiti-unit:
     type: bundle.unit-test
@@ -69,3 +73,4 @@ targets:
         TEST_HOST: ""
     dependencies:
       - package: PerfectFreehand
+      - package: KeyboardShortcuts

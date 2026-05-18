@@ -1,5 +1,6 @@
 // ABOUTME: Synthesizes NSEvents and asserts dispatchKey invokes the right
 // ABOUTME: callbacks. Tests the pure dispatch helper, not the monitor wiring.
+// ABOUTME: System-wide activation lives behind HotkeyRegistry, not here.
 
 import AppKit
 import Foundation
@@ -7,26 +8,11 @@ import Testing
 
 @Suite("dispatchKey")
 struct NSEventInputSourceTests {
-    @Test("Ctrl+G triggers onToggle")
-    func ctrlG() throws {
-        var toggled = false
-        let event = try #require(makeKeyDown(chars: "g", flags: [.control]))
-        let consumed = dispatchKey(event,
-                                   onToggle: { toggled = true },
-                                   onClear: nil,
-                                   onDeactivate: nil,
-                                   onUndo: nil,
-                                   onRedo: nil)
-        #expect(toggled)
-        #expect(consumed)
-    }
-
     @Test("Esc triggers onDeactivate")
     func esc() throws {
         var deactivated = false
         let event = try #require(makeKeyDown(chars: "", flags: [], keyCode: 53))
         let consumed = dispatchKey(event,
-                                   onToggle: nil,
                                    onClear: nil,
                                    onDeactivate: { deactivated = true },
                                    onUndo: nil,
@@ -40,7 +26,6 @@ struct NSEventInputSourceTests {
         var cleared = false
         let event = try #require(makeKeyDown(chars: "k", flags: [.command]))
         let consumed = dispatchKey(event,
-                                   onToggle: nil,
                                    onClear: { cleared = true },
                                    onDeactivate: nil,
                                    onUndo: nil,
@@ -54,7 +39,6 @@ struct NSEventInputSourceTests {
         var undone = false
         let event = try #require(makeKeyDown(chars: "z", flags: [.command]))
         let consumed = dispatchKey(event,
-                                   onToggle: nil,
                                    onClear: nil,
                                    onDeactivate: nil,
                                    onUndo: { undone = true },
@@ -71,7 +55,6 @@ struct NSEventInputSourceTests {
         // not "z" — Shift affects the character even though Cmd/Option don't.
         let event = try #require(makeKeyDown(chars: "Z", flags: [.command, .shift]))
         let consumed = dispatchKey(event,
-                                   onToggle: nil,
                                    onClear: nil,
                                    onDeactivate: nil,
                                    onUndo: { undone = true },
@@ -81,17 +64,14 @@ struct NSEventInputSourceTests {
         #expect(consumed)
     }
 
-    @Test("bare G passes through (no Ctrl)")
-    func bareG() throws {
-        var toggled = false
-        let event = try #require(makeKeyDown(chars: "g", flags: []))
+    @Test("Opt+F is not consumed by dispatchKey — system-wide hotkey owns it")
+    func optFPassesThrough() throws {
+        let event = try #require(makeKeyDown(chars: "f", flags: [.option]))
         let consumed = dispatchKey(event,
-                                   onToggle: { toggled = true },
                                    onClear: nil,
                                    onDeactivate: nil,
                                    onUndo: nil,
                                    onRedo: nil)
-        #expect(toggled == false)
         #expect(consumed == false)
     }
 
@@ -99,7 +79,6 @@ struct NSEventInputSourceTests {
     func passthrough() throws {
         let event = try #require(makeKeyDown(chars: "a", flags: []))
         let consumed = dispatchKey(event,
-                                   onToggle: nil,
                                    onClear: nil,
                                    onDeactivate: nil,
                                    onUndo: nil,

@@ -21,7 +21,7 @@ graph LR
         Input["NSEventInputSource"]
         Snapshot["SnapshotRenderer"]
         Stroke["StrokeDrawing<br/>(shared helper)"]
-        AX["AccessibilityCheck"]
+        Hotkeys["KeyboardShortcutsHotkeys"]
     end
 
     subgraph DevHTTP["Sources/DevHTTP (adapter)"]
@@ -39,7 +39,9 @@ graph LR
     end
 
     User -->|NSEvent| Input
-    Input -->|onPointer*/onActivate| Controller
+    User -->|Opt+F system-wide| Hotkeys
+    Input -->|onPointer*/onClear/onDeactivate/onUndo/onRedo| Controller
+    Hotkeys -->|onActivation| Controller
     Controller --> Editor
     Editor --> Doc
     Editor -.subscribe.-> Frame
@@ -59,7 +61,7 @@ graph LR
     Main --- Input
     Main --- Server
     Main --- Surface
-    Main --- AX
+    Main --- Hotkeys
 ```
 
 ## Ports & adapters
@@ -70,14 +72,15 @@ A **port** is a protocol in `Sources/Core/Ports/` that Core depends on. An **ada
 | --- | --- | --- |
 | `Renderer` | `CanvasView` (NSView) | Drawing pixels |
 | `WindowControl` | `TransparentWindow` (NSWindow) | Click-through, focus |
-| `InputSource` | `NSEventInputSource` | Mouse + key events |
+| `InputSource` | `NSEventInputSource` | In-app mouse + key events (Esc, Cmd+K, Cmd+Z, Cmd+Shift+Z) |
+| `HotkeyRegistry` | `KeyboardShortcutsHotkeys` | System-wide activation hotkey (Opt+F default, user-rebindable) |
 | `Clock` | `SystemClock` | `now()` for stroke timestamps |
 | `IdGenerator` | `UUIDStrokeIds` | Fresh `StrokeId` per stroke |
 | `DevHTTPSurface` (DevHTTP) | `FitiDevHTTPSurface` (App) | What the dev HTTP server can read/do |
 
 The composition root is `Sources/App/main.swift`. It is the only file that imports both Core and an adapter module, and it wires the concrete adapters into Core's ports. Swap any adapter (e.g. a Metal-backed `Renderer`, or an in-memory `Clock` for tests) without touching Core.
 
-Test doubles live under `Tests/CoreTests/Doubles/`: `RecordingRenderer`, `RecordingWindow`, `FixedClock`, `StubIds`. Core tests run without AppKit; the build graph enforces this — the `fiti-unit` scheme does not compile `Sources/AppKit` at all, and `just lint` runs `scripts/check-core-imports.sh` to grep-fail any forbidden import in `Sources/Core/`.
+Test doubles live under `Tests/CoreTests/Doubles/`: `RecordingRenderer`, `RecordingWindow`, `RecordingHotkeyRegistry`, `FixedClock`, `StubIds`. Core tests run without AppKit; the build graph enforces this — the `fiti-unit` scheme does not compile `Sources/AppKit` at all, and `just lint` runs `scripts/check-core-imports.sh` to grep-fail any forbidden import in `Sources/Core/`.
 
 ## Editor and the document model
 

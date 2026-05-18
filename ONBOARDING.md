@@ -2,7 +2,7 @@
 
 fiti is a native Swift macOS port of [telestrator](https://github.com/steveruizok/telestrator) — a transparent always-on-top drawing overlay. The current scope is a proof-of-concept that validates a hexagonal Core ↔ adapters split, a borderless transparent window with cursor click-through, and an HTTP dev surface so Claude Code can observe and drive the running app.
 
-**Status: POC + hardening complete.** All seven acceptance criteria from the POC design pass. The hardening plan (`docs/specs/2026-05-16-fiti-hardening-plan.md`) is also done: a `fiti-integration` test target covers the AppKit boundary, `Editor` and `AppController` are `@MainActor`-isolated, `CanvasView` uses a two-canvas split (committed strokes baked, in-progress drawn live), and `Ctrl+G` works globally when Accessibility permission is granted. Next: shapes, fading, pen pressure, toolbar — see [Out of scope] in the design doc.
+**Status: POC + hardening complete.** All seven acceptance criteria from the POC design pass. The hardening plan (`docs/specs/2026-05-16-fiti-hardening-plan.md`) is also done: a `fiti-integration` test target covers the AppKit boundary, `Editor` and `AppController` are `@MainActor`-isolated, `CanvasView` uses a two-canvas split (committed strokes baked, in-progress drawn live), and the global activation hotkey runs through `HotkeyRegistry` / KeyboardShortcuts so it works system-wide without Accessibility permission. Next: shapes, fading, pen pressure, toolbar — see [Out of scope] in the design doc.
 
 ## Stack
 
@@ -29,15 +29,9 @@ These `just` recipes run the project end-to-end:
 
 ## Code signing
 
-Builds default to ad-hoc signing (`-`), which works but invalidates macOS Accessibility grants every rebuild — you'd need to toggle Fiti off-and-on in System Settings → Privacy & Security → Accessibility after every `just install`.
+Builds default to ad-hoc signing (`-`), which is fine for local development. The global activation hotkey is registered via Carbon's `RegisterEventHotKey` (wrapped by `sindresorhus/KeyboardShortcuts`) and requires no special permission, so ad-hoc signing imposes no recurring grant cost.
 
-To make grants persist across rebuilds, set a stable signing identity:
-
-1. Copy `.env.example` to `.env` (gitignored).
-2. Set `FITI_CODE_SIGN_IDENTITY` to a code-signing identity available on your machine. List them with `security find-identity -v -p codesigning`. A real Developer ID Application cert (free with any paid Apple Developer membership) or a self-signed `Code Signing` cert from Keychain Access both work.
-3. Run `just install` once and grant Fiti Accessibility access. The grant persists across all future rebuilds with that identity.
-
-Without `.env`, the ad-hoc fallback is used — fine for CI and contributors who don't need the global Ctrl+G hotkey to survive rebuilds.
+For distribution builds, set a stable identity by copying `.env.example` to `.env` (gitignored) and setting `FITI_CODE_SIGN_IDENTITY` — `security find-identity -v -p codesigning` lists candidates.
 
 ## Architecture
 
@@ -47,7 +41,7 @@ The document model is identity-bearing: each stroke has a stable `StrokeId`, poi
 
 ## Keyboard shortcuts
 
-- `Ctrl+G` — toggle activate/deactivate (works globally if Accessibility permission is granted; otherwise only when fiti has focus)
+- `Opt+F` — toggle activate/deactivate (works globally; no Accessibility prompt; user-rebindable via the `KeyboardShortcuts.Name.toggleActivation` default in `Sources/AppKit/KeyboardShortcutsHotkeys.swift`)
 - `Esc` — deactivate (release cursor; click-through on; strokes remain visible)
 - `Cmd+K` — clear all strokes (only fires while the overlay has key focus)
 - `Cmd+Z` / `Cmd+Shift+Z` — undo / redo (only while the overlay has key focus)

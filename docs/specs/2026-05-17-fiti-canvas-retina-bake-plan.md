@@ -250,7 +250,7 @@ just stop && just run-bg
 
 - [ ] **Step 2: Activate fiti**
 
-`Ctrl+G` (or menubar → Activate).
+`Opt+F` (or menubar → Activate).
 
 - [ ] **Step 3: Draw three slow, curving strokes**
 

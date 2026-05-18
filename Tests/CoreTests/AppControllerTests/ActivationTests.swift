@@ -97,4 +97,33 @@ struct ActivationTests {
         c.deactivate()
         #expect(w.releaseFocusCount == 0)
     }
+
+    @Test("RecordingHotkeyRegistry fires the registered handler")
+    func registryFiresHandler() {
+        let registry = RecordingHotkeyRegistry()
+        var fired = 0
+        registry.onActivation { fired += 1 }
+        registry.fireActivation()
+        registry.fireActivation()
+        #expect(fired == 2)
+    }
+
+    @Test("RecordingHotkeyRegistry without a handler is a no-op when fired")
+    func registryWithoutHandlerNoOps() {
+        let registry = RecordingHotkeyRegistry()
+        registry.fireActivation()
+        // Reaching here without crashing is the assertion.
+    }
+
+    @Test("activation hotkey toggles the controller between inactive and activeIdle")
+    func activationHotkeyTogglesController() {
+        let (c, _) = make()
+        let registry = RecordingHotkeyRegistry()
+        registry.onActivation { c.toggle() }
+        #expect(c.mode == .inactive)
+        registry.fireActivation()
+        #expect(c.mode == .activeIdle)
+        registry.fireActivation()
+        #expect(c.mode == .inactive)
+    }
 }

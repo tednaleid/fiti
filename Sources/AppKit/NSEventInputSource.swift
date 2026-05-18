@@ -1,5 +1,6 @@
-// ABOUTME: AppKit InputSource — wraps an NSView's mouse callbacks and local/global
-// ABOUTME: NSEvent key monitors (Ctrl+G global to toggle, Esc local to deactivate).
+// ABOUTME: AppKit InputSource — wraps an NSView's mouse callbacks and a local
+// ABOUTME: NSEvent monitor for Esc / Cmd+K / Cmd+Z / Cmd+Shift+Z. The system-wide
+// ABOUTME: activation hotkey is handled by KeyboardShortcutsHotkeys, not here.
 
 import AppKit
 
@@ -7,7 +8,6 @@ public final class NSEventInputSource: InputSource {
     public var onPointerDown: ((StrokePoint) -> Void)?
     public var onPointerMoved: ((StrokePoint) -> Void)?
     public var onPointerUp: (() -> Void)?
-    public var onToggle: (() -> Void)?
     public var onDeactivate: (() -> Void)?
     public var onClear: (() -> Void)?
     public var onUndo: (() -> Void)?
@@ -15,7 +15,6 @@ public final class NSEventInputSource: InputSource {
 
     private let view: CanvasInputView
     private var keyMonitor: Any?
-    private var globalMonitor: Any?
 
     public init(view: CanvasInputView) {
         self.view = view
@@ -25,32 +24,23 @@ public final class NSEventInputSource: InputSource {
 
     deinit {
         if let m = keyMonitor { NSEvent.removeMonitor(m) }
-        if let m = globalMonitor { NSEvent.removeMonitor(m) }
     }
 
     /// Returns true if the event was consumed (caller should drop it).
     public func handleKeyDown(_ event: NSEvent) -> Bool {
         dispatchKey(event,
-                    onToggle: onToggle, onClear: onClear, onDeactivate: onDeactivate,
+                    onClear: onClear, onDeactivate: onDeactivate,
                     onUndo: onUndo, onRedo: onRedo)
     }
 
     private func installKeyMonitor() {
-        // Local monitor handles every shortcut when fiti is focused (Esc, Cmd+K,
-        // Cmd+Z, Cmd+Shift+Z, Ctrl+G).
+        // Local monitor only — fires when fiti is the focused app. The global
+        // activation hotkey is owned by HotkeyRegistry (KeyboardShortcuts), which
+        // intercepts the keystroke system-wide and does not need Accessibility
+        // permission.
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             return self.handleKeyDown(event) ? nil : event
-        }
-        // Global monitor handles Ctrl+G only — Esc / Cmd+K / undo / redo stay
-        // local because they only make sense while fiti is the focused app.
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            guard let self else { return }
-            let chars = event.charactersIgnoringModifiers?.lowercased()
-            let ctrl = event.modifierFlags.contains(.control)
-            if chars == "g" && ctrl {
-                self.onToggle?()
-            }
         }
     }
 }
@@ -69,14 +59,12 @@ extension NSEventInputSource: CanvasInputDelegate {
 
 // MARK: - Pure key dispatch (testable without installing NSEvent monitors)
 
-// swiftlint:disable function_parameter_count
 /// Inspect a `keyDown` event and invoke whichever callback matches; returns
 /// `true` if the event was consumed. Pure logic — no AppKit side effects beyond
 /// reading the event. Lifted out of `NSEventInputSource` so tests can exercise
-/// dispatch without instantiating the class (which would install real
-/// `NSEvent` monitors as a side effect).
+/// dispatch without instantiating the class (which would install a real
+/// `NSEvent` monitor as a side effect).
 public func dispatchKey(_ event: NSEvent,
-                        onToggle: (() -> Void)?,
                         onClear: (() -> Void)?,
                         onDeactivate: (() -> Void)?,
                         onUndo: (() -> Void)?,
@@ -86,12 +74,7 @@ public func dispatchKey(_ event: NSEvent,
     let chars = event.charactersIgnoringModifiers?.lowercased()
     let cmd = event.modifierFlags.contains(.command)
     let opt = event.modifierFlags.contains(.option)
-    let ctrl = event.modifierFlags.contains(.control)
     let shift = event.modifierFlags.contains(.shift)
-    if chars == "g" && ctrl {
-        onToggle?()
-        return true
-    }
     if chars == "z" && cmd && !opt && shift {
         onRedo?()
         return true
@@ -110,7 +93,6 @@ public func dispatchKey(_ event: NSEvent,
     }
     return false
 }
-// swiftlint:enable function_parameter_count
 
 // MARK: - Companion view
 

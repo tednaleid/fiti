@@ -18,17 +18,11 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     var subscription: Cancellable?
     var menubar: MenubarController!
     var toolbar: ToolbarController!
+    var hotkeys: KeyboardShortcutsHotkeys!
 
     init(args: Args) { self.args = args }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // AXIsProcessTrustedWithOptions(prompt: true) is a one-time prompt per
-        // bundle identity — the OS suppresses repeat dialogs on its own, so we
-        // can call this on every launch without becoming annoying.
-        if !AccessibilityCheck.isTrusted(prompt: true) {
-            NSLog("fiti: accessibility permission not granted; Ctrl+G global hotkey will not work until granted in System Settings → Privacy & Security → Accessibility.")
-        }
-
         editor = Editor(clock: SystemClock(), ids: UUIDStrokeIds())
         window = TransparentWindow()
         let frame = window.contentLayoutRect
@@ -51,11 +45,13 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0) }
         input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0) }
         input.onPointerUp     = { [weak self] in self?.controller.pointerUp() }
-        input.onToggle        = { [weak self] in self?.controller.toggle() }
         input.onDeactivate    = { [weak self] in self?.controller.deactivate() }
         input.onClear         = { [weak self] in self?.controller.clear() }
         input.onUndo          = { [weak self] in _ = self?.editor.undo() }
         input.onRedo          = { [weak self] in _ = self?.editor.redo() }
+
+        hotkeys = KeyboardShortcutsHotkeys()
+        hotkeys.onActivation { [weak self] in self?.controller.toggle() }
 
         subscription = editor.subscribe { [weak self] _ in
             guard let self else { return }

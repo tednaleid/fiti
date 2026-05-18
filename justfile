@@ -7,10 +7,11 @@ build_dir     := "/tmp/fiti-build"
 install_dir   := env_var('HOME') / "Applications"
 dev_port      := "9876"
 # Code-signing identity (override via FITI_CODE_SIGN_IDENTITY in .env or shell).
-# "-" means ad-hoc; the cdhash changes per build and Accessibility grants get
-# invalidated after each rebuild. Set a stable identity to fix that — see
-# .env.example.
+# "-" means ad-hoc. Set a stable identity for distribution builds — see .env.example.
 sign_identity := env_var_or_default("FITI_CODE_SIGN_IDENTITY", "-")
+# Manual signing avoids Xcode demanding a DEVELOPMENT_TEAM for SPM-resource bundles
+# (e.g. KeyboardShortcuts ships localized .strings that build a signed bundle target).
+xcb_sign      := 'CODE_SIGN_IDENTITY="' + sign_identity + '" CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM=""'
 
 # List available recipes
 default:
@@ -37,9 +38,9 @@ install-hooks:
 # Build the app (Debug); output in /tmp/fiti-build to avoid Dropbox/iCloud codesign issues
 [group('build')]
 build: generate
-    xcodebuild -project fiti.xcodeproj -scheme fiti -configuration Debug build SYMROOT={{build_dir}} CODE_SIGN_IDENTITY="{{sign_identity}}"
+    xcodebuild -project fiti.xcodeproj -scheme fiti -configuration Debug build SYMROOT={{build_dir}} {{xcb_sign}}
 
-# Copy the built .app to ~/Applications/Fiti.app (stable path for Accessibility grants)
+# Copy the built .app to ~/Applications/Fiti.app
 [group('build')]
 install: build
     @rm -rf "{{install_dir}}/Fiti.app"
@@ -58,18 +59,18 @@ clean:
 # Run the Swift Testing test bundle
 [group('test')]
 test: generate
-    xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} CODE_SIGN_IDENTITY="{{sign_identity}}"
+    xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} {{xcb_sign}}
     swift test --package-path Packages/PerfectFreehand
 
 # Run one test by name. Swift Testing identifiers include `()`, e.g. 'swiftTestingIsWired()' or 'SmokeTests/myTest()'
 [group('test')]
 test-only NAME: generate
-    xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} CODE_SIGN_IDENTITY="{{sign_identity}}" -only-testing:'fiti-unit/{{NAME}}'
+    xcodebuild -project fiti.xcodeproj -scheme fiti-unit -destination 'platform=macOS' test SYMROOT={{build_dir}} {{xcb_sign}} -only-testing:'fiti-unit/{{NAME}}'
 
 # Run the AppKit / integration test bundle (slower; includes AppKit)
 [group('test')]
 test-integration: generate
-    xcodebuild -project fiti.xcodeproj -scheme fiti-integration -destination 'platform=macOS' test SYMROOT={{build_dir}} CODE_SIGN_IDENTITY="{{sign_identity}}"
+    xcodebuild -project fiti.xcodeproj -scheme fiti-integration -destination 'platform=macOS' test SYMROOT={{build_dir}} {{xcb_sign}}
     swift test --package-path Packages/PerfectFreehand
 
 # ─── check ────────────────────────────────────────────────────────────────
@@ -86,9 +87,7 @@ check: test test-integration lint build
 
 # ─── run ──────────────────────────────────────────────────────────────────
 
-# Build, install to ~/Applications, and launch in foreground (--dev enables HTTP introspection).
-# `open -W` launches via Launch Services (not as a shell child) so macOS attributes
-# Accessibility requests to Fiti.app itself, not to the terminal that ran `just`.
+# Build, install to ~/Applications, and launch in foreground (--dev enables HTTP introspection)
 [group('run')]
 run: install
     open -W "{{install_dir}}/Fiti.app" --args --dev --port {{dev_port}}
@@ -107,25 +106,6 @@ stop:
         || pkill -f 'Fiti.app/Contents/MacOS/Fiti' 2>/dev/null \
         || echo "fiti not running"
 
-# Wipe Fiti's Accessibility TCC entry so the next launch re-prompts cleanly
-[group('run')]
-reset-accessibility:
-    @tccutil reset Accessibility com.fiti.app
-    @echo "TCC entry reset. Next 'just run-bg' will trigger a fresh permission dialog."
-
-# Install + open Privacy & Security → Accessibility so you can grant Fiti the global Ctrl+G hotkey
-[group('run')]
-grant-accessibility: install
-    @open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-    @open -R "{{install_dir}}/Fiti.app"
-    @echo ""
-    @echo "Drag Fiti.app from the revealed Finder window into the Accessibility list,"
-    @echo "or use the + button and Cmd+Shift+G with this path:"
-    @echo "  {{install_dir}}/Fiti.app"
-    @echo ""
-    @echo "Then toggle Fiti on. With a stable FITI_CODE_SIGN_IDENTITY in .env the grant"
-    @echo "persists across rebuilds. With ad-hoc signing it will need re-toggling after"
-    @echo "each rebuild — see ONBOARDING.md > Code signing."
 
 # ─── inspect (dev HTTP @ localhost:9876) ──────────────────────────────────
 
