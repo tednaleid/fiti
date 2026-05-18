@@ -27,6 +27,14 @@ public final class CanvasView: NSView, Renderer {
         }
     }
 
+    public private(set) var globalOpacity: Double = 1.0
+
+    public func setGlobalOpacity(_ opacity: Double) {
+        guard globalOpacity != opacity else { return }
+        globalOpacity = opacity
+        needsDisplay = true
+    }
+
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         self.wantsLayer = true
@@ -55,6 +63,7 @@ public final class CanvasView: NSView, Renderer {
     public override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext, let frame = lastFrame else { return }
         guard drawingsVisible else { return }
+        ctx.setAlpha(CGFloat(globalOpacity))
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
         if let image = committedImage {
