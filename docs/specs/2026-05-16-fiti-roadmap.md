@@ -23,8 +23,11 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 ## Open: visibility & interaction
 
 ### Global hide/show hotkey
-- [ ] Toolbar already has a hide/show button; need a system-wide hotkey so you can toggle visibility without going through the toolbar. Suggested: `Cmd+Opt+H`. Wire through `KeyboardShortcuts.Name.toggleDrawingsVisible` so it gets the same rebind-in-Preferences treatment as the activation hotkey.
-- [ ] Open question: should the global hide-toggle work even when fiti is not capturing input? Probably yes — it's separate from activation — but that means the global monitor needs a second binding.
+- [ ] Toolbar already has a hide/show button; need a system-wide hotkey so you can toggle visibility without going through the toolbar. Default: `Opt+H`. Wire through `KeyboardShortcuts.Name.toggleDrawingsVisible` so it gets the same rebind-in-Preferences treatment as the activation hotkey.
+- [ ] `Opt+H` in most apps types the `˙` combining-diacritic. That character is rarely needed in normal typing; rebinding is the escape hatch for anyone who does need it.
+- [ ] Fall-through when there's nothing to hide: if `editor.doc.strokes.isEmpty`, the hotkey should *not* intercept the keystroke — pass it through so apps still see `Opt+H` and the `˙` character types normally. Only swallow the event when there's actually something to toggle.
+  - Implementation tension: `KeyboardShortcuts` is Carbon-backed (`RegisterEventHotKey`), which always intercepts at the OS level — there's no "decline" return code. Two options to get fall-through: (a) after receiving the event, re-synthesise and post the original keypress via `CGEventPost` when we want to "let it through" — gross but doesn't need extra entitlements; (b) bypass the library for this one binding and use a `CGEventTap` (needs Accessibility permission in System Settings → Privacy & Security). Option (a) is the lower-friction default; revisit if it has noticeable latency or feels janky.
+- [ ] The hotkey works regardless of fiti's activation state — it's purely about whether marks are rendered. Activating fiti is still `Opt+F`.
 
 ### Disappearing drawings (auto-fade)
 - [ ] Opt-in mode where strokes auto-fade after N seconds (default 10s, configurable in Preferences). Fade is a brief opacity ramp at the end of the window (not the whole duration). New strokes drawn while older strokes are still visible reset the disappear timer for everything on screen, so a continuous annotation session keeps all marks present.
@@ -44,7 +47,7 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
   - `[` / `]`: decrement / increment width.
   - `Cmd+Z` / `Cmd+Shift+Z`: undo / redo (already bound via menubar).
 - [ ] Research: survey what Notability, FreeForm, Goodnotes, OneNote, Telestrator, ZoomIt, Excalidraw use for tool bindings. Pick the most thumb-friendly conventions where they conflict. Document the chosen bindings in ONBOARDING.md.
-- [ ] Implementation: a `KeyCommands` port in `Sources/Core/Ports/` that maps key events to `AppController` calls; an `NSEvent.localMonitor`-based adapter in `Sources/AppKit/`. Bindings live in a single hard-coded dictionary in Core so tests can exhaustively verify them. **Not user-rebindable**: these only fire while fiti has key focus, so conflicts with other apps' shortcuts can't happen. Compare to `Opt+F` and the planned `Cmd+Opt+H`, which go through `sindresorhus/KeyboardShortcuts` because they fire system-wide and need a Preferences recorder to resolve real cross-app conflicts. Bindings must work mid-stroke (e.g., switching color during a stroke applies to subsequent strokes, not the current one).
+- [ ] Implementation: a `KeyCommands` port in `Sources/Core/Ports/` that maps key events to `AppController` calls; an `NSEvent.localMonitor`-based adapter in `Sources/AppKit/`. Bindings live in a single hard-coded dictionary in Core so tests can exhaustively verify them. **Not user-rebindable**: these only fire while fiti has key focus, so conflicts with other apps' shortcuts can't happen. Compare to `Opt+F` and the planned `Opt+H`, which go through `sindresorhus/KeyboardShortcuts` because they fire system-wide and need a Preferences recorder to resolve real cross-app conflicts. Bindings must work mid-stroke (e.g., switching color during a stroke applies to subsequent strokes, not the current one).
 
 ### Selection tool
 - [ ] Selection / pointer tool that lets the user pick previously drawn strokes and manipulate them.
