@@ -18,7 +18,7 @@ public final class TimerFadeTicker: FadeTicker {
         guard timer == nil else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30.0, repeats: true) { [weak self] _ in
             // Hop to MainActor — Timer's callback is not actor-isolated.
-            Task { @MainActor [weak self] in
+            Task { @MainActor in
                 guard let self else { return }
                 self.onTick?(self.clock.now())
             }
