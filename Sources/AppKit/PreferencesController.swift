@@ -9,13 +9,16 @@ public final class PreferencesController: NSObject {
     private let launchAtLogin: LaunchAtLogin
     private let window: PreferencesWindow
     private let recorder: KeyboardShortcuts.RecorderCocoa
+    private let launchSwitch: NSSwitch
 
     public init(launchAtLogin: LaunchAtLogin) {
         self.launchAtLogin = launchAtLogin
         self.window = PreferencesWindow()
         self.recorder = KeyboardShortcuts.RecorderCocoa(for: .toggleActivation)
+        self.launchSwitch = NSSwitch()
         super.init()
         buildContent()
+        syncSwitchFromStatus()
     }
 
     public func show() {
@@ -32,6 +35,10 @@ public final class PreferencesController: NSObject {
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         stack.addArrangedSubview(row(label: "Activation hotkey:", control: recorder))
+
+        launchSwitch.target = self
+        launchSwitch.action = #selector(launchSwitchToggled(_:))
+        stack.addArrangedSubview(row(label: "Launch at login:", control: launchSwitch))
 
         let container = NSView()
         container.addSubview(stack)
@@ -54,9 +61,36 @@ public final class PreferencesController: NSObject {
         return row
     }
 
+    private func syncSwitchFromStatus() {
+        switch launchAtLogin.status {
+        case .enabled, .requiresApproval:
+            launchSwitch.state = .on
+        case .disabled, .unavailable:
+            launchSwitch.state = .off
+        }
+    }
+
+    @objc private func launchSwitchToggled(_ sender: NSSwitch) {
+        let wantsEnabled = sender.state == .on
+        do {
+            try launchAtLogin.setEnabled(wantsEnabled)
+            syncSwitchFromStatus()
+        } catch {
+            // Spring back to the prior state on failure.
+            sender.state = wantsEnabled ? .off : .on
+        }
+    }
+
     // MARK: - Test hooks
+
+    internal func testOnly_toggleSwitch(to state: NSControl.StateValue) {
+        launchSwitch.state = state
+        launchSwitchToggled(launchSwitch)
+    }
+
     // swiftlint:disable identifier_name
     internal var testOnly_recorder: KeyboardShortcuts.RecorderCocoa { recorder }
     internal var testOnly_window: PreferencesWindow { window }
+    internal var testOnly_switch: NSSwitch { launchSwitch }
     // swiftlint:enable identifier_name
 }
