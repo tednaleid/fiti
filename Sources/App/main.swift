@@ -39,7 +39,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         container.addSubview(inputView)
         window.contentView = container
 
-        controller = AppController(editor: editor, window: window)
+        controller = AppController(editor: editor, window: window, detector: TaskStationaryDetector())
         menubar = MenubarController(controller: controller, editor: editor)
         toolbar = ToolbarController(controller: controller)
         composeControllerCallbacks()

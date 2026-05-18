@@ -32,6 +32,11 @@ public final class AppController {
 
     public let editor: Editor
     private let window: WindowControl
+    private let detector: StationaryDetector
+    private let stationaryDeadZone: Double = 2.0
+    private var lastTimerResetPoint: StrokePoint?
+
+    public private(set) var isRubberBanding: Bool = false
 
     // Drawing parameters. Each has a didSet publisher so HTTP writes and
     // toolbar-widget writes both notify other adapters that need to react
@@ -80,9 +85,11 @@ public final class AppController {
         onCursorChanged?(next)
     }
 
-    public init(editor: Editor, window: WindowControl) {
+    public init(editor: Editor, window: WindowControl, detector: StationaryDetector) {
         self.editor = editor
         self.window = window
+        self.detector = detector
+        detector.onStationary = { [weak self] in self?.handleStationary() }
     }
 
     public func activate() {
@@ -94,7 +101,10 @@ public final class AppController {
 
     public func deactivate() {
         guard mode != .inactive else { return }
-        if mode == .activeDrawing { editor.endStroke() }
+        if mode == .activeDrawing {
+            resetStrokeState()
+            editor.endStroke()
+        }
         mode = .inactive
         window.setClickThrough(true)
         window.releaseFocus()
@@ -109,17 +119,44 @@ public final class AppController {
         _ = editor.startStroke(color: currentColor, width: currentWidth, pointerType: .mouse)
         editor.appendPoint(point)
         mode = .activeDrawing
+        lastTimerResetPoint = point
+        detector.arm()
     }
 
     public func pointerMoved(_ point: StrokePoint) {
         guard mode == .activeDrawing else { return }
-        editor.appendPoint(point)
+        if isRubberBanding {
+            editor.moveCurrentStrokeEndpoint(to: point)
+        } else {
+            editor.appendPoint(point)
+            if pastDeadZone(point) {
+                lastTimerResetPoint = point
+                detector.arm()
+            }
+        }
+    }
+
+    private func pastDeadZone(_ point: StrokePoint) -> Bool {
+        guard let last = lastTimerResetPoint else { return true }
+        let dx = point.x - last.x
+        let dy = point.y - last.y
+        return (dx * dx + dy * dy).squareRoot() > stationaryDeadZone
     }
 
     public func pointerUp() {
         guard mode == .activeDrawing else { return }
+        resetStrokeState()
         editor.endStroke()
         mode = .activeIdle
+    }
+
+    private func handleStationary() {
+        guard mode == .activeDrawing, !isRubberBanding else { return }
+        guard let id = editor.currentStrokeId,
+              let stroke = editor.doc.strokes[id] else { return }
+        guard isSubstantiallyStraight(points: stroke.points) else { return }
+        editor.straightenCurrentStroke()
+        isRubberBanding = true
     }
 
     public func clear() {
@@ -127,9 +164,16 @@ public final class AppController {
         // before they're cleared (matches the eraseStroke / undo invariant that
         // a snapshot of the doc is consistent after every public method returns).
         if mode == .activeDrawing {
+            resetStrokeState()
             editor.endStroke()
             mode = .activeIdle
         }
         editor.clear()
+    }
+
+    private func resetStrokeState() {
+        detector.disarm()
+        isRubberBanding = false
+        lastTimerResetPoint = nil
     }
 }

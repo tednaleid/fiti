@@ -11,7 +11,7 @@ struct MenubarControllerTests {
     private func make() -> (MenubarController, AppController, RecordingWindow, Editor) {
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        let controller = AppController(editor: editor, window: window)
+        let controller = AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
         let menubar = MenubarController(controller: controller, editor: editor)
         return (menubar, controller, window, editor)
     }
