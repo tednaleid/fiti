@@ -9,7 +9,13 @@ struct PointerRoutingTests {
     private func make() -> AppController {
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        return AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
+        return AppController(
+            editor: editor,
+            window: window,
+            detector: RecordingStationaryDetector(),
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker()
+        )
     }
 
     @Test("pointerDown in activeIdle starts a stroke and seeds the first point")

@@ -10,7 +10,13 @@ struct OnCurrentColorWidthChangedTests {
     private func make() -> AppController {
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        return AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
+        return AppController(
+            editor: editor,
+            window: window,
+            detector: RecordingStationaryDetector(),
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker()
+        )
     }
 
     @Test("assigning a new currentColor publishes via onCurrentColorChanged")

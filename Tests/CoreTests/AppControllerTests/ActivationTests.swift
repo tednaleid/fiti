@@ -9,7 +9,13 @@ struct ActivationTests {
     private func make() -> (AppController, RecordingWindow) {
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        let controller = AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
+        let controller = AppController(
+            editor: editor,
+            window: window,
+            detector: RecordingStationaryDetector(),
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker()
+        )
         return (controller, window)
     }
 

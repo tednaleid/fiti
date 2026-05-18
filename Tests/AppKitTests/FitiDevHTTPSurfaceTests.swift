@@ -16,7 +16,13 @@ struct FitiDevHTTPSurfaceTests {
     private func makeBridge() -> Rig {
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        let controller = AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
+        let controller = AppController(
+            editor: editor,
+            window: window,
+            detector: RecordingStationaryDetector(),
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker()
+        )
         let bridge = FitiDevHTTPSurface(controller: controller,
                                         canvasSize: { Size(width: 100, height: 100) })
         return Rig(bridge: bridge, controller: controller, window: window)

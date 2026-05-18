@@ -27,7 +27,8 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     init(args: Args) { self.args = args }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        editor = Editor(clock: SystemClock(), ids: UUIDStrokeIds())
+        let clock = SystemClock()
+        editor = Editor(clock: clock, ids: UUIDStrokeIds())
         window = TransparentWindow()
         let frame = window.contentLayoutRect
 
@@ -40,7 +41,14 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         container.addSubview(inputView)
         window.contentView = container
 
-        controller = AppController(editor: editor, window: window, detector: TaskStationaryDetector())
+        let ticker = TimerFadeTicker(clock: clock)
+        controller = AppController(
+            editor: editor,
+            window: window,
+            detector: TaskStationaryDetector(),
+            clock: clock,
+            ticker: ticker
+        )
         preferences = PreferencesController(launchAtLogin: SMAppServiceLaunchAtLogin())
         menubar = MenubarController(
             controller: controller,

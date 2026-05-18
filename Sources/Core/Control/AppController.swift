@@ -23,6 +23,8 @@ public final class AppController {
     }
 
     public var onDrawingsVisibilityChanged: ((Bool) -> Void)?
+    public var onAutoFadeEnabledChanged: ((Bool) -> Void)?
+    public var onFadeOpacityChanged: ((Double) -> Void)?
 
     public var drawingsVisible: Bool = true {
         didSet {
@@ -30,9 +32,27 @@ public final class AppController {
         }
     }
 
+    public var autoFadeEnabled: Bool = false {
+        didSet {
+            guard oldValue != autoFadeEnabled else { return }
+            onAutoFadeEnabledChanged?(autoFadeEnabled)
+            autoFadeStateChanged()
+        }
+    }
+
+    public var fadeOpacity: Double = 1.0 {
+        didSet {
+            if oldValue != fadeOpacity { onFadeOpacityChanged?(fadeOpacity) }
+        }
+    }
+
+    private var lastInputAt: Double?
+
     public let editor: Editor
     private let window: WindowControl
     private let detector: StationaryDetector
+    private let clock: Clock
+    private let ticker: FadeTicker
     private let stationaryDeadZone: Double = 2.0
     private var lastTimerResetPoint: StrokePoint?
 
@@ -85,11 +105,20 @@ public final class AppController {
         onCursorChanged?(next)
     }
 
-    public init(editor: Editor, window: WindowControl, detector: StationaryDetector) {
+    public init(
+        editor: Editor,
+        window: WindowControl,
+        detector: StationaryDetector,
+        clock: Clock,
+        ticker: FadeTicker
+    ) {
         self.editor = editor
         self.window = window
         self.detector = detector
+        self.clock = clock
+        self.ticker = ticker
         detector.onStationary = { [weak self] in self?.handleStationary() }
+        ticker.onTick = { [weak self] now in self?.handleTick(now) }
     }
 
     public func activate() {
@@ -175,5 +204,19 @@ public final class AppController {
         detector.disarm()
         isRubberBanding = false
         lastTimerResetPoint = nil
+    }
+
+    private func autoFadeStateChanged() {
+        if autoFadeEnabled {
+            lastInputAt = clock.now()
+            ticker.start()
+        } else {
+            ticker.stop()
+            fadeOpacity = 1.0
+        }
+    }
+
+    private func handleTick(_ now: Double) {
+        // Task 4 fills this in. For now: no-op so the ticker doesn't crash.
     }
 }

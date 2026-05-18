@@ -12,7 +12,13 @@ struct MenubarControllerTests {
         let counter = PreferencesCounter()
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        let controller = AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
+        let controller = AppController(
+            editor: editor,
+            window: window,
+            detector: RecordingStationaryDetector(),
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker()
+        )
         let menubar = MenubarController(
             controller: controller,
             editor: editor,

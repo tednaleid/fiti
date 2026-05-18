@@ -12,7 +12,13 @@ struct ToolbarControllerTests {
     private func make() -> (ToolbarController, AppController, Editor) {
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        let controller = AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
+        let controller = AppController(
+            editor: editor,
+            window: window,
+            detector: RecordingStationaryDetector(),
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker()
+        )
         let toolbar = ToolbarController(controller: controller,
                                         defaults: UserDefaults(suiteName: UUID().uuidString)!)
         return (toolbar, controller, editor)
@@ -88,7 +94,13 @@ struct ToolbarControllerTests {
         suite.set(11.0, forKey: "fiti.width")
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        let controller = AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
+        let controller = AppController(
+            editor: editor,
+            window: window,
+            detector: RecordingStationaryDetector(),
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker()
+        )
         _ = ToolbarController(controller: controller, defaults: suite)
         #expect(controller.currentColor == RGBA(r: 0.1, g: 0.2, b: 0.3, a: 0.4))
         #expect(controller.currentWidth == 11)
@@ -99,7 +111,13 @@ struct ToolbarControllerTests {
         let suite = UserDefaults(suiteName: UUID().uuidString)!
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        let controller = AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
+        let controller = AppController(
+            editor: editor,
+            window: window,
+            detector: RecordingStationaryDetector(),
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker()
+        )
         let toolbar = ToolbarController(controller: controller, defaults: suite)
         toolbar.testOnly_setWidth(9)
         toolbar.testOnly_setOpacity(0.6)

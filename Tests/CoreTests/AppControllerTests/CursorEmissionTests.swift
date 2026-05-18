@@ -15,7 +15,13 @@ struct CursorEmissionTests {
     private func makeWithRecorder() -> (AppController, Recorder) {
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        let controller = AppController(editor: editor, window: window, detector: RecordingStationaryDetector())
+        let controller = AppController(
+            editor: editor,
+            window: window,
+            detector: RecordingStationaryDetector(),
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker()
+        )
         let rec = Recorder()
         controller.onCursorChanged = { rec.emissions.append($0) }
         return (controller, rec)

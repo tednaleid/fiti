@@ -28,7 +28,13 @@ struct HoldToStraightenTests {
         let window = RecordingWindow()
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
         let detector = RecordingStationaryDetector()
-        let controller = AppController(editor: editor, window: window, detector: detector)
+        let controller = AppController(
+            editor: editor,
+            window: window,
+            detector: detector,
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker()
+        )
         return (controller, detector)
     }
 
