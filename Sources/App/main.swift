@@ -14,7 +14,9 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     var input: NSEventInputSource!
     var controller: AppController!
     var editor: Editor!
+    #if DEBUG
     var devServer: DevHTTPServer?
+    #endif
     var subscription: Cancellable?
     var menubar: MenubarController!
     var toolbar: ToolbarController!
@@ -62,21 +64,29 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
             self.canvas.render(RenderFrame.from(editor: self.editor, canvasSize: self.canvasSize))
         }
 
-        if args.dev {
-            let surface = FitiDevHTTPSurface(controller: controller,
-                                             canvasSize: { [weak self] in self?.canvasSize ?? Size(width: 0, height: 0) })
-            do {
-                let server = try DevHTTPServer(surface: surface, port: args.port)
-                try server.start()
-                devServer = server
-                NSLog("fiti dev HTTP listening on localhost:\(args.port)")
-            } catch {
-                NSLog("fiti dev HTTP failed to start: \(error)")
-            }
-        }
+        maybeStartDevServer()
 
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
+    }
+
+    @MainActor
+    private func maybeStartDevServer() {
+        guard args.dev else { return }
+        #if DEBUG
+        let surface = FitiDevHTTPSurface(controller: controller,
+                                         canvasSize: { [weak self] in self?.canvasSize ?? Size(width: 0, height: 0) })
+        do {
+            let server = try DevHTTPServer(surface: surface, port: args.port)
+            try server.start()
+            devServer = server
+            NSLog("fiti dev HTTP listening on localhost:\(args.port)")
+        } catch {
+            NSLog("fiti dev HTTP failed to start: \(error)")
+        }
+        #else
+        NSLog("fiti: --dev is a no-op in Release builds (DevHTTP surface is compiled out)")
+        #endif
     }
 
     private var canvasSize: Size {

@@ -2,6 +2,7 @@
 // ABOUTME: dev HTTP server. Lives in Sources/App because it imports both
 // ABOUTME: Core (AppController) and AppKit (SnapshotRenderer).
 
+#if DEBUG
 import Foundation
 
 public final class FitiDevHTTPSurface: DevHTTPSurface {
@@ -61,3 +62,4 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
         return SnapshotRenderer.png(from: frame)
     }
 }
+#endif

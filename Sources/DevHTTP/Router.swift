@@ -1,6 +1,7 @@
 // ABOUTME: Maps (method, path) to a route handler. Path params resolved by simple
 // ABOUTME: pattern match — no regex DSL; we only have a handful of routes.
 
+#if DEBUG
 import Foundation
 
 public struct Router: Sendable {
@@ -40,3 +41,4 @@ public struct Router: Sendable {
         return .notFound()
     }
 }
+#endif

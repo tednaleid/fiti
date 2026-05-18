@@ -1,6 +1,7 @@
 // ABOUTME: Minimal HTTP/1.1 request parser. Only what the dev API needs.
 // ABOUTME: Parses method, path, headers (lowercased keys), and body from raw Data.
 
+#if DEBUG
 import Foundation
 
 public struct HTTPRequest: Sendable {
@@ -37,3 +38,4 @@ public struct HTTPRequest: Sendable {
         return HTTPRequest(method: parts[0], path: parts[1], headers: headers, body: Data(body))
     }
 }
+#endif

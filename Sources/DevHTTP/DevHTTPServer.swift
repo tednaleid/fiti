@@ -1,6 +1,8 @@
 // ABOUTME: NWListener-based HTTP/1.1 server. Single-threaded async — fine for
 // ABOUTME: a dev introspection API that handles a few requests per minute.
+// ABOUTME: Compiled into Debug builds only — never present in shipped binaries.
 
+#if DEBUG
 import Foundation
 import Network
 
@@ -257,3 +259,4 @@ public final class DevHTTPServer: @unchecked Sendable {
         return .ok()
     }
 }
+#endif

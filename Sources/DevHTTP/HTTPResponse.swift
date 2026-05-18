@@ -1,6 +1,7 @@
 // ABOUTME: Minimal HTTP/1.1 response composer. Serializes status, headers, and body.
 // ABOUTME: Header names are canonicalized to Title-Case on serialize (e.g. content-type -> Content-Type).
 
+#if DEBUG
 import Foundation
 
 public struct HTTPResponse: Sendable {
@@ -71,3 +72,4 @@ public struct HTTPResponse: Sendable {
                      headers: ["content-type": "image/png"], body: data)
     }
 }
+#endif

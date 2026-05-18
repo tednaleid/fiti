@@ -1,6 +1,7 @@
 // ABOUTME: Protocol the dev HTTP server talks to. Production wires AppController + Editor;
 // ABOUTME: tests wire FakeSurface for deterministic assertions.
 
+#if DEBUG
 import Foundation
 
 @MainActor
@@ -30,3 +31,4 @@ public protocol DevHTTPSurface: AnyObject {
     func setWidth(_ width: Double)
     func setDrawingsVisible(_ visible: Bool)
 }
+#endif
