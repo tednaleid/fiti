@@ -219,3 +219,77 @@ struct ToolbarControllerAutoFadeTests {
         #expect(controller.autoFadeEnabled == true)
     }
 }
+
+@Suite("ToolbarController tooltips and labels")
+@MainActor
+struct ToolbarControllerTooltipTests {
+    private func make() -> (ToolbarController, AppController) {
+        let clock = VirtualClock()
+        let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
+        let controller = AppController(
+            editor: editor,
+            window: RecordingWindow(),
+            detector: RecordingStationaryDetector(),
+            clock: clock,
+            ticker: RecordingFadeTicker()
+        )
+        let toolbar = ToolbarController(controller: controller,
+                                        defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        return (toolbar, controller)
+    }
+
+    @Test("color swatches have name + shortcut tooltips")
+    func swatchTooltips() {
+        let (toolbar, _) = make()
+        for i in 0..<8 {
+            let expected = "\(QuickPickPalette.colors[i].name) — \(i + 1)"
+            #expect(toolbar.testOnly_swatchTooltip(at: i) == expected)
+        }
+    }
+
+    @Test("color well has 'Custom color' tooltip")
+    func colorWellTooltip() {
+        let (toolbar, _) = make()
+        #expect(toolbar.testOnly_colorWellTooltip == "Custom color")
+    }
+
+    @Test("width slider has 'Stroke size — s / S' tooltip")
+    func widthSliderTooltip() {
+        let (toolbar, _) = make()
+        #expect(toolbar.testOnly_widthSliderTooltip == "Stroke size — s / S")
+    }
+
+    @Test("opacity slider has 'Stroke opacity — o / O' tooltip")
+    func opacitySliderTooltip() {
+        let (toolbar, _) = make()
+        #expect(toolbar.testOnly_opacitySliderTooltip == "Stroke opacity — o / O")
+    }
+
+    @Test("hide button tooltip flips with drawingsVisible")
+    func hideButtonTooltip() {
+        let (toolbar, controller) = make()
+        #expect(toolbar.testOnly_hideButtonTooltip == "Hide drawings — h")
+        controller.drawingsVisible = false
+        #expect(toolbar.testOnly_hideButtonTooltip == "Show drawings — h")
+    }
+
+    @Test("auto-fade button tooltip flips with autoFadeEnabled")
+    func autoFadeButtonTooltip() {
+        let (toolbar, controller) = make()
+        #expect(toolbar.testOnly_autoFadeTooltip == "Auto-fade off — f")
+        controller.autoFadeEnabled = true
+        #expect(toolbar.testOnly_autoFadeTooltip == "Auto-fade on — f")
+    }
+
+    @Test("width label text is 'stroke size'")
+    func widthLabelText() {
+        let (toolbar, _) = make()
+        #expect(toolbar.testOnly_widthLabelText == "stroke size")
+    }
+
+    @Test("opacity label text is 'stroke opacity'")
+    func opacityLabelText() {
+        let (toolbar, _) = make()
+        #expect(toolbar.testOnly_opacityLabelText == "stroke opacity")
+    }
+}

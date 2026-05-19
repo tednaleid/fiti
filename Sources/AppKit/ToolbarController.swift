@@ -16,6 +16,9 @@ public final class ToolbarController: NSObject {
     private let autoFadeButton = NSButton(title: "", target: nil, action: nil)
     private var quickPickButtons: [NSButton] = []
 
+    private let widthLabel = NSTextField(labelWithString: "stroke size")
+    private let opacityLabel = NSTextField(labelWithString: "stroke opacity")
+
     public init(controller: AppController, defaults: UserDefaults = .standard) {
         self.controller = controller
         self.defaults = defaults
@@ -87,6 +90,7 @@ public final class ToolbarController: NSObject {
                 btn.bezelStyle = .regularSquare
                 btn.image = makeSwatchImage(r: color.r, g: color.g, b: color.b)
                 btn.imagePosition = .imageOnly
+                btn.toolTip = "\(color.name) — \(i + 1)"
                 quickPickButtons.append(btn)
                 row.addArrangedSubview(btn)
             }
@@ -99,18 +103,23 @@ public final class ToolbarController: NSObject {
                                   green: CGFloat(controller.currentColor.g),
                                   blue: CGFloat(controller.currentColor.b),
                                   alpha: CGFloat(controller.currentColor.a))
+        colorWell.toolTip = "Custom color"
         stack.addArrangedSubview(colorWell)
 
         widthSlider.target = self
         widthSlider.action = #selector(widthChanged(_:))
         widthSlider.doubleValue = controller.currentWidth
-        stack.addArrangedSubview(label("w"))
+        widthSlider.toolTip = "Stroke size — s / S"
+        styleSliderLabel(widthLabel)
+        stack.addArrangedSubview(widthLabel)
         stack.addArrangedSubview(widthSlider)
 
         opacitySlider.target = self
         opacitySlider.action = #selector(opacityChanged(_:))
         opacitySlider.doubleValue = controller.currentColor.a
-        stack.addArrangedSubview(label("o"))
+        opacitySlider.toolTip = "Stroke opacity — o / O"
+        styleSliderLabel(opacityLabel)
+        stack.addArrangedSubview(opacityLabel)
         stack.addArrangedSubview(opacitySlider)
 
         hideButton.target = self
@@ -139,11 +148,9 @@ public final class ToolbarController: NSObject {
         panel.contentView = container
     }
 
-    private func label(_ text: String) -> NSTextField {
-        let l = NSTextField(labelWithString: text)
-        l.font = .systemFont(ofSize: 10)
-        l.alignment = .center
-        return l
+    private func styleSliderLabel(_ field: NSTextField) {
+        field.font = .systemFont(ofSize: 10)
+        field.alignment = .center
     }
 
     private func makeSwatchImage(r: Double, g: Double, b: Double) -> NSImage {
@@ -178,6 +185,7 @@ public final class ToolbarController: NSObject {
         currentHideGlyphName = name
         hideButton.image = icon(named: name, withRedX: !visible,
                                 accessibilityDescription: visible ? "Hide" : "Show")
+        hideButton.toolTip = visible ? "Hide drawings — h" : "Show drawings — h"
     }
 
     private func updateAutoFadeGlyph(enabled: Bool) {
@@ -185,6 +193,7 @@ public final class ToolbarController: NSObject {
         currentAutoFadeGlyphName = name
         autoFadeButton.image = icon(named: name, withRedX: !enabled,
                                     accessibilityDescription: "Auto-fade drawings")
+        autoFadeButton.toolTip = enabled ? "Auto-fade on — f" : "Auto-fade off — f"
     }
 
     // MARK: - Actions
@@ -255,6 +264,11 @@ public final class ToolbarController: NSObject {
         colorClicked(quickPickButtons[index])
     }
 
+    internal func testOnly_swatchTooltip(at index: Int) -> String? {
+        guard index < quickPickButtons.count else { return nil }
+        return quickPickButtons[index].toolTip
+    }
+
     internal func testOnly_setWidth(_ value: Double) {
         widthSlider.doubleValue = value
         widthChanged(widthSlider)
@@ -278,6 +292,13 @@ public final class ToolbarController: NSObject {
     internal var testOnly_widthSliderValue: Double { widthSlider.doubleValue }
     internal var testOnly_hideButtonGlyphName: String { currentHideGlyphName }
     internal var testOnly_autoFadeGlyphName: String { currentAutoFadeGlyphName }
+    internal var testOnly_colorWellTooltip: String? { colorWell.toolTip }
+    internal var testOnly_widthSliderTooltip: String? { widthSlider.toolTip }
+    internal var testOnly_opacitySliderTooltip: String? { opacitySlider.toolTip }
+    internal var testOnly_hideButtonTooltip: String? { hideButton.toolTip }
+    internal var testOnly_autoFadeTooltip: String? { autoFadeButton.toolTip }
+    internal var testOnly_widthLabelText: String { widthLabel.stringValue }
+    internal var testOnly_opacityLabelText: String { opacityLabel.stringValue }
     // swiftlint:enable identifier_name
 }
 
