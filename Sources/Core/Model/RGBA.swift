@@ -16,3 +16,11 @@ public struct RGBA: Equatable, Codable, Sendable {
         self.a = a
     }
 }
+
+public extension RGBA {
+    /// Returns a copy with `a` replaced. Used by AppController.run(.bumpOpacity:)
+    /// to avoid spelling out all four fields.
+    func with(a newAlpha: Double) -> RGBA {
+        RGBA(r: r, g: g, b: b, a: newAlpha)
+    }
+}
