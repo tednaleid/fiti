@@ -178,6 +178,8 @@ public final class ToolbarController: NSObject {
     internal private(set) var currentHideGlyphName: String = "eye"
     internal private(set) var currentAutoFadeGlyphName: String = "timer"
 
+    private static let activeBackground = NSColor.systemGreen.withAlphaComponent(0.25).cgColor
+
     private func updateHideButtonGlyph(visible: Bool) {
         let name = visible ? "eye" : "eye.slash"
         currentHideGlyphName = name
@@ -185,8 +187,8 @@ public final class ToolbarController: NSObject {
         image?.isTemplate = true
         hideButton.image = image
         let active = !visible  // hiding is the engaged action
-        hideButton.layer?.backgroundColor = active ? NSColor.controlAccentColor.cgColor : nil
-        hideButton.contentTintColor = active ? .white : nil
+        hideButton.layer?.backgroundColor = active ? Self.activeBackground : nil
+        hideButton.contentTintColor = active ? .systemGreen : nil
     }
 
     private func updateAutoFadeGlyph(enabled: Bool) {
@@ -195,8 +197,8 @@ public final class ToolbarController: NSObject {
         let image = NSImage(systemSymbolName: name, accessibilityDescription: "Auto-fade drawings")
         image?.isTemplate = true
         autoFadeButton.image = image
-        autoFadeButton.layer?.backgroundColor = enabled ? NSColor.controlAccentColor.cgColor : nil
-        autoFadeButton.contentTintColor = enabled ? .white : nil
+        autoFadeButton.layer?.backgroundColor = enabled ? Self.activeBackground : nil
+        autoFadeButton.contentTintColor = enabled ? .systemGreen : nil
     }
 
     // MARK: - Actions
