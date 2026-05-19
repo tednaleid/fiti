@@ -16,21 +16,6 @@ public final class ToolbarController: NSObject {
     private let autoFadeButton = NSButton(title: "", target: nil, action: nil)
     private var quickPickButtons: [NSButton] = []
 
-    // swiftlint:disable large_tuple comma
-    /// 8 quick-pick colors from `../scratch/scratch/packages/web/src/ui/Toolbar.tsx`.
-    /// RGB only — alpha is taken from the user's current opacity at click time.
-    private static let quickPickRGB: [(r: Double, g: Double, b: Double)] = [
-        (0.0, 0.0, 0.0),
-        (134.0 / 255.0, 142.0 / 255.0, 150.0 / 255.0),
-        (224.0 / 255.0,  49.0 / 255.0,  49.0 / 255.0),
-        (247.0 / 255.0, 103.0 / 255.0,   7.0 / 255.0),
-        (245.0 / 255.0, 159.0 / 255.0,   0.0),
-        ( 47.0 / 255.0, 158.0 / 255.0,  68.0 / 255.0),
-        ( 25.0 / 255.0, 113.0 / 255.0, 194.0 / 255.0),
-        (156.0 / 255.0,  54.0 / 255.0, 181.0 / 255.0)
-    ]
-    // swiftlint:enable large_tuple comma
-
     public init(controller: AppController, defaults: UserDefaults = .standard) {
         self.controller = controller
         self.defaults = defaults
@@ -90,17 +75,17 @@ public final class ToolbarController: NSObject {
         pen.isEnabled = false
         stack.addArrangedSubview(pen)
 
-        for rowStart in stride(from: 0, to: Self.quickPickRGB.count, by: 2) {
+        for rowStart in stride(from: 0, to: QuickPickPalette.colors.count, by: 2) {
             let row = NSStackView()
             row.orientation = .horizontal
             row.spacing = 4
-            for offset in 0..<2 where rowStart + offset < Self.quickPickRGB.count {
+            for offset in 0..<2 where rowStart + offset < QuickPickPalette.colors.count {
                 let i = rowStart + offset
-                let rgb = Self.quickPickRGB[i]
+                let color = QuickPickPalette.colors[i]
                 let btn = NSButton(title: "", target: self, action: #selector(colorClicked(_:)))
                 btn.tag = i
                 btn.bezelStyle = .regularSquare
-                btn.image = makeSwatchImage(r: rgb.r, g: rgb.g, b: rgb.b)
+                btn.image = makeSwatchImage(r: color.r, g: color.g, b: color.b)
                 btn.imagePosition = .imageOnly
                 quickPickButtons.append(btn)
                 row.addArrangedSubview(btn)
@@ -205,9 +190,9 @@ public final class ToolbarController: NSObject {
     // MARK: - Actions
 
     @objc private func colorClicked(_ sender: NSButton) {
-        let rgb = Self.quickPickRGB[sender.tag]
+        let c = QuickPickPalette.colors[sender.tag]
         let a = controller.currentColor.a
-        controller.currentColor = RGBA(r: rgb.r, g: rgb.g, b: rgb.b, a: a)
+        controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: a)
         persistColor()
     }
 
