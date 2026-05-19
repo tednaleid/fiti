@@ -132,6 +132,8 @@ public final class ToolbarController: NSObject {
         hideButton.action = #selector(toggleHide(_:))
         hideButton.bezelStyle = .regularSquare
         hideButton.imagePosition = .imageOnly
+        hideButton.wantsLayer = true
+        hideButton.layer?.cornerRadius = 4
         updateHideButtonGlyph(visible: controller.drawingsVisible)
         stack.addArrangedSubview(hideButton)
 
@@ -139,6 +141,8 @@ public final class ToolbarController: NSObject {
         autoFadeButton.action = #selector(autoFadeClicked(_:))
         autoFadeButton.bezelStyle = .regularSquare
         autoFadeButton.imagePosition = .imageOnly
+        autoFadeButton.wantsLayer = true
+        autoFadeButton.layer?.cornerRadius = 4
         updateAutoFadeGlyph(enabled: controller.autoFadeEnabled)
         stack.addArrangedSubview(autoFadeButton)
         autoFadeButton.widthAnchor.constraint(equalTo: hideButton.widthAnchor).isActive = true
@@ -177,16 +181,22 @@ public final class ToolbarController: NSObject {
     private func updateHideButtonGlyph(visible: Bool) {
         let name = visible ? "eye" : "eye.slash"
         currentHideGlyphName = name
-        hideButton.image = NSImage(systemSymbolName: name, accessibilityDescription: visible ? "Hide" : "Show")
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: visible ? "Hide" : "Show")
+        image?.isTemplate = true
+        hideButton.image = image
+        let active = !visible  // hiding is the engaged action
+        hideButton.layer?.backgroundColor = active ? NSColor.controlAccentColor.cgColor : nil
+        hideButton.contentTintColor = active ? .white : nil
     }
 
     private func updateAutoFadeGlyph(enabled: Bool) {
-        let name = enabled ? "clock.fill" : "clock"
+        let name = enabled ? "timer.fill" : "timer"
         currentAutoFadeGlyphName = name
         let image = NSImage(systemSymbolName: name, accessibilityDescription: "Auto-fade drawings")
         image?.isTemplate = true
         autoFadeButton.image = image
-        autoFadeButton.contentTintColor = enabled ? .controlAccentColor : nil
+        autoFadeButton.layer?.backgroundColor = enabled ? NSColor.controlAccentColor.cgColor : nil
+        autoFadeButton.contentTintColor = enabled ? .white : nil
     }
 
     // MARK: - Actions
