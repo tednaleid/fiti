@@ -181,11 +181,12 @@ public final class ToolbarController: NSObject {
     }
 
     private func updateAutoFadeGlyph(enabled: Bool) {
-        let name = enabled ? "timer.fill" : "timer"
+        let name = enabled ? "clock.fill" : "clock"
         currentAutoFadeGlyphName = name
         let image = NSImage(systemSymbolName: name, accessibilityDescription: "Auto-fade drawings")
         image?.isTemplate = true
         autoFadeButton.image = image
+        autoFadeButton.contentTintColor = enabled ? .controlAccentColor : nil
     }
 
     // MARK: - Actions
