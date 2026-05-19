@@ -23,6 +23,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     var toolbar: ToolbarController!
     var hotkeys: KeyboardShortcutsHotkeys!
     var cursorRenderer: CursorRenderer!
+    private var keyMonitor: KeyMonitor!
 
     init(args: Args) { self.args = args }
 
@@ -56,6 +57,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
             onOpenPreferences: { [weak self] in self?.preferences.show() }
         )
         toolbar = ToolbarController(controller: controller)
+        keyMonitor = KeyMonitor(controller: controller)
         composeControllerCallbacks()
 
         input = NSEventInputSource(view: inputView)
@@ -109,11 +111,13 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func composeControllerCallbacks() {
-        // Compose onModeChanged: menubar (icon) + toolbar (panel visibility).
+        // Compose onModeChanged: menubar (icon) + toolbar (panel visibility)
+        // + keyMonitor (install/uninstall local NSEvent monitor).
         let menubarModeHandler = controller.onModeChanged
         controller.onModeChanged = { [weak self] mode in
             menubarModeHandler?(mode)
             self?.toolbar.updateVisibility(for: mode)
+            self?.keyMonitor.syncRegistration(for: mode)
         }
 
         // Compose onDrawingsVisibilityChanged: toolbar (eye glyph) + canvas

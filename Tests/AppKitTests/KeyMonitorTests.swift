@@ -1,0 +1,101 @@
+// ABOUTME: Tests for KeyMonitor's pure NSEvent → dispatch path. Synthesizes
+// ABOUTME: NSEvent.keyDown via NSEvent.keyEvent(with:...) and asserts that
+// ABOUTME: handle() either dispatches and swallows or passes the event through.
+
+import AppKit
+import Testing
+
+@Suite("KeyMonitor")
+@MainActor
+struct KeyMonitorTests {
+    // swiftlint:disable:next large_tuple
+    private func make() -> (KeyMonitor, AppController, Editor) {
+        let clock = VirtualClock()
+        let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
+        let controller = AppController(
+            editor: editor,
+            window: RecordingWindow(),
+            detector: RecordingStationaryDetector(),
+            clock: clock,
+            ticker: RecordingFadeTicker()
+        )
+        let monitor = KeyMonitor(controller: controller)
+        return (monitor, controller, editor)
+    }
+
+    private func keyEvent(_ chars: String, shift: Bool = false, command: Bool = false) -> NSEvent {
+        var flags: NSEvent.ModifierFlags = []
+        if shift { flags.insert(.shift) }
+        if command { flags.insert(.command) }
+        return NSEvent.keyEvent(
+            with: .keyDown,
+            location: .zero,
+            modifierFlags: flags,
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            characters: chars,
+            charactersIgnoringModifiers: chars,
+            isARepeat: false,
+            keyCode: 0
+        )!
+    }
+
+    @Test("bound key dispatches and is swallowed")
+    func boundKeyDispatched() {
+        let (monitor, controller, _) = make()
+        let before = controller.currentColor
+        let result = monitor.handle(keyEvent("1"))  // Black — distinct from the Red default
+        #expect(result == nil, "bound key should be swallowed (nil return)")
+        #expect(controller.currentColor != before)
+    }
+
+    @Test("shifted bound key dispatches the shifted variant")
+    func shiftedKeyDispatched() {
+        let (monitor, controller, _) = make()
+        controller.currentWidth = 10
+        _ = monitor.handle(keyEvent("s", shift: true))  // bumpSize(.down)
+        #expect(controller.currentWidth < 10)
+    }
+
+    @Test("unbound key is passed through unchanged")
+    func unboundKeyPassesThrough() {
+        let (monitor, controller, _) = make()
+        let before = controller.currentColor
+        let event = keyEvent("x")
+        let result = monitor.handle(event)
+        #expect(result === event, "unbound key should return the original event")
+        #expect(controller.currentColor == before)
+    }
+
+    @Test("Cmd-modified bound key passes through (menubar's job, not ours)")
+    func commandModifierPassesThrough() {
+        let (monitor, controller, _) = make()
+        let before = controller.currentWidth
+        let event = keyEvent("s", command: true)
+        let result = monitor.handle(event)
+        #expect(result === event)
+        #expect(controller.currentWidth == before)
+    }
+
+    @Test("multi-character chars (dead-key composition) pass through")
+    func multiCharPassesThrough() {
+        let (monitor, controller, _) = make()
+        let before = controller.currentColor
+        let event = keyEvent("´e")  // accent composition
+        let result = monitor.handle(event)
+        #expect(result === event)
+        #expect(controller.currentColor == before)
+    }
+
+    @Test("clear dispatches via run(.clear)")
+    func clearDispatches() {
+        let (monitor, controller, editor) = make()
+        controller.activate()
+        controller.pointerDown(StrokePoint(x: 0, y: 0))
+        controller.pointerUp()
+        #expect(editor.doc.strokes.isEmpty == false)
+        _ = monitor.handle(keyEvent("c"))
+        #expect(editor.doc.strokes.isEmpty == true)
+    }
+}
