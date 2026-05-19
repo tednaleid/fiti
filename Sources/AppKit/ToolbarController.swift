@@ -141,6 +141,7 @@ public final class ToolbarController: NSObject {
         autoFadeButton.imagePosition = .imageOnly
         updateAutoFadeGlyph(enabled: controller.autoFadeEnabled)
         stack.addArrangedSubview(autoFadeButton)
+        autoFadeButton.widthAnchor.constraint(equalTo: hideButton.widthAnchor).isActive = true
 
         let container = NSView()
         container.addSubview(stack)
@@ -182,7 +183,9 @@ public final class ToolbarController: NSObject {
     private func updateAutoFadeGlyph(enabled: Bool) {
         let name = enabled ? "timer.fill" : "timer"
         currentAutoFadeGlyphName = name
-        autoFadeButton.image = NSImage(systemSymbolName: name, accessibilityDescription: "Auto-fade drawings")
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Auto-fade drawings")
+        image?.isTemplate = true
+        autoFadeButton.image = image
     }
 
     // MARK: - Actions
