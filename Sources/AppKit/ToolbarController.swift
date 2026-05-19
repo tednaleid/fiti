@@ -132,8 +132,6 @@ public final class ToolbarController: NSObject {
         hideButton.action = #selector(toggleHide(_:))
         hideButton.bezelStyle = .regularSquare
         hideButton.imagePosition = .imageOnly
-        hideButton.wantsLayer = true
-        hideButton.layer?.cornerRadius = 4
         updateHideButtonGlyph(visible: controller.drawingsVisible)
         stack.addArrangedSubview(hideButton)
 
@@ -141,8 +139,6 @@ public final class ToolbarController: NSObject {
         autoFadeButton.action = #selector(autoFadeClicked(_:))
         autoFadeButton.bezelStyle = .regularSquare
         autoFadeButton.imagePosition = .imageOnly
-        autoFadeButton.wantsLayer = true
-        autoFadeButton.layer?.cornerRadius = 4
         updateAutoFadeGlyph(enabled: controller.autoFadeEnabled)
         stack.addArrangedSubview(autoFadeButton)
         autoFadeButton.widthAnchor.constraint(equalTo: hideButton.widthAnchor).isActive = true
@@ -178,27 +174,32 @@ public final class ToolbarController: NSObject {
     internal private(set) var currentHideGlyphName: String = "eye"
     internal private(set) var currentAutoFadeGlyphName: String = "timer"
 
-    private static let activeBackground = NSColor.systemGreen.withAlphaComponent(0.25).cgColor
+    /// Builds an SF Symbol image. When `withRedX` is true, palette rendering
+    /// colors the secondary layer (the slash on `eye.slash` or the X badge on
+    /// `clock.badge.xmark`) red while the base symbol keeps the label color.
+    private func icon(named name: String, withRedX: Bool, accessibilityDescription: String?) -> NSImage? {
+        if withRedX {
+            let config = NSImage.SymbolConfiguration(paletteColors: [.labelColor, .systemRed])
+            return NSImage(systemSymbolName: name, accessibilityDescription: accessibilityDescription)?
+                .withSymbolConfiguration(config)
+        }
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: accessibilityDescription)
+        image?.isTemplate = true
+        return image
+    }
 
     private func updateHideButtonGlyph(visible: Bool) {
         let name = visible ? "eye" : "eye.slash"
         currentHideGlyphName = name
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: visible ? "Hide" : "Show")
-        image?.isTemplate = true
-        hideButton.image = image
-        let active = !visible  // hiding is the engaged action
-        hideButton.layer?.backgroundColor = active ? Self.activeBackground : nil
-        hideButton.contentTintColor = active ? .systemGreen : nil
+        hideButton.image = icon(named: name, withRedX: !visible,
+                                accessibilityDescription: visible ? "Hide" : "Show")
     }
 
     private func updateAutoFadeGlyph(enabled: Bool) {
-        let name = enabled ? "timer.fill" : "timer"
+        let name = enabled ? "clock" : "clock.badge.xmark"
         currentAutoFadeGlyphName = name
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "Auto-fade drawings")
-        image?.isTemplate = true
-        autoFadeButton.image = image
-        autoFadeButton.layer?.backgroundColor = enabled ? Self.activeBackground : nil
-        autoFadeButton.contentTintColor = enabled ? .systemGreen : nil
+        autoFadeButton.image = icon(named: name, withRedX: !enabled,
+                                    accessibilityDescription: "Auto-fade drawings")
     }
 
     // MARK: - Actions

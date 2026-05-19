@@ -178,17 +178,17 @@ struct ToolbarControllerAutoFadeTests {
         return d
     }
 
-    @Test("button glyph is outline timer when auto-fade is off")
+    @Test("button glyph is clock.badge.xmark when auto-fade is off")
     func glyphOff() {
         let (toolbar, _, _) = make(defaults: uniqueDefaults())
-        #expect(toolbar.testOnly_autoFadeGlyphName == "timer")
+        #expect(toolbar.testOnly_autoFadeGlyphName == "clock.badge.xmark")
     }
 
-    @Test("button glyph swaps to filled timer when auto-fade is on")
+    @Test("button glyph swaps to plain clock when auto-fade is on")
     func glyphOn() {
         let (toolbar, controller, _) = make(defaults: uniqueDefaults())
         controller.autoFadeEnabled = true
-        #expect(toolbar.testOnly_autoFadeGlyphName == "timer.fill")
+        #expect(toolbar.testOnly_autoFadeGlyphName == "clock")
     }
 
     @Test("clicking the button toggles controller.autoFadeEnabled")
