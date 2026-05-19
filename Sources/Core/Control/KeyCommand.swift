@@ -4,7 +4,7 @@
 
 import Foundation
 
-public enum KeyCommand: Equatable, Sendable {
+public enum KeyCommand: Equatable, Hashable, Sendable {
     case pickColor(Int)
     case bumpSize(Direction)
     case bumpOpacity(Direction)
@@ -12,7 +12,7 @@ public enum KeyCommand: Equatable, Sendable {
     case toggleAutoFade
     case clear
 
-    public enum Direction: Equatable, Sendable {
+    public enum Direction: Equatable, Hashable, Sendable {
         case up
         case down
     }

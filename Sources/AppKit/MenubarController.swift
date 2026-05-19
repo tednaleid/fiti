@@ -17,6 +17,7 @@ public final class MenubarController: NSObject {
     private let preferencesItem: NSMenuItem
     private let undoItem: NSMenuItem
     private let redoItem: NSMenuItem
+    private var drawingItems: [KeyCommand: NSMenuItem] = [:]
 
     public init(
         controller: AppController,
@@ -51,11 +52,17 @@ public final class MenubarController: NSObject {
             item.target = self
         }
 
+        let drawingMenu = NSMenu(title: "Drawing")
+        buildDrawingSubmenu(drawingMenu)
+        let drawingItem = NSMenuItem(title: "Drawing", action: nil, keyEquivalent: "")
+        drawingItem.submenu = drawingMenu
+
         menu.addItem(activateItem)
         menu.addItem(deactivateItem)
         menu.addItem(.separator())
         menu.addItem(preferencesItem)
         menu.addItem(.separator())
+        menu.addItem(drawingItem)
         menu.addItem(clearItem)
         menu.addItem(undoItem)
         menu.addItem(redoItem)
@@ -67,6 +74,42 @@ public final class MenubarController: NSObject {
 
         updateIcon(for: controller.mode)
         controller.onModeChanged = { [weak self] mode in self?.updateIcon(for: mode) }
+    }
+
+    private func buildDrawingSubmenu(_ menu: NSMenu) {
+        for (i, color) in QuickPickPalette.colors.enumerated() {
+            let item = makeDrawingItem(
+                title: color.name,
+                key: "\(i + 1)",
+                modifiers: [],
+                command: .pickColor(i)
+            )
+            menu.addItem(item)
+        }
+        menu.addItem(.separator())
+        menu.addItem(makeDrawingItem(title: "Larger stroke", key: "s", modifiers: [], command: .bumpSize(.up)))
+        menu.addItem(makeDrawingItem(title: "Smaller stroke", key: "s", modifiers: [.shift], command: .bumpSize(.down)))
+        menu.addItem(.separator())
+        menu.addItem(makeDrawingItem(title: "More opaque", key: "o", modifiers: [], command: .bumpOpacity(.up)))
+        menu.addItem(makeDrawingItem(title: "Less opaque", key: "o", modifiers: [.shift], command: .bumpOpacity(.down)))
+        menu.addItem(.separator())
+        menu.addItem(makeDrawingItem(title: "Hide drawings", key: "h", modifiers: [], command: .toggleHide))
+        menu.addItem(makeDrawingItem(title: "Auto-fade", key: "f", modifiers: [], command: .toggleAutoFade))
+    }
+
+    private func makeDrawingItem(title: String, key: String, modifiers: NSEvent.ModifierFlags,
+                                 command: KeyCommand) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: #selector(runDrawingCommand(_:)), keyEquivalent: key)
+        item.keyEquivalentModifierMask = modifiers
+        item.target = self
+        item.representedObject = CommandBox(command: command)
+        drawingItems[command] = item
+        return item
+    }
+
+    @objc private func runDrawingCommand(_ sender: NSMenuItem) {
+        guard let box = sender.representedObject as? CommandBox else { return }
+        controller.run(box.command)
     }
 
     isolated deinit {
@@ -98,5 +141,12 @@ extension MenubarController: NSMenuDelegate {
         deactivateItem.isEnabled = active
         undoItem.isEnabled = editor.canUndo
         redoItem.isEnabled = editor.canRedo
+        drawingItems[.toggleHide]?.state = controller.drawingsVisible ? .off : .on
+        drawingItems[.toggleAutoFade]?.state = controller.autoFadeEnabled ? .on : .off
     }
+}
+
+private final class CommandBox: NSObject {
+    let command: KeyCommand
+    init(command: KeyCommand) { self.command = command }
 }

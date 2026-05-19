@@ -76,6 +76,7 @@ struct MenubarControllerTests {
         let titles = menubar.menu.items.map(\.title)
         #expect(titles == ["Activate", "Deactivate", "",
                            "Preferences...", "",
+                           "Drawing",
                            "Clear", "Undo", "Redo", "",
                            "Quit fiti"])
     }
@@ -178,5 +179,120 @@ struct MenubarControllerTests {
         try fire("Undo", in: menubar)
         #expect(editor.doc.strokeOrder.isEmpty)
         #expect(editor.canRedo == true)
+    }
+}
+
+@Suite("MenubarController Drawing submenu")
+@MainActor
+struct MenubarControllerDrawingSubmenuTests {
+    // swiftlint:disable:next large_tuple
+    private func make() -> (MenubarController, AppController, Editor) {
+        let clock = VirtualClock()
+        let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
+        let controller = AppController(
+            editor: editor,
+            window: RecordingWindow(),
+            detector: RecordingStationaryDetector(),
+            clock: clock,
+            ticker: RecordingFadeTicker()
+        )
+        let mb = MenubarController(controller: controller, editor: editor, onOpenPreferences: {})
+        return (mb, controller, editor)
+    }
+
+    private func drawingSubmenu(_ mb: MenubarController) -> NSMenu? {
+        mb.menu.item(withTitle: "Drawing")?.submenu
+    }
+
+    @Test("Drawing submenu exists")
+    func submenuExists() {
+        let (mb, _, _) = make()
+        #expect(drawingSubmenu(mb) != nil)
+    }
+
+    @Test("Drawing submenu has 8 color items with keyEquivalents 1..8")
+    func colorItems() {
+        let (mb, _, _) = make()
+        let sub = drawingSubmenu(mb)!
+        let colors = QuickPickPalette.colors
+        for i in 0..<8 {
+            let item = sub.item(withTitle: colors[i].name)
+            #expect(item != nil, "expected menu item titled \(colors[i].name)")
+            #expect(item?.keyEquivalent == "\(i + 1)")
+            #expect(item?.keyEquivalentModifierMask == [])
+        }
+    }
+
+    @Test("Larger stroke item has keyEquivalent 's' with no modifier")
+    func largerStrokeKey() {
+        let (mb, _, _) = make()
+        let item = drawingSubmenu(mb)!.item(withTitle: "Larger stroke")
+        #expect(item?.keyEquivalent == "s")
+        #expect(item?.keyEquivalentModifierMask == [])
+    }
+
+    @Test("Smaller stroke item has keyEquivalent 's' with shift")
+    func smallerStrokeKey() {
+        let (mb, _, _) = make()
+        let item = drawingSubmenu(mb)!.item(withTitle: "Smaller stroke")
+        #expect(item?.keyEquivalent == "s")
+        #expect(item?.keyEquivalentModifierMask == [.shift])
+    }
+
+    @Test("More opaque item has keyEquivalent 'o' with no modifier")
+    func moreOpaqueKey() {
+        let (mb, _, _) = make()
+        let item = drawingSubmenu(mb)!.item(withTitle: "More opaque")
+        #expect(item?.keyEquivalent == "o")
+        #expect(item?.keyEquivalentModifierMask == [])
+    }
+
+    @Test("Less opaque item has keyEquivalent 'o' with shift")
+    func lessOpaqueKey() {
+        let (mb, _, _) = make()
+        let item = drawingSubmenu(mb)!.item(withTitle: "Less opaque")
+        #expect(item?.keyEquivalent == "o")
+        #expect(item?.keyEquivalentModifierMask == [.shift])
+    }
+
+    @Test("Hide drawings item shows checkmark when drawingsVisible is false")
+    func hideStateCheckmark() {
+        let (mb, controller, _) = make()
+        let item = drawingSubmenu(mb)!.item(withTitle: "Hide drawings")!
+        // Initial: drawingsVisible == true → item.state == .off
+        mb.menu.delegate?.menuNeedsUpdate?(mb.menu)
+        #expect(item.state == .off)
+        controller.drawingsVisible = false
+        mb.menu.delegate?.menuNeedsUpdate?(mb.menu)
+        #expect(item.state == .on)
+    }
+
+    @Test("Auto-fade item shows checkmark when autoFadeEnabled is true")
+    func autoFadeStateCheckmark() {
+        let (mb, controller, _) = make()
+        let item = drawingSubmenu(mb)!.item(withTitle: "Auto-fade")!
+        mb.menu.delegate?.menuNeedsUpdate?(mb.menu)
+        #expect(item.state == .off)
+        controller.autoFadeEnabled = true
+        mb.menu.delegate?.menuNeedsUpdate?(mb.menu)
+        #expect(item.state == .on)
+    }
+
+    @Test("clicking a color submenu item dispatches the matching pickColor")
+    func clickColorDispatches() {
+        let (mb, controller, _) = make()
+        let red = drawingSubmenu(mb)!.item(withTitle: "Red")!
+        // Synthesize a click by invoking the action selector directly.
+        _ = red.target?.perform(red.action, with: red)
+        #expect(abs(controller.currentColor.r - 224.0/255.0) < 0.0001)
+    }
+
+    @Test("clicking Larger stroke dispatches bumpSize(.up)")
+    func clickLargerStrokeDispatches() {
+        let (mb, controller, _) = make()
+        controller.currentWidth = 10
+        let item = drawingSubmenu(mb)!.item(withTitle: "Larger stroke")!
+        _ = item.target?.perform(item.action, with: item)
+        #expect(controller.currentWidth > 10)
     }
 }
