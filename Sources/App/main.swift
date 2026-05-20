@@ -6,6 +6,7 @@ import Foundation
 
 let args = Args.parse(CommandLine.arguments)
 
+@MainActor
 final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     let args: Args
     var window: TransparentWindow!
@@ -24,6 +25,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     var hotkeys: KeyboardShortcutsHotkeys!
     var cursorRenderer: CursorRenderer!
     private var keyMonitor: KeyMonitor!
+    private var toolbarScreenObserver: NSObjectProtocol?
 
     init(args: Args) { self.args = args }
 
@@ -59,6 +61,8 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         toolbar = ToolbarController(controller: controller)
         keyMonitor = KeyMonitor(controller: controller)
         composeControllerCallbacks()
+        followToolbarToScreen(clearStrokes: false)  // initial sync — autosaved toolbar position may be on a non-main screen
+        observeToolbarScreenChanges()
 
         input = NSEventInputSource(view: inputView)
         input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0) }
@@ -131,6 +135,31 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         controller.onFadeOpacityChanged = { [weak self] opacity in
             self?.canvas.setGlobalOpacity(opacity)
         }
+    }
+
+    /// Keep the full-screen drawing canvas on whichever monitor hosts the
+    /// floating toolbar. Fires when the user drags the toolbar between
+    /// monitors (didChangeScreenNotification) and once at startup so the
+    /// canvas follows the toolbar's autosaved frame.
+    @MainActor
+    private func observeToolbarScreenChanges() {
+        toolbarScreenObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeScreenNotification,
+            object: toolbar.panel,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.followToolbarToScreen(clearStrokes: true)
+            }
+        }
+    }
+
+    @MainActor
+    private func followToolbarToScreen(clearStrokes: Bool) {
+        guard let target = toolbar.panel.screen else { return }
+        guard window.screen != target else { return }
+        if clearStrokes { controller.clear() }
+        window.setFrame(target.frame, display: true)
     }
 }
 
