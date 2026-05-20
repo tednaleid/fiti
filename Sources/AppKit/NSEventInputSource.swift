@@ -169,5 +169,10 @@ public final class CanvasInputView: NSView {
         } else {
             NSCursor.arrow.set()
         }
+        // Force AppKit to re-resolve the cursor on the next runloop pass so a
+        // keyboard-triggered change (color/size/opacity) sticks even when the
+        // mouse is stationary. Without this, AppKit's cursor cache reverts to
+        // the system arrow because no mouse motion fired cursorUpdate(with:).
+        window?.invalidateCursorRects(for: self)
     }
 }
