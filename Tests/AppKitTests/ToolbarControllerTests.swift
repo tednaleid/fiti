@@ -293,3 +293,82 @@ struct ToolbarControllerTooltipTests {
         #expect(toolbar.testOnly_opacityLabelText == "stroke opacity")
     }
 }
+
+@Suite("ToolbarController active-state highlights")
+@MainActor
+struct ToolbarControllerActiveStateTests {
+    private func make() -> (ToolbarController, AppController) {
+        let clock = VirtualClock()
+        let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
+        let controller = AppController(
+            editor: editor,
+            window: RecordingWindow(),
+            detector: RecordingStationaryDetector(),
+            clock: clock,
+            ticker: RecordingFadeTicker()
+        )
+        let toolbar = ToolbarController(controller: controller,
+                                        defaults: UserDefaults(suiteName: UUID().uuidString)!)
+        return (toolbar, controller)
+    }
+
+    @Test("the swatch matching currentColor is the active swatch on init")
+    func initActiveSwatchMatchesDefault() {
+        // Default currentColor is Red (palette index 2).
+        let (toolbar, _) = make()
+        #expect(toolbar.testOnly_activeSwatchIndex == 2)
+    }
+
+    @Test("changing currentColor to a palette color updates the active swatch")
+    func activeSwatchTracksColorChange() {
+        let (toolbar, controller) = make()
+        let green = QuickPickPalette.colors[5]
+        controller.currentColor = RGBA(r: green.r, g: green.g, b: green.b, a: 0.7)
+        #expect(toolbar.testOnly_activeSwatchIndex == 5)
+    }
+
+    @Test("setting a non-palette currentColor clears the active swatch")
+    func nonPaletteColorClearsHighlight() {
+        let (toolbar, controller) = make()
+        controller.currentColor = RGBA(r: 0.123, g: 0.456, b: 0.789, a: 1.0)
+        #expect(toolbar.testOnly_activeSwatchIndex == nil)
+    }
+
+    @Test("matching ignores alpha — only RGB is compared")
+    func swatchMatchIgnoresAlpha() {
+        let (toolbar, controller) = make()
+        let blue = QuickPickPalette.colors[6]
+        controller.currentColor = RGBA(r: blue.r, g: blue.g, b: blue.b, a: 0.1)
+        #expect(toolbar.testOnly_activeSwatchIndex == 6)
+    }
+
+    @Test("hide button has no active background while drawings are visible")
+    func hideButtonInactiveByDefault() {
+        let (toolbar, _) = make()
+        #expect(toolbar.testOnly_hideButtonActiveBackground == false)
+    }
+
+    @Test("hide button gains an active background once drawings are hidden")
+    func hideButtonActiveWhenHidden() {
+        let (toolbar, controller) = make()
+        controller.drawingsVisible = false
+        #expect(toolbar.testOnly_hideButtonActiveBackground == true)
+        controller.drawingsVisible = true
+        #expect(toolbar.testOnly_hideButtonActiveBackground == false)
+    }
+
+    @Test("auto-fade button has no active background while disabled")
+    func autoFadeInactiveByDefault() {
+        let (toolbar, _) = make()
+        #expect(toolbar.testOnly_autoFadeActiveBackground == false)
+    }
+
+    @Test("auto-fade button gains an active background once enabled")
+    func autoFadeActiveWhenEnabled() {
+        let (toolbar, controller) = make()
+        controller.autoFadeEnabled = true
+        #expect(toolbar.testOnly_autoFadeActiveBackground == true)
+        controller.autoFadeEnabled = false
+        #expect(toolbar.testOnly_autoFadeActiveBackground == false)
+    }
+}

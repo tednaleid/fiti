@@ -4,6 +4,7 @@
 import AppKit
 
 @MainActor
+// swiftlint:disable:next type_body_length
 public final class ToolbarController: NSObject {
     private let controller: AppController
     private let defaults: UserDefaults
@@ -18,6 +19,7 @@ public final class ToolbarController: NSObject {
 
     private let widthLabel = NSTextField(labelWithString: "stroke size")
     private let opacityLabel = NSTextField(labelWithString: "stroke opacity")
+    private(set) var activeSwatchIndex: Int?
 
     public init(controller: AppController, defaults: UserDefaults = .standard) {
         self.controller = controller
@@ -60,6 +62,7 @@ public final class ToolbarController: NSObject {
         colorWell.color = NSColor(red: CGFloat(color.r), green: CGFloat(color.g),
                                   blue: CGFloat(color.b), alpha: CGFloat(color.a))
         opacitySlider.doubleValue = color.a
+        updateSwatchHighlights()
     }
 
     // swiftlint:disable:next function_body_length
@@ -137,7 +140,7 @@ public final class ToolbarController: NSObject {
         stack.addArrangedSubview(autoFadeButton)
         autoFadeButton.widthAnchor.constraint(equalTo: hideButton.widthAnchor).isActive = true
 
-        let container = NSView()
+        let container = ToolbarContainerView()
         container.addSubview(stack)
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: container.topAnchor),
@@ -146,6 +149,33 @@ public final class ToolbarController: NSObject {
             stack.trailingAnchor.constraint(equalTo: container.trailingAnchor)
         ])
         panel.contentView = container
+        updateSwatchHighlights()
+    }
+
+    /// Refresh the "active" highlight on the swatch matching `controller.currentColor`.
+    /// Called whenever the controller's color changes (via toolbar click, picker,
+    /// keyboard shortcut, or HTTP write). Compares on RGB only — alpha comes from
+    /// the opacity slider and doesn't disqualify a swatch match.
+    private func updateSwatchHighlights() {
+        let match = matchingSwatchIndex(for: controller.currentColor)
+        activeSwatchIndex = match
+        for (i, btn) in quickPickButtons.enumerated() {
+            setActiveBackground(btn, active: i == match)
+        }
+    }
+
+    private func matchingSwatchIndex(for color: RGBA) -> Int? {
+        QuickPickPalette.colors.firstIndex { c in
+            abs(c.r - color.r) < 0.001 && abs(c.g - color.g) < 0.001 && abs(c.b - color.b) < 0.001
+        }
+    }
+
+    private func setActiveBackground(_ button: NSButton, active: Bool) {
+        button.wantsLayer = true
+        button.layer?.cornerRadius = 4
+        button.layer?.backgroundColor = active
+            ? NSColor.controlAccentColor.withAlphaComponent(0.25).cgColor
+            : NSColor.clear.cgColor
     }
 
     private func styleSliderLabel(_ field: NSTextField) {
@@ -186,6 +216,8 @@ public final class ToolbarController: NSObject {
         hideButton.image = icon(named: name, withRedX: !visible,
                                 accessibilityDescription: visible ? "Hide" : "Show")
         hideButton.toolTip = visible ? "Hide drawings — h" : "Show drawings — h"
+        // Active = hiding is engaged (drawings not visible).
+        setActiveBackground(hideButton, active: !visible)
     }
 
     private func updateAutoFadeGlyph(enabled: Bool) {
@@ -194,6 +226,8 @@ public final class ToolbarController: NSObject {
         autoFadeButton.image = icon(named: name, withRedX: !enabled,
                                     accessibilityDescription: "Auto-fade drawings")
         autoFadeButton.toolTip = enabled ? "Auto-fade on — f" : "Auto-fade off — f"
+        // Active = auto-fade timer is running.
+        setActiveBackground(autoFadeButton, active: enabled)
     }
 
     // MARK: - Actions
@@ -299,7 +333,43 @@ public final class ToolbarController: NSObject {
     internal var testOnly_autoFadeTooltip: String? { autoFadeButton.toolTip }
     internal var testOnly_widthLabelText: String { widthLabel.stringValue }
     internal var testOnly_opacityLabelText: String { opacityLabel.stringValue }
+    internal var testOnly_activeSwatchIndex: Int? { activeSwatchIndex }
+    internal var testOnly_hideButtonActiveBackground: Bool {
+        guard let cg = hideButton.layer?.backgroundColor else { return false }
+        return cg.alpha > 0
+    }
+    internal var testOnly_autoFadeActiveBackground: Bool {
+        guard let cg = autoFadeButton.layer?.backgroundColor else { return false }
+        return cg.alpha > 0
+    }
     // swiftlint:enable identifier_name
 }
 
 internal enum TestOnlyError: Error { case outOfRange }
+
+/// Container for the toolbar's content view that claims the arrow cursor.
+/// Without this, the canvas window's lingering `NSCursor.set()` for the fiti
+/// circle cursor stays visible while the mouse is over the toolbar — the
+/// canvas tracking area doesn't fire `mouseExited` for a different window
+/// covering the same screen area, so it never gets a chance to revert.
+@MainActor
+private final class ToolbarContainerView: NSView {
+    private var trackingArea: NSTrackingArea?
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let existing = trackingArea { removeTrackingArea(existing) }
+        let area = NSTrackingArea(
+            rect: bounds,
+            options: [.activeAlways, .cursorUpdate, .inVisibleRect],
+            owner: self,
+            userInfo: nil
+        )
+        addTrackingArea(area)
+        trackingArea = area
+    }
+
+    override func cursorUpdate(with event: NSEvent) {
+        NSCursor.arrow.set()
+    }
+}
