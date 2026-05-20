@@ -1,6 +1,8 @@
 # fiti
 
-Native macOS transparent drawing overlay. Press a hotkey, draw on top of any app, press again to hide. fiti is a Swift port of the [telestrator](https://github.com/steveruizok/telestrator) concept, with a hexagonal Core / AppKit / DevHTTP architecture so the rendering layer and the document model can evolve independently.
+Native macOS transparent drawing overlay. Press a hotkey, draw on top of any app, press it again to hide. Useful for annotating during screen shares, demos, and recordings: circle the thing you're pointing at, sketch over a diagram, or scribble notes that auto-fade after a few seconds.
+
+The app sits in the menubar with no Dock icon and stays out of your way until you activate it.
 
 ## Install
 
@@ -20,20 +22,48 @@ To update:
 brew upgrade --cask fiti
 ```
 
-The cask installs `Fiti.app` to `/Applications` and the menubar status icon launches it. The app sits in the menubar (no Dock icon) and stays inactive until the activation hotkey or menu item is invoked.
+The cask installs `Fiti.app` to `/Applications`.
 
 ## Use
 
+Press `Opt+F` to activate. The cursor becomes a circle that previews the current pen color, opacity, and width, and a floating toolbar appears with color quick-picks, a custom color well, stroke size and opacity sliders, a hide/show toggle, and an auto-fade toggle. The toolbar remembers its position across launches.
+
+### System-wide
+
 | Action | Shortcut |
 | --- | --- |
-| Toggle activate/deactivate (system-wide) | `Opt+F` |
+| Activate / deactivate | `Opt+F` |
 | Deactivate (while active) | `Esc` |
-| Clear all strokes | `Cmd+K` |
+
+`Opt+F` is registered via [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) and rebindable in Preferences if it collides with another app.
+
+### While fiti is active
+
+These single-key shortcuts only fire while fiti has key focus, and pass through to whatever app you're in otherwise.
+
+| Action | Shortcut |
+| --- | --- |
+| Pick color | `1`-`8` |
+| Stroke size larger / smaller | `s` / `Shift+S` |
+| Stroke opacity more / less | `o` / `Shift+O` |
+| Toggle hide drawings | `h` |
+| Toggle auto-fade | `f` |
+| Clear all strokes | `Delete` |
+
+Hover over any toolbar control to see its action and shortcut. The menubar's "Drawing" submenu lists them too.
+
+### Menubar
+
+| Action | Shortcut |
+| --- | --- |
 | Undo / Redo | `Cmd+Z` / `Cmd+Shift+Z` |
+| Clear | `Cmd+K` |
+| Preferences | `Cmd+,` |
+| Quit | `Cmd+Q` |
 
-The activation hotkey is registered via [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) and rebindable through the library's API (`KeyboardShortcuts.Name.toggleActivation`). A Preferences UI for in-app rebinding is on the roadmap.
+### Auto-fade
 
-While active, the cursor becomes a circle that matches the current pen color, opacity, and width. The toolbar (color quick-picks, custom color, width slider, opacity slider, undo/redo/clear, hide-drawings) appears beside the cursor and remembers its position across launches.
+Toggle the clock glyph on the toolbar (or press `f`) to enable auto-fade. Drawings stay solid for 8 seconds after the last stroke, ramp down to invisible over the following 2 seconds, then clear. Any new stroke or `Cmd+Z` resets the timer and restores everything at full opacity. Toggling off mid-fade snaps strokes back to full opacity.
 
 ## Development
 

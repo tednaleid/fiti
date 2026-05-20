@@ -29,16 +29,17 @@ struct KeyCommandRegistryTests {
         #expect(lookup("o", shift: true) == .bumpOpacity(.down))
     }
 
-    @Test("'h' toggles hide; 'f' toggles auto-fade; 'c' clears")
+    @Test("'h' toggles hide; 'f' toggles auto-fade; delete clears")
     func toggleAndClearBindings() {
         #expect(lookup("h") == .toggleHide)
         #expect(lookup("f") == .toggleAutoFade)
-        #expect(lookup("c") == .clear)
+        #expect(lookup("\u{7F}") == .clear)  // NSDeleteCharacter
     }
 
-    @Test("reserved slots (Space, 'e', 'p') resolve to nil")
+    @Test("reserved slots (Space, 'c', 'e', 'p') resolve to nil")
     func reservedSlotsAreUnbound() {
         #expect(lookup(" ") == nil)
+        #expect(lookup("c") == nil)
         #expect(lookup("e") == nil)
         #expect(lookup("p") == nil)
     }
@@ -54,7 +55,7 @@ struct KeyCommandRegistryTests {
 
     @Test("registry has exactly the documented number of bindings")
     func bindingCount() {
-        // 8 colors + 4 size/opacity (s/S/o/O) + 3 toggles (h/f/c) = 15
+        // 8 colors + 4 size/opacity (s/S/o/O) + 2 toggles (h/f) + 1 clear (delete) = 15
         #expect(KeyCommandRegistry.bindings.count == 15)
     }
 }

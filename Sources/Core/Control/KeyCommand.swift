@@ -44,7 +44,10 @@ public enum KeyCommandRegistry {
         KeyBinding(character: "o", shift: true): .bumpOpacity(.down),
         KeyBinding(character: "h"): .toggleHide,
         KeyBinding(character: "f"): .toggleAutoFade,
-        KeyBinding(character: "c"): .clear
+        // "\u{7F}" is NSDeleteCharacter — what NSEvent delivers when the user
+        // presses the big delete key (top-right of QWERTY). The forward-delete
+        // key (fn+Delete) is U+F728 and is intentionally unbound for now.
+        KeyBinding(character: "\u{7F}"): .clear
     ]
 
     public static func command(for binding: KeyBinding) -> KeyCommand? {

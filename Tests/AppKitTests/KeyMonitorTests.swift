@@ -109,14 +109,26 @@ struct KeyMonitorTests {
         #expect(controller.currentColor == before)
     }
 
-    @Test("clear dispatches via run(.clear)")
-    func clearDispatches() {
+    @Test("delete key dispatches run(.clear)")
+    func deleteClearDispatches() {
         let (monitor, controller, editor) = make()
         controller.activate()
         controller.pointerDown(StrokePoint(x: 0, y: 0))
         controller.pointerUp()
         #expect(editor.doc.strokes.isEmpty == false)
-        _ = monitor.handle(keyEvent("c"))
+        _ = monitor.handle(keyEvent("\u{7F}"))  // NSDeleteCharacter
         #expect(editor.doc.strokes.isEmpty == true)
+    }
+
+    @Test("'c' is no longer bound; passes through")
+    func cIsUnbound() {
+        let (monitor, controller, editor) = make()
+        controller.activate()
+        controller.pointerDown(StrokePoint(x: 0, y: 0))
+        controller.pointerUp()
+        let event = keyEvent("c")
+        let result = monitor.handle(event)
+        #expect(result === event, "'c' should pass through unchanged now that delete is the clear binding")
+        #expect(editor.doc.strokes.isEmpty == false)
     }
 }
