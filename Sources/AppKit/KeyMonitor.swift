@@ -53,9 +53,12 @@ public final class KeyMonitor {
     /// event (bound key dispatched); returns the original event to pass it
     /// through (unbound, Cmd-modified, or multi-character composition).
     internal func handle(_ event: NSEvent) -> NSEvent? {
+        // charactersIgnoringModifiers ignores everything *except* shift, so
+        // Shift+S arrives as "S". Lowercase before building the binding —
+        // the registry uses lowercase + an explicit shift flag.
         guard let chars = event.charactersIgnoringModifiers,
               chars.count == 1,
-              let ch = chars.first else {
+              let ch = chars.lowercased().first else {
             return event
         }
         // Cmd combos belong to the menubar (Cmd+Z, Cmd+K, Cmd+S, ...).

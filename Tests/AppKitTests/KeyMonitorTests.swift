@@ -58,6 +58,27 @@ struct KeyMonitorTests {
         #expect(controller.currentWidth < 10)
     }
 
+    @Test("OS-shape Shift+S (chars='S', shift flag set) dispatches bumpSize(.down)")
+    func shiftedKeyDispatchedOSShape() {
+        // charactersIgnoringModifiers ignores everything except shift, so Shift+S
+        // arrives as "S" not "s". This test mimics the real NSEvent shape that
+        // macOS delivers — the original shiftedKeyDispatched used "s" for both
+        // chars and charactersIgnoringModifiers, which masked the bug where the
+        // registry lookup missed because of the case mismatch.
+        let (monitor, controller, _) = make()
+        controller.currentWidth = 10
+        _ = monitor.handle(keyEvent("S", shift: true))
+        #expect(controller.currentWidth < 10, "Shift+S should dispatch bumpSize(.down) even when chars is uppercase")
+    }
+
+    @Test("OS-shape Shift+O (chars='O', shift flag set) dispatches bumpOpacity(.down)")
+    func shiftedOpacityDispatchedOSShape() {
+        let (monitor, controller, _) = make()
+        controller.currentColor = RGBA(r: 0.5, g: 0.5, b: 0.5, a: 0.9)
+        _ = monitor.handle(keyEvent("O", shift: true))
+        #expect(controller.currentColor.a < 0.9, "Shift+O should dispatch bumpOpacity(.down) even when chars is uppercase")
+    }
+
     @Test("unbound key is passed through unchanged")
     func unboundKeyPassesThrough() {
         let (monitor, controller, _) = make()
