@@ -1,6 +1,6 @@
 # fiti Roadmap
 
-Date: 2026-05-16 (refreshed 2026-05-18)
+Date: 2026-05-16 (refreshed 2026-05-20)
 Status: Backlog. Items here are not committed scope. Each item becomes a brainstorm → design spec → implementation plan when it's time to land.
 
 ## What this is
@@ -19,6 +19,9 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 - [x] Hold-to-straighten gesture (Notability-style draw-and-hold-to-snap, then rubber-band the endpoint).
 - [x] Real code signing (Developer ID Application cert via `FITI_CODE_SIGN_IDENTITY`), notarization in CI, reproducible CI builds via GitHub secrets.
 - [x] Dev HTTP surface gated behind `#if DEBUG` — Release binaries do not link Network or expose `localhost:9876`.
+- [x] Disappearing drawings (auto-fade) — opt-in toolbar toggle (clock glyph). 10s solid + 2s linear fade, then `editor.clear()` in one undoable op. `Sources/Core/Control/AppController.swift` owns the state machine; `Sources/AppKit/TimerFadeTicker.swift` drives the 30Hz tick.
+- [x] Active-app keyboard shortcuts — `1`-`8` (color), `s` / `Shift+S` (size), `o` / `Shift+O` (opacity), `h` (hide), `f` (auto-fade), `Delete` (clear). Pure-Core `KeyCommandRegistry` is the source of truth, dispatched by `Sources/AppKit/KeyMonitor.swift`. Discoverable via toolbar tooltips and the menubar "Drawing" submenu.
+- [x] Canvas follows the toolbar to whichever monitor it lives on. `NSWindow.didChangeScreenNotification` observer on the toolbar panel relocates the full-screen canvas; drawings clear on monitor switch (one-`Cmd+Z` restores at original coordinates).
 
 ## Open: visibility & interaction
 
@@ -29,25 +32,11 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
   - Implementation tension: `KeyboardShortcuts` is Carbon-backed (`RegisterEventHotKey`), which always intercepts at the OS level — there's no "decline" return code. Two options to get fall-through: (a) after receiving the event, re-synthesise and post the original keypress via `CGEventPost` when we want to "let it through" — gross but doesn't need extra entitlements; (b) bypass the library for this one binding and use a `CGEventTap` (needs Accessibility permission in System Settings → Privacy & Security). Option (a) is the lower-friction default; revisit if it has noticeable latency or feels janky.
 - [ ] The hotkey works regardless of fiti's activation state — it's purely about whether marks are rendered. Activating fiti is still `Opt+F`.
 
-### Disappearing drawings (auto-fade)
-- [ ] Opt-in mode where strokes auto-fade after N seconds (default 10s, configurable in Preferences). Fade is a brief opacity ramp at the end of the window (not the whole duration). New strokes drawn while older strokes are still visible reset the disappear timer for everything on screen, so a continuous annotation session keeps all marks present.
-- [ ] Toggle goes on the toolbar (eye-with-clock glyph) and on a keyboard shortcut (see Keyboard-driven tool use). Turning it on starts the fade for everything currently drawn; turning it off freezes whatever's still visible at full opacity.
-- [ ] Undo/redo integration: fade-out commits a "fade" entry on the undo stack. Cmd+Z resurrects all faded strokes back to full opacity and restarts the timer. A subsequent stroke continues normally (no double-revival).
-- [ ] Implementation: driven by `Editor.tick(now:)` against a `Clock` port so tests use `VirtualClock`. Do not drive from an AppKit display link directly. The fade ramp uses elapsed-time-since-last-input, not absolute timestamps — keeps the math local to the editor.
-
-### Keyboard-driven tool use
-- [ ] Make fiti heavily keyboard-driven while active. Most controls today require menubar or toolbar clicks. Initial bindings (subject to research before implementation):
-  - `1`–`8`: select quick-pick color (same eight as the toolbar's row).
-  - `c`: clear all (replaces `Cmd+K` as the primary; `Cmd+K` can stay as a redundant binding).
-  - `h`: hide/show drawings.
-  - `f`: toggle auto-fade (only if Disappearing drawings has shipped).
-  - `e`: eraser tool (only once Eraser as a UI tool has shipped).
-  - `p`: pen tool (the default; useful when switching back from eraser/select).
-  - `s` or `Space`: selection tool (only once selection has shipped; see below).
-  - `[` / `]`: decrement / increment width.
-  - `Cmd+Z` / `Cmd+Shift+Z`: undo / redo (already bound via menubar).
-- [ ] Research: survey what Notability, FreeForm, Goodnotes, OneNote, Telestrator, ZoomIt, Excalidraw use for tool bindings. Pick the most thumb-friendly conventions where they conflict. Document the chosen bindings in ONBOARDING.md.
-- [ ] Implementation: a `KeyCommands` port in `Sources/Core/Ports/` that maps key events to `AppController` calls; an `NSEvent.localMonitor`-based adapter in `Sources/AppKit/`. Bindings live in a single hard-coded dictionary in Core so tests can exhaustively verify them. **Not user-rebindable**: these only fire while fiti has key focus, so conflicts with other apps' shortcuts can't happen. Compare to `Opt+F` and the planned `Opt+H`, which go through `sindresorhus/KeyboardShortcuts` because they fire system-wide and need a Preferences recorder to resolve real cross-app conflicts. Bindings must work mid-stroke (e.g., switching color during a stroke applies to subsequent strokes, not the current one).
+### Keyboard slots reserved for future tools
+- [ ] `e`: eraser tool (when Eraser as a UI tool ships).
+- [ ] `p`: pen tool (default; only useful once a non-pen tool exists to switch back from).
+- [ ] `Space`: selection tool (press-and-hold, see selection design). Tentative; final choice between `Space` and a dedicated letter gets decided in the selection-tool brainstorm.
+- These slots are deliberately absent from `KeyCommandRegistry` today. The registry's tests assert they resolve to `nil` so a future binding can't be added silently.
 
 ### Selection tool
 - [ ] Selection / pointer tool that lets the user pick previously drawn strokes and manipulate them.
@@ -56,11 +45,13 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
   - Drag from empty area: rubber-band a marquee box; release selects all strokes whose bounding box intersects the marquee.
   - Once selected, the selection bounding box renders with eight resize handles (corners and midpoints) and a separate rotation handle anchored above the top edge.
   - Drag the body of the selection to translate. Drag a corner/edge handle to scale (Shift to lock aspect ratio). Drag the rotation handle to rotate around the selection center.
+  - `Delete` with a selection removes only the selected strokes (one undoable op). With no selection, `Delete` keeps its current behavior of clearing everything.
   - `Esc` or click in empty space dismisses the selection.
-- [ ] Activated by the keyboard shortcut item above (`s` or `Space` press-and-hold, TBD). Returns to pen when shortcut released or another tool selected.
+- [ ] Activated by the keyboard shortcut item above (`Space` press-and-hold leaning likeliest, TBD in design). Returns to pen when released or another tool selected.
 - [ ] Implementation surface:
   - New `AppController.Mode` case (`.activeSelecting`) or a parallel "current tool" state independent of mode. The latter scales better as more tools land.
   - `Editor` gains `transformStrokes(ids:translate:scale:rotate:)` as a single undoable op so one drag = one undo entry.
+  - `Editor` gains `eraseStrokes(ids:)` (or extends the existing `eraseStroke`) as a batched single undoable op for the Delete-selected case.
   - Hit-testing helper in Core: point-in-polygon for perfect-freehand strokes, distance-from-path within `width/2 + tolerance` for any legacy uniform strokes.
   - Bounding-box / marquee math also in Core (testable without AppKit).
   - Selection rendering (handles, marquee outline) lives in `Sources/AppKit/CanvasView.swift` since it's a presentation concern.
@@ -86,7 +77,8 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 - [ ] Open question: persistence of toolbar position, hide-state, opacity — already in UserDefaults under `fiti.*` keys; doc persistence is a separate concern.
 
 ### Multi-display
-- [ ] One window per display, all sharing the same `Editor`. Strokes get a `displayId` or get coordinates resolved to a global space — open design question. Affects how the selection tool's marquee behaves across displays.
+- Shipped (0.3.0): the canvas window follows whichever monitor hosts the toolbar. One display at a time; strokes clear on a monitor switch.
+- [ ] Richer version: one canvas per display, all sharing the same `Editor`. Strokes get a `displayId` or get coordinates resolved to a global space — open design question. Affects how the selection tool's marquee behaves across displays.
 
 ## Code-level cleanup (not features)
 
