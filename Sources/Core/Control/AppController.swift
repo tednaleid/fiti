@@ -1,5 +1,5 @@
-// ABOUTME: Activation state machine. Bridges raw pointer input to Editor
-// ABOUTME: calls; owns click-through toggling via WindowControl.
+// ABOUTME: Activation state machine and selection gesture router. Bridges
+// ABOUTME: raw pointer input to Editor calls; owns click-through toggling via WindowControl.
 
 import Foundation
 
@@ -46,19 +46,29 @@ public final class AppController {
         }
     }
 
-    private var lastInputAt: Double?
+    var lastInputAt: Double?
 
     public let editor: Editor
     private let window: WindowControl
-    private let detector: StationaryDetector
-    private let clock: Clock
-    private let ticker: FadeTicker
+    let detector: StationaryDetector
+    let clock: Clock
+    let ticker: FadeTicker
     private let stationaryDeadZone: Double = 2.0
-    private static let fadeWindowSeconds: Double = 10.0
-    private static let fadeRampSeconds: Double = 2.0
+    static let fadeWindowSeconds: Double = 10.0
+    static let fadeRampSeconds: Double = 2.0
     private var lastTimerResetPoint: StrokePoint?
 
     public private(set) var isRubberBanding: Bool = false
+
+    // MARK: Selection gesture state
+
+    enum SelectionGesture {
+        case marquee(startPoint: StrokePoint)
+        case translate(startPoint: StrokePoint, originalTransforms: [StrokeId: Transform])
+    }
+
+    var selectionGesture: SelectionGesture?
+    var lastSelectionPoint: StrokePoint?
 
     // Drawing parameters. Each has a didSet publisher so HTTP writes and
     // toolbar-widget writes both notify other adapters that need to react
@@ -174,8 +184,53 @@ public final class AppController {
         if mode == .inactive { activate() } else { deactivate() }
     }
 
+    // MARK: Public pointer entry points
+
     public func pointerDown(_ point: StrokePoint) {
+        pointerDown(point, modifiers: .none)
+    }
+
+    public func pointerDown(_ point: StrokePoint, modifiers: PointerModifiers) {
         lastInputAt = clock.now()
+        guard mode != .inactive else { return }
+        switch currentTool {
+        case .pen:
+            if !selectedStrokeIds.isEmpty { selectedStrokeIds = [] }
+            penPointerDown(point)
+        case .selection:
+            selectionPointerDown(point, modifiers: modifiers)
+        }
+    }
+
+    public func pointerMoved(_ point: StrokePoint) {
+        pointerMoved(point, modifiers: .none)
+    }
+
+    public func pointerMoved(_ point: StrokePoint, modifiers: PointerModifiers) {
+        lastInputAt = clock.now()
+        guard mode != .inactive else { return }
+        switch currentTool {
+        case .pen: penPointerMoved(point)
+        case .selection: selectionPointerMoved(point, modifiers: modifiers)
+        }
+    }
+
+    public func pointerUp() {
+        pointerUp(modifiers: .none)
+    }
+
+    public func pointerUp(modifiers: PointerModifiers) {
+        lastInputAt = clock.now()
+        guard mode != .inactive else { return }
+        switch currentTool {
+        case .pen: penPointerUp()
+        case .selection: selectionPointerUp(modifiers: modifiers)
+        }
+    }
+
+    // MARK: Pen gesture (private)
+
+    private func penPointerDown(_ point: StrokePoint) {
         guard mode == .activeIdle else { return }
         _ = editor.startStroke(color: currentColor, width: currentWidth, pointerType: .mouse)
         editor.appendPoint(point)
@@ -184,8 +239,7 @@ public final class AppController {
         detector.arm()
     }
 
-    public func pointerMoved(_ point: StrokePoint) {
-        lastInputAt = clock.now()
+    private func penPointerMoved(_ point: StrokePoint) {
         guard mode == .activeDrawing else { return }
         if isRubberBanding {
             editor.moveCurrentStrokeEndpoint(to: point)
@@ -198,19 +252,18 @@ public final class AppController {
         }
     }
 
+    private func penPointerUp() {
+        guard mode == .activeDrawing else { return }
+        resetStrokeState()
+        editor.endStroke()
+        mode = .activeIdle
+    }
+
     private func pastDeadZone(_ point: StrokePoint) -> Bool {
         guard let last = lastTimerResetPoint else { return true }
         let dx = point.x - last.x
         let dy = point.y - last.y
         return (dx * dx + dy * dy).squareRoot() > stationaryDeadZone
-    }
-
-    public func pointerUp() {
-        lastInputAt = clock.now()
-        guard mode == .activeDrawing else { return }
-        resetStrokeState()
-        editor.endStroke()
-        mode = .activeIdle
     }
 
     private func handleStationary() {
@@ -240,71 +293,4 @@ public final class AppController {
         lastTimerResetPoint = nil
     }
 
-    private func autoFadeStateChanged() {
-        if autoFadeEnabled {
-            lastInputAt = clock.now()
-            ticker.start()
-        } else {
-            ticker.stop()
-            fadeOpacity = 1.0
-        }
-    }
-
-    private func handleTick(_ now: Double) {
-        guard autoFadeEnabled else { return }
-        guard mode != .activeDrawing else { return }
-
-        if editor.doc.strokes.isEmpty {
-            lastInputAt = nil
-            fadeOpacity = 1.0
-            return
-        }
-
-        if lastInputAt == nil {
-            lastInputAt = now
-            fadeOpacity = 1.0
-            return
-        }
-
-        let age = now - lastInputAt!
-        let rampStart = Self.fadeWindowSeconds - Self.fadeRampSeconds  // 8.0
-
-        if age >= Self.fadeWindowSeconds {
-            editor.clear()
-            lastInputAt = nil
-            fadeOpacity = 1.0
-        } else if age >= rampStart {
-            fadeOpacity = 1.0 - (age - rampStart) / Self.fadeRampSeconds
-        } else {
-            fadeOpacity = 1.0
-        }
-    }
-
-    public func run(_ command: KeyCommand) {
-        switch command {
-        case .pickColor(let i):
-            guard i >= 0, i < QuickPickPalette.colors.count else { return }
-            let c = QuickPickPalette.colors[i]
-            currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: currentColor.a)
-        case .bumpSize(.up):
-            currentWidth = min(40, currentWidth * 1.1)
-        case .bumpSize(.down):
-            currentWidth = max(1, currentWidth / 1.1)
-        case .bumpOpacity(.up):
-            currentColor = currentColor.with(a: min(1, currentColor.a + 0.1))
-        case .bumpOpacity(.down):
-            currentColor = currentColor.with(a: max(0, currentColor.a - 0.1))
-        case .toggleHide:
-            drawingsVisible.toggle()
-        case .toggleAutoFade:
-            autoFadeEnabled.toggle()
-        case .clear:
-            if !selectedStrokeIds.isEmpty {
-                _ = editor.eraseStrokes(ids: selectedStrokeIds)
-                selectedStrokeIds = []
-            } else {
-                clear()
-            }
-        }
-    }
 }
