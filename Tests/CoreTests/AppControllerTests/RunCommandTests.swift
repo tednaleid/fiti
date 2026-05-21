@@ -202,4 +202,17 @@ struct RunCommandTests {
         c.run(.clear)
         #expect(editor.doc.strokeOrder.isEmpty)
     }
+
+    @Test("clear() resets selectedStrokeIds so the canvas selection indicator doesn't linger")
+    func clearResetsSelection() {
+        let (c, editor, _) = make()
+        c.activate()
+        c.pointerDown(StrokePoint(x: 0, y: 0))
+        c.pointerUp()
+        c.selectedStrokeIds = editor.doc.strokeOrder
+        #expect(!c.selectedStrokeIds.isEmpty)
+        c.clear()
+        #expect(c.selectedStrokeIds == [])
+        #expect(editor.doc.strokes.isEmpty)
+    }
 }

@@ -293,6 +293,7 @@ public final class AppController {
             mode = .activeIdle
         }
         editor.clear()
+        if !selectedStrokeIds.isEmpty { selectedStrokeIds = [] }
     }
 
     private func resetStrokeState() {
