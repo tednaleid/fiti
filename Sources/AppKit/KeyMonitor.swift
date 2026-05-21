@@ -1,6 +1,6 @@
 // ABOUTME: Active-app keyboard shortcut adapter. Installs an NSEvent local
-// ABOUTME: monitor while mode != .inactive; translates each keyDown into a
-// ABOUTME: KeyCommand via KeyCommandRegistry and dispatches AppController.run(_:).
+// ABOUTME: monitor while mode != .inactive; translates keyDown/keyUp into tool
+// ABOUTME: switches (Space) or KeyCommands via KeyCommandRegistry.
 
 import AppKit
 
@@ -34,7 +34,7 @@ public final class KeyMonitor {
 
     private func install() {
         guard monitor == nil else { return }
-        let m = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        let m = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
             self?.handle(event) ?? event
         }
         monitor = m
@@ -50,8 +50,8 @@ public final class KeyMonitor {
     }
 
     /// Pure translation, exposed for unit tests. Returns nil to swallow the
-    /// event (bound key dispatched); returns the original event to pass it
-    /// through (unbound, Cmd-modified, or multi-character composition).
+    /// event (bound key dispatched or Space tool switch); returns the original
+    /// event to pass it through (unbound, Cmd-modified, or multi-character).
     internal func handle(_ event: NSEvent) -> NSEvent? {
         // charactersIgnoringModifiers ignores everything *except* shift, so
         // Shift+S arrives as "S". Lowercase before building the binding —
@@ -61,6 +61,20 @@ public final class KeyMonitor {
               let ch = chars.lowercased().first else {
             return event
         }
+        // Space press-and-hold: keyDown → selection, keyUp → pen.
+        if ch == " " {
+            if event.type == .keyDown {
+                if event.isARepeat { return nil }
+                controller.currentTool = .selection
+                return nil
+            }
+            if event.type == .keyUp {
+                controller.currentTool = .pen
+                return nil
+            }
+        }
+        // Only dispatch registry commands for keyDown; pass keyUp through.
+        guard event.type == .keyDown else { return event }
         // Cmd combos belong to the menubar (Cmd+Z, Cmd+K, Cmd+S, ...).
         if event.modifierFlags.contains(.command) { return event }
         let binding = KeyBinding(character: ch, shift: event.modifierFlags.contains(.shift))

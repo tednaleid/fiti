@@ -23,7 +23,7 @@ struct KeyMonitorTests {
         return (monitor, controller, editor)
     }
 
-    private func keyEvent(_ chars: String, shift: Bool = false, command: Bool = false) -> NSEvent {
+    private func keyEvent(_ chars: String, shift: Bool = false, command: Bool = false, isARepeat: Bool = false) -> NSEvent {
         var flags: NSEvent.ModifierFlags = []
         if shift { flags.insert(.shift) }
         if command { flags.insert(.command) }
@@ -31,6 +31,21 @@ struct KeyMonitorTests {
             with: .keyDown,
             location: .zero,
             modifierFlags: flags,
+            timestamp: 0,
+            windowNumber: 0,
+            context: nil,
+            characters: chars,
+            charactersIgnoringModifiers: chars,
+            isARepeat: isARepeat,
+            keyCode: 0
+        )!
+    }
+
+    private func keyUpEvent(_ chars: String) -> NSEvent {
+        NSEvent.keyEvent(
+            with: .keyUp,
+            location: .zero,
+            modifierFlags: [],
             timestamp: 0,
             windowNumber: 0,
             context: nil,
@@ -130,5 +145,33 @@ struct KeyMonitorTests {
         let result = monitor.handle(event)
         #expect(result === event, "'c' should pass through unchanged now that delete is the clear binding")
         #expect(editor.doc.strokes.isEmpty == false)
+    }
+
+    @Test("Space keyDown sets currentTool to .selection")
+    func spaceKeyDownEntersSelection() {
+        let (monitor, controller, _) = make()
+        #expect(controller.currentTool == .pen)
+        _ = monitor.handle(keyEvent(" "))
+        #expect(controller.currentTool == .selection)
+    }
+
+    @Test("Space keyUp reverts currentTool to .pen")
+    func spaceKeyUpExitsSelection() {
+        let (monitor, controller, _) = make()
+        _ = monitor.handle(keyEvent(" "))
+        #expect(controller.currentTool == .selection)
+        _ = monitor.handle(keyUpEvent(" "))
+        #expect(controller.currentTool == .pen)
+    }
+
+    @Test("Space autorepeat (isARepeat=true) does not re-fire the tool transition")
+    func spaceRepeatIgnored() {
+        let (monitor, controller, _) = make()
+        var fireCount = 0
+        controller.onCurrentToolChanged = { _ in fireCount += 1 }
+        _ = monitor.handle(keyEvent(" "))
+        _ = monitor.handle(keyEvent(" ", isARepeat: true))
+        _ = monitor.handle(keyEvent(" ", isARepeat: true))
+        #expect(fireCount == 1)
     }
 }
