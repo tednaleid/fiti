@@ -65,9 +65,9 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         observeToolbarScreenChanges()
 
         input = NSEventInputSource(view: inputView)
-        input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0) }
-        input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0) }
-        input.onPointerUp     = { [weak self] in self?.controller.pointerUp() }
+        input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0, modifiers: $1) }
+        input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0, modifiers: $1) }
+        input.onPointerUp     = { [weak self] in self?.controller.pointerUp(modifiers: $0) }
         input.onDeactivate    = { [weak self] in self?.controller.deactivate() }
         input.onClear         = { [weak self] in self?.controller.clear() }
         input.onUndo          = { [weak self] in _ = self?.editor.undo() }

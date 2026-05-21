@@ -5,9 +5,9 @@
 import AppKit
 
 public final class NSEventInputSource: InputSource {
-    public var onPointerDown: ((StrokePoint) -> Void)?
-    public var onPointerMoved: ((StrokePoint) -> Void)?
-    public var onPointerUp: (() -> Void)?
+    public var onPointerDown: ((StrokePoint, PointerModifiers) -> Void)?
+    public var onPointerMoved: ((StrokePoint, PointerModifiers) -> Void)?
+    public var onPointerUp: ((PointerModifiers) -> Void)?
     public var onDeactivate: (() -> Void)?
     public var onClear: (() -> Void)?
     public var onUndo: (() -> Void)?
@@ -46,14 +46,14 @@ public final class NSEventInputSource: InputSource {
 }
 
 extension NSEventInputSource: CanvasInputDelegate {
-    public func canvasInput(_ view: CanvasInputView, mouseDownAt point: CGPoint) {
-        onPointerDown?(StrokePoint(x: Double(point.x), y: Double(point.y)))
+    public func canvasInput(_ view: CanvasInputView, mouseDownAt point: CGPoint, modifiers: PointerModifiers) {
+        onPointerDown?(StrokePoint(x: Double(point.x), y: Double(point.y)), modifiers)
     }
-    public func canvasInput(_ view: CanvasInputView, mouseDraggedAt point: CGPoint) {
-        onPointerMoved?(StrokePoint(x: Double(point.x), y: Double(point.y)))
+    public func canvasInput(_ view: CanvasInputView, mouseDraggedAt point: CGPoint, modifiers: PointerModifiers) {
+        onPointerMoved?(StrokePoint(x: Double(point.x), y: Double(point.y)), modifiers)
     }
-    public func canvasInput(_ view: CanvasInputView, mouseUpAt point: CGPoint) {
-        onPointerUp?()
+    public func canvasInput(_ view: CanvasInputView, mouseUpAt point: CGPoint, modifiers: PointerModifiers) {
+        onPointerUp?(modifiers)
     }
 }
 
@@ -97,9 +97,9 @@ public func dispatchKey(_ event: NSEvent,
 // MARK: - Companion view
 
 public protocol CanvasInputDelegate: AnyObject {
-    func canvasInput(_ view: CanvasInputView, mouseDownAt point: CGPoint)
-    func canvasInput(_ view: CanvasInputView, mouseDraggedAt point: CGPoint)
-    func canvasInput(_ view: CanvasInputView, mouseUpAt point: CGPoint)
+    func canvasInput(_ view: CanvasInputView, mouseDownAt point: CGPoint, modifiers: PointerModifiers)
+    func canvasInput(_ view: CanvasInputView, mouseDraggedAt point: CGPoint, modifiers: PointerModifiers)
+    func canvasInput(_ view: CanvasInputView, mouseUpAt point: CGPoint, modifiers: PointerModifiers)
 }
 
 public final class CanvasInputView: NSView {
@@ -112,15 +112,27 @@ public final class CanvasInputView: NSView {
 
     public override func mouseDown(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        delegate?.canvasInput(self, mouseDownAt: p)
+        let m = PointerModifiers(
+            command: event.modifierFlags.contains(.command),
+            shift: event.modifierFlags.contains(.shift)
+        )
+        delegate?.canvasInput(self, mouseDownAt: p, modifiers: m)
     }
     public override func mouseDragged(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        delegate?.canvasInput(self, mouseDraggedAt: p)
+        let m = PointerModifiers(
+            command: event.modifierFlags.contains(.command),
+            shift: event.modifierFlags.contains(.shift)
+        )
+        delegate?.canvasInput(self, mouseDraggedAt: p, modifiers: m)
     }
     public override func mouseUp(with event: NSEvent) {
         let p = convert(event.locationInWindow, from: nil)
-        delegate?.canvasInput(self, mouseUpAt: p)
+        let m = PointerModifiers(
+            command: event.modifierFlags.contains(.command),
+            shift: event.modifierFlags.contains(.shift)
+        )
+        delegate?.canvasInput(self, mouseUpAt: p, modifiers: m)
     }
 
     public override func updateTrackingAreas() {
