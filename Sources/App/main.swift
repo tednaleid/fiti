@@ -64,26 +64,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         followToolbarToScreen(clearStrokes: false)  // initial sync — autosaved toolbar position may be on a non-main screen
         observeToolbarScreenChanges()
 
-        input = NSEventInputSource(view: inputView)
-        input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0, modifiers: $1) }
-        input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0, modifiers: $1) }
-        input.onPointerUp     = { [weak self] in self?.controller.pointerUp(modifiers: $0) }
-        input.onDeactivate    = { [weak self] in self?.controller.deactivate() }
-        input.onClear         = { [weak self] in self?.controller.clear() }
-        input.onUndo          = { [weak self] in _ = self?.editor.undo() }
-        input.onRedo          = { [weak self] in _ = self?.editor.redo() }
-
-        hotkeys = KeyboardShortcutsHotkeys()
-        hotkeys.onActivation { [weak self] in self?.controller.toggle() }
-
-        cursorRenderer = CursorRenderer(view: inputView)
-        controller.onCursorChanged = { [weak self] spec in self?.cursorRenderer.setSpec(spec) }
-
-        subscription = editor.subscribe { [weak self] _ in
-            guard let self else { return }
-            self.canvas.render(RenderFrame.from(editor: self.editor, canvasSize: self.canvasSize))
-        }
-
+        wireInputAndSubscriptions()
         maybeStartDevServer()
 
         window.makeKeyAndOrderFront(nil)
@@ -107,6 +88,36 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         #else
         NSLog("fiti: --dev is a no-op in Release builds (DevHTTP surface is compiled out)")
         #endif
+    }
+
+    @MainActor
+    private func wireInputAndSubscriptions() {
+        input = NSEventInputSource(view: inputView)
+        input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0, modifiers: $1) }
+        input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0, modifiers: $1) }
+        input.onPointerUp     = { [weak self] in self?.controller.pointerUp(modifiers: $0) }
+        input.onDeactivate    = { [weak self] in
+            guard let self else { return }
+            if !self.controller.selectedStrokeIds.isEmpty {
+                self.controller.selectedStrokeIds = []
+            } else {
+                self.controller.deactivate()
+            }
+        }
+        input.onClear         = { [weak self] in self?.controller.clear() }
+        input.onUndo          = { [weak self] in _ = self?.editor.undo() }
+        input.onRedo          = { [weak self] in _ = self?.editor.redo() }
+
+        hotkeys = KeyboardShortcutsHotkeys()
+        hotkeys.onActivation { [weak self] in self?.controller.toggle() }
+
+        cursorRenderer = CursorRenderer(view: inputView)
+        controller.onCursorChanged = { [weak self] spec in self?.cursorRenderer.setSpec(spec) }
+
+        subscription = editor.subscribe { [weak self] _ in
+            guard let self else { return }
+            self.canvas.render(RenderFrame.from(editor: self.editor, canvasSize: self.canvasSize))
+        }
     }
 
     private var canvasSize: Size {
@@ -134,6 +145,33 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
         controller.onFadeOpacityChanged = { [weak self] opacity in
             self?.canvas.setGlobalOpacity(opacity)
+        }
+
+        controller.onSelectionChanged = { [weak self] ids in
+            guard let self else { return }
+            let bounds = SelectionMath.selectionBounds(
+                strokeIds: ids,
+                strokes: self.editor.doc.strokes
+            )
+            self.canvas.setSelectionBounds(bounds)
+        }
+
+        controller.onInFlightTransformsChanged = { [weak self] overrides in
+            guard let self else { return }
+            let frame = RenderFrame.from(editor: self.editor,
+                                        canvasSize: self.canvasSize,
+                                        overrides: overrides)
+            self.canvas.render(frame)
+            let strokesById = frame.strokes.reduce(into: [String: Stroke]()) { $0[$1.id] = $1 }
+            let bounds = SelectionMath.selectionBounds(
+                strokeIds: self.controller.selectedStrokeIds,
+                strokes: strokesById
+            )
+            self.canvas.setSelectionBounds(bounds)
+        }
+
+        controller.onMarqueeChanged = { [weak self] rect in
+            self?.canvas.setMarquee(rect)
         }
     }
 

@@ -32,8 +32,14 @@ extension AppController {
         lastSelectionPoint = point
         guard let gesture = selectionGesture else { return }
         switch gesture {
-        case .marquee:
-            break
+        case .marquee(let startPoint):
+            let rect = Rect(
+                x: min(startPoint.x, point.x),
+                y: min(startPoint.y, point.y),
+                width: abs(point.x - startPoint.x),
+                height: abs(point.y - startPoint.y)
+            )
+            marqueeRect = rect
         case .translate(let startPoint, let originals):
             let dx = point.x - startPoint.x
             let dy = point.y - startPoint.y
@@ -57,6 +63,7 @@ extension AppController {
         guard let g = gesture else { return }
         switch g {
         case .marquee(let startPoint):
+            marqueeRect = nil
             let end = endPoint ?? startPoint
             let rect = Rect(
                 x: min(startPoint.x, end.x),

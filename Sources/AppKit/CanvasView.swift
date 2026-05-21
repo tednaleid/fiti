@@ -35,6 +35,21 @@ public final class CanvasView: NSView, Renderer {
         needsDisplay = true
     }
 
+    public private(set) var selectionBounds: Rect?
+    public private(set) var marqueeRect: Rect?
+
+    public func setSelectionBounds(_ rect: Rect?) {
+        guard selectionBounds != rect else { return }
+        selectionBounds = rect
+        needsDisplay = true
+    }
+
+    public func setMarquee(_ rect: Rect?) {
+        guard marqueeRect != rect else { return }
+        marqueeRect = rect
+        needsDisplay = true
+    }
+
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         self.wantsLayer = true
@@ -81,6 +96,73 @@ public final class CanvasView: NSView, Renderer {
         if let live = frame.inProgress, !live.points.isEmpty {
             drawStroke(live, in: ctx, isInProgress: true)
         }
+        // Reset alpha for selection/marquee overlays — they manage their own alpha.
+        ctx.setAlpha(1.0)
+        if let sel = selectionBounds {
+            drawSelectionBox(sel, in: ctx)
+        }
+        if let marq = marqueeRect {
+            drawMarquee(marq, in: ctx)
+        }
+    }
+
+    private func drawSelectionBox(_ rect: Rect, in ctx: CGContext) {
+        let cgRect = CGRect(x: rect.x, y: rect.y, width: rect.width, height: rect.height)
+        let accentColor = NSColor.controlAccentColor
+
+        // Outline
+        ctx.saveGState()
+        accentColor.setStroke()
+        ctx.setLineWidth(1)
+        ctx.stroke(cgRect)
+
+        // Corner handles: 6x6pt squares centered on each corner
+        let handleSize: CGFloat = 6
+        let offset: CGFloat = handleSize / 2
+        let corners: [CGPoint] = [
+            CGPoint(x: cgRect.minX, y: cgRect.minY),
+            CGPoint(x: cgRect.maxX, y: cgRect.minY),
+            CGPoint(x: cgRect.minX, y: cgRect.maxY),
+            CGPoint(x: cgRect.maxX, y: cgRect.maxY)
+        ]
+        accentColor.setFill()
+        for corner in corners {
+            let handle = CGRect(x: corner.x - offset, y: corner.y - offset,
+                                width: handleSize, height: handleSize)
+            ctx.fill(handle)
+        }
+
+        // Rotation handle: circle 20pt above top midpoint, with a connecting line
+        let topMidX = cgRect.midX
+        let topY = cgRect.minY
+        let rotHandleRadius: CGFloat = 6
+        let rotHandleCenterY = topY - 20
+        ctx.setLineWidth(1)
+        ctx.strokeEllipse(in: CGRect(x: topMidX - rotHandleRadius,
+                                     y: rotHandleCenterY - rotHandleRadius,
+                                     width: rotHandleRadius * 2,
+                                     height: rotHandleRadius * 2))
+        ctx.move(to: CGPoint(x: topMidX, y: topY))
+        ctx.addLine(to: CGPoint(x: topMidX, y: rotHandleCenterY + rotHandleRadius))
+        ctx.strokePath()
+        ctx.restoreGState()
+    }
+
+    private func drawMarquee(_ rect: Rect, in ctx: CGContext) {
+        let cgRect = CGRect(x: rect.x, y: rect.y, width: rect.width, height: rect.height)
+        let accentColor = NSColor.controlAccentColor
+
+        ctx.saveGState()
+        // Faint fill
+        accentColor.withAlphaComponent(0.15).setFill()
+        ctx.fill(cgRect)
+
+        // Dashed outline
+        accentColor.setStroke()
+        ctx.setLineWidth(1)
+        ctx.setLineDash(phase: 0, lengths: [4, 4])
+        ctx.stroke(cgRect)
+        ctx.restoreGState()
     }
 
     private func bakeCommitted(_ frame: RenderFrame, exclude: StrokeId?) -> CGImage? {

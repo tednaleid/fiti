@@ -123,6 +123,14 @@ public final class AppController {
         didSet { onInFlightTransformsChanged?(inFlightTransforms) }
     }
 
+    public var onMarqueeChanged: ((Rect?) -> Void)?
+
+    public var marqueeRect: Rect? {
+        didSet {
+            if oldValue != marqueeRect { onMarqueeChanged?(marqueeRect) }
+        }
+    }
+
     // Cursor publisher. Adapters subscribe to keep the rendered NSCursor in sync
     // with mode + currentColor + currentWidth. `nil` means inactive (system
     // cursor returns). Initial state is nil; refreshCursor() only fires when
