@@ -10,6 +10,21 @@ public func drawStroke(_ stroke: Stroke, in ctx: CGContext, isInProgress: Bool) 
     let opts = FitiStrokeOptions.make(width: stroke.width, last: !isInProgress || stroke.snappedToLine)
     let polygon = getStroke(points: stroke.points.perfectFreehandInputs, options: opts)
     guard polygon.count >= 3 else { return }
+
+    ctx.saveGState()
+    let t = stroke.transform
+    if t != .identity {
+        if t.x != 0 || t.y != 0 {
+            ctx.translateBy(x: CGFloat(t.x), y: CGFloat(t.y))
+        }
+        if t.rotate != 0 {
+            ctx.rotate(by: CGFloat(t.rotate * .pi / 180.0))
+        }
+        if t.scale != 1 {
+            ctx.scaleBy(x: CGFloat(t.scale), y: CGFloat(t.scale))
+        }
+    }
+
     ctx.setFillColor(red: CGFloat(stroke.color.r),
                      green: CGFloat(stroke.color.g),
                      blue: CGFloat(stroke.color.b),
@@ -22,4 +37,5 @@ public func drawStroke(_ stroke: Stroke, in ctx: CGContext, isInProgress: Bool) 
     path.closeSubpath()
     ctx.addPath(path)
     ctx.fillPath()
+    ctx.restoreGState()
 }

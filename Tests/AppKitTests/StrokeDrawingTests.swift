@@ -27,6 +27,73 @@ struct StrokeDrawingTests {
         return RGB(r: data[offset], g: data[offset + 1], b: data[offset + 2])
     }
 
+    private func renderToBitmap(width: Int, height: Int, draw: (CGContext) -> Void) -> CGContext {
+        let ctx = makeContext(width: width, height: height)
+        draw(ctx)
+        return ctx
+    }
+
+    // Returns the red component (0–255) at the given pixel.  The bitmap is
+    // premultiplied RGBA so for a fully-opaque red stroke r ≈ 255, g ≈ 0.
+    // For absence-of-stroke detection we rely on the background remaining white.
+    private func redComponent(_ ctx: CGContext, x: Int, y: Int) -> UInt8 {
+        pixel(ctx, x: x, y: y).r
+    }
+
+    @Test("drawStroke applies stroke.transform via CTM")
+    func drawStrokeAppliesTransform() {
+        // Stroke points at y=50. CGContext uses bottom-left origin, so bitmap row
+        // for y=50 in a 200-tall bitmap is 200-50=150 from the top.
+        // With a y+80 translate, stroke moves to y=130 → bitmap row 200-130=70.
+        let baseStroke = Stroke(id: "a",
+                                color: RGBA(r: 1, g: 0, b: 0, a: 1),
+                                width: 10,
+                                transform: .identity,
+                                points: [StrokePoint(x: 50, y: 50),
+                                         StrokePoint(x: 100, y: 50),
+                                         StrokePoint(x: 150, y: 50)],
+                                pointerType: .mouse,
+                                pressureEnabled: false,
+                                createdAt: 0)
+
+        let untransformed = renderToBitmap(width: 200, height: 200) { ctx in
+            drawStroke(baseStroke, in: ctx, isInProgress: false)
+        }
+        let translatedStroke = Stroke(id: "a",
+                                      color: RGBA(r: 1, g: 0, b: 0, a: 1),
+                                      width: 10,
+                                      transform: Transform(x: 0, y: 80, scale: 1, rotate: 0),
+                                      points: [StrokePoint(x: 50, y: 50),
+                                               StrokePoint(x: 100, y: 50),
+                                               StrokePoint(x: 150, y: 50)],
+                                      pointerType: .mouse,
+                                      pressureEnabled: false,
+                                      createdAt: 0)
+        let translated = renderToBitmap(width: 200, height: 200) { ctx in
+            drawStroke(translatedStroke, in: ctx, isInProgress: false)
+        }
+
+        // Without transform, stroke center at CG y=50 → bitmap row 150.
+        let untransformedOnLine = pixel(untransformed, x: 100, y: 150)
+        #expect(untransformedOnLine.r > 200, "untransformed stroke should be present at bitmap row 150 (CG y=50)")
+        #expect(untransformedOnLine.g < 50)
+
+        // Bitmap row 70 (CG y=130) should be untouched white background without translation.
+        let untransformedOffLine = pixel(untransformed, x: 100, y: 70)
+        #expect(untransformedOffLine.r == 255 && untransformedOffLine.g == 255 && untransformedOffLine.b == 255,
+                "untransformed stroke should not reach bitmap row 70 (CG y=130)")
+
+        // With y+80 translate, original row 150 (CG y=50) should now be white background.
+        let translatedOldPos = pixel(translated, x: 100, y: 150)
+        #expect(translatedOldPos.r == 255 && translatedOldPos.g == 255 && translatedOldPos.b == 255,
+                "translated stroke should not be present at original bitmap row 150 (CG y=50)")
+
+        // With y+80 translate, stroke moves to CG y=130 → bitmap row 70 — should be red-dominant.
+        let translatedNewPos = pixel(translated, x: 100, y: 70)
+        #expect(translatedNewPos.r > 200, "translated stroke should be present at bitmap row 70 (CG y=130)")
+        #expect(translatedNewPos.g < 50)
+    }
+
     @Test("draws nothing for an empty stroke")
     func emptyStroke() {
         let ctx = makeContext(width: 10, height: 10)
