@@ -21,7 +21,7 @@ public enum SelectionMath {
     /// preserving the original array's order (z-order from bottom up).
     public static func marqueeHit(rect: Rect, strokes: [Stroke]) -> [StrokeId] {
         strokes.compactMap { stroke in
-            let bounds = aabb(of: transformed(points: stroke.points, by: stroke.transform))
+            guard let bounds = aabb(of: transformed(points: stroke.points, by: stroke.transform)) else { return nil }
             return rect.intersects(bounds) ? stroke.id : nil
         }
     }
@@ -31,7 +31,7 @@ public enum SelectionMath {
         var union: Rect?
         for id in strokeIds {
             guard let s = strokes[id] else { continue }
-            let bounds = aabb(of: transformed(points: s.points, by: s.transform))
+            guard let bounds = aabb(of: transformed(points: s.points, by: s.transform)) else { continue }
             if let current = union {
                 union = unionRect(current, bounds)
             } else {
@@ -52,12 +52,12 @@ public enum SelectionMath {
             let sy = p.y * t.scale
             let rx = sx * cosθ - sy * sinθ
             let ry = sx * sinθ + sy * cosθ
-            return StrokePoint(x: rx + t.x, y: ry + t.y)
+            return StrokePoint(x: rx + t.x, y: ry + t.y, pressure: p.pressure)
         }
     }
 
-    private static func aabb(of points: [StrokePoint]) -> Rect {
-        guard let first = points.first else { return Rect(x: 0, y: 0, width: 0, height: 0) }
+    private static func aabb(of points: [StrokePoint]) -> Rect? {
+        guard let first = points.first else { return nil }
         var minX = first.x, maxX = first.x, minY = first.y, maxY = first.y
         for p in points.dropFirst() {
             if p.x < minX { minX = p.x }

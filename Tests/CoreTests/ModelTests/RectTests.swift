@@ -36,4 +36,12 @@ struct RectTests {
         #expect(outer.intersects(inner))
         #expect(inner.intersects(outer))
     }
+
+    @Test("intersects is closed — touching edges count as intersection")
+    func intersectsTouchingEdges() {
+        let a = Rect(x: 0, y: 0, width: 10, height: 10)
+        let b = Rect(x: 10, y: 0, width: 10, height: 10)
+        #expect(a.intersects(b))
+        #expect(b.intersects(a))
+    }
 }

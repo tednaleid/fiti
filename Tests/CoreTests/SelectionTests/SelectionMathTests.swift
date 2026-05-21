@@ -77,6 +77,23 @@ struct SelectionMathTests {
         #expect(ids.isEmpty)
     }
 
+    @Test("marqueeHit skips strokes with zero points")
+    func marqueeHitSkipsEmptyStrokes() {
+        let s = makeStroke(id: "empty", points: [])
+        let ids = SelectionMath.marqueeHit(rect: Rect(x: -1000, y: -1000, width: 2000, height: 2000),
+                                           strokes: [s])
+        #expect(ids.isEmpty)
+    }
+
+    @Test("hitTest applies transform — translated stroke is hit at its new location")
+    func hitTestAfterTranslate() {
+        let s = makeStroke(id: "a",
+                           points: [StrokePoint(x: 0, y: 0), StrokePoint(x: 5, y: 0)],
+                           transform: Transform(x: 10, y: 0, scale: 1, rotate: 0))
+        let hit = SelectionMath.hitTest(point: StrokePoint(x: 15, y: 0), strokes: [s], tolerance: 1)
+        #expect(hit == "a")
+    }
+
     // MARK: selectionBounds
 
     @Test("selectionBounds returns the AABB enclosing all selected strokes")
