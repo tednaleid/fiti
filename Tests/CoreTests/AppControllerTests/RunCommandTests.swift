@@ -174,4 +174,32 @@ struct RunCommandTests {
         #expect(strokeAfter?.width == strokeBefore.width)  // unchanged
         #expect(c.currentWidth > strokeBefore.width)        // controller moved
     }
+
+    @Test("run(.clear) with non-empty selectedStrokeIds erases only those strokes")
+    func clearWithSelectionErasesSelected() {
+        let (c, editor, _) = make()
+        c.activate()
+        c.pointerDown(StrokePoint(x: 0, y: 0))
+        c.pointerUp()
+        c.pointerDown(StrokePoint(x: 10, y: 10))
+        c.pointerUp()
+        let allIds = editor.doc.strokeOrder
+        #expect(allIds.count == 2)
+        c.selectedStrokeIds = [allIds[0]]
+        c.run(.clear)
+        #expect(editor.doc.strokes[allIds[0]] == nil)
+        #expect(editor.doc.strokes[allIds[1]] != nil)
+        #expect(c.selectedStrokeIds == [])
+    }
+
+    @Test("run(.clear) with empty selection clears everything (existing behavior)")
+    func clearWithoutSelectionClearsAll() {
+        let (c, editor, _) = make()
+        c.activate()
+        c.pointerDown(StrokePoint(x: 0, y: 0))
+        c.pointerUp()
+        #expect(editor.doc.strokeOrder.count == 1)
+        c.run(.clear)
+        #expect(editor.doc.strokeOrder.isEmpty)
+    }
 }

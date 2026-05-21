@@ -86,6 +86,33 @@ public final class AppController {
         }
     }
 
+    // Tool + selection state.
+    public var onCurrentToolChanged: ((Tool) -> Void)?
+
+    public var currentTool: Tool = .pen {
+        didSet {
+            guard oldValue != currentTool else { return }
+            onCurrentToolChanged?(currentTool)
+            refreshCursor()
+        }
+    }
+
+    public var onSelectionChanged: (([StrokeId]) -> Void)?
+
+    public var selectedStrokeIds: [StrokeId] = [] {
+        didSet {
+            if oldValue != selectedStrokeIds {
+                onSelectionChanged?(selectedStrokeIds)
+            }
+        }
+    }
+
+    public var onInFlightTransformsChanged: (([StrokeId: Transform]) -> Void)?
+
+    public var inFlightTransforms: [StrokeId: Transform] = [:] {
+        didSet { onInFlightTransformsChanged?(inFlightTransforms) }
+    }
+
     // Cursor publisher. Adapters subscribe to keep the rendered NSCursor in sync
     // with mode + currentColor + currentWidth. `nil` means inactive (system
     // cursor returns). Initial state is nil; refreshCursor() only fires when
@@ -97,7 +124,9 @@ public final class AppController {
 
     /// The cursor the AppKit adapter should render right now. Pure derived state.
     public var currentCursor: CursorSpec? {
-        mode == .inactive ? nil : CursorSpec(color: currentColor, diameter: currentWidth)
+        if mode == .inactive { return nil }
+        if currentTool == .selection { return nil }
+        return CursorSpec(color: currentColor, diameter: currentWidth)
     }
 
     private func refreshCursor() {
@@ -270,7 +299,12 @@ public final class AppController {
         case .toggleAutoFade:
             autoFadeEnabled.toggle()
         case .clear:
-            clear()
+            if !selectedStrokeIds.isEmpty {
+                _ = editor.eraseStrokes(ids: selectedStrokeIds)
+                selectedStrokeIds = []
+            } else {
+                clear()
+            }
         }
     }
 }
