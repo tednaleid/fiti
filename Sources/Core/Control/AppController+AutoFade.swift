@@ -35,6 +35,7 @@ extension AppController {
 
         if age >= Self.fadeWindowSeconds {
             editor.clear()
+            if !selectedStrokeIds.isEmpty { selectedStrokeIds = [] }
             lastInputAt = nil
             fadeOpacity = 1.0
         } else if age >= rampStart {

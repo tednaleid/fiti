@@ -72,6 +72,18 @@ struct FadeTickTests {
         #expect(c.fadeOpacity == 1.0)
     }
 
+    @Test("tick at age 10 also clears selectedStrokeIds so the selection box disappears with the strokes")
+    func tickExpiresClearsSelection() {
+        let (c, clock, ticker, editor) = make()
+        drawOneStroke(c)
+        c.selectedStrokeIds = editor.doc.strokeOrder
+        #expect(!c.selectedStrokeIds.isEmpty)
+        c.autoFadeEnabled = true
+        clock.advance(by: 10)
+        ticker.tick(at: clock.now())
+        #expect(c.selectedStrokeIds == [])
+    }
+
     @Test("tick on empty doc stays at opacity 1.0")
     func tickEmptyDoc() {
         let (c, clock, ticker, _) = make()
