@@ -17,7 +17,7 @@ struct CanvasViewBakeTests {
         let frame = RenderFrame(strokes: [stroke], inProgress: nil,
                                 canvasSize: Size(width: 100, height: 100))
         view.render(frame)
-        #expect(view.committedSignature == ["a"])
+        #expect(view.bakeSignatureForTesting.map(\.id) == ["a"])
     }
 
     @Test("adding a stroke invalidates the bake signature")
@@ -33,7 +33,7 @@ struct CanvasViewBakeTests {
                         pressureEnabled: false, createdAt: 0)
         view.render(RenderFrame(strokes: [s1, s2], inProgress: nil,
                                 canvasSize: Size(width: 100, height: 100)))
-        #expect(view.committedSignature == ["a", "b"])
+        #expect(view.bakeSignatureForTesting.map(\.id) == ["a", "b"])
     }
 
     @Test("a committed stroke near the top renders near the top of the view")
@@ -64,7 +64,7 @@ struct CanvasViewBakeTests {
                           pressureEnabled: false, createdAt: 0)
         view.render(RenderFrame(strokes: [committed, live], inProgress: live,
                                 canvasSize: Size(width: 100, height: 100)))
-        #expect(view.committedSignature == ["a"])
+        #expect(view.bakeSignatureForTesting.map(\.id) == ["a"])
     }
 
     @Test("bake CGImage dimensions match canvas points × backingScale (default 1)")
@@ -94,6 +94,31 @@ struct CanvasViewBakeTests {
         let image = try #require(view.testOnly_committedImage)
         #expect(image.width == 100)
         #expect(image.height == 100)
+    }
+
+    @Test("same stroke ID with changed transform invalidates the bake")
+    func transformChangeInvalidatesBake() throws {
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
+        let stroke1 = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 2,
+                             transform: .identity,
+                             points: [StrokePoint(x: 0, y: 0), StrokePoint(x: 10, y: 10)],
+                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        let frame1 = RenderFrame(strokes: [stroke1], inProgress: nil,
+                                 canvasSize: Size(width: 100, height: 100))
+        view.render(frame1)
+        let firstImage = try #require(view.testOnly_committedImage)
+
+        let stroke2 = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 2,
+                             transform: Transform(x: 50, y: 0, scale: 1, rotate: 0),
+                             points: [StrokePoint(x: 0, y: 0), StrokePoint(x: 10, y: 10)],
+                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        let frame2 = RenderFrame(strokes: [stroke2], inProgress: nil,
+                                 canvasSize: Size(width: 100, height: 100))
+        view.render(frame2)
+        let secondImage = try #require(view.testOnly_committedImage)
+
+        // The bake must have been re-issued — a different CGImage pointer proves it.
+        #expect(firstImage !== secondImage)
     }
 
     @Test("changing backingScale invalidates the bake and re-bakes at new resolution")

@@ -58,11 +58,14 @@ extension AppController {
         let endPoint = lastSelectionPoint
         lastSelectionPoint = nil
         let preview = inFlightTransforms
-        inFlightTransforms = [:]
 
-        guard let g = gesture else { return }
+        guard let g = gesture else {
+            inFlightTransforms = [:]
+            return
+        }
         switch g {
         case .marquee(let startPoint):
+            inFlightTransforms = [:]
             marqueeRect = nil
             let end = endPoint ?? startPoint
             let rect = Rect(
@@ -78,6 +81,7 @@ extension AppController {
             if !updates.isEmpty {
                 _ = editor.transformStrokes(updates)
             }
+            inFlightTransforms = [:]   // clear AFTER commit so the callback reads new transforms
         }
     }
 }

@@ -108,6 +108,23 @@ struct SelectionGestureTests {
         #expect(editor.doc.strokes[ids[0]]?.transform == .identity)
     }
 
+    @Test("translate commits to editor BEFORE clearing inFlightTransforms so the [:] callback reads new transforms")
+    func translateCommitsBeforeClearingOverlay() {
+        let (c, editor, ids) = setup()
+        var seenAtCallback: [StrokeId: Transform] = [:]
+        c.onInFlightTransformsChanged = { overrides in
+            if overrides.isEmpty {
+                // Capture the editor's transform at the moment the overlay clears.
+                // If commit happened first, this is the post-drag value.
+                seenAtCallback[ids[0]] = editor.doc.strokes[ids[0]]?.transform
+            }
+        }
+        c.pointerDown(StrokePoint(x: 20, y: 10))
+        c.pointerMoved(StrokePoint(x: 30, y: 20))
+        c.pointerUp()
+        #expect(seenAtCallback[ids[0]] == Transform(x: 10, y: 10, scale: 1, rotate: 0))
+    }
+
     // MARK: pen mode bypasses selection
 
     @Test("pointerDown while currentTool == .pen draws a stroke")

@@ -1,14 +1,22 @@
 // ABOUTME: NSView that renders a RenderFrame via Core Graphics.
 // ABOUTME: Two-canvas split: committed strokes baked to a CGImage and
-// ABOUTME: redrawn only when strokeOrder changes; in-progress drawn live.
+// ABOUTME: redrawn only when strokeOrder or transforms change; in-progress drawn live.
 
 import AppKit
 import CoreGraphics
 
+struct BakeSignatureEntry: Equatable {
+    let id: StrokeId
+    let transform: Transform
+}
+
 public final class CanvasView: NSView, Renderer {
     private var lastFrame: RenderFrame?
     private var committedImage: CGImage?
-    internal private(set) var committedSignature: [StrokeId] = []
+    private var committedSignature: [BakeSignatureEntry] = []
+
+    /// Exposed for tests only — do not use in production code.
+    internal var bakeSignatureForTesting: [BakeSignatureEntry] { committedSignature }
 
     private var backingScale: CGFloat = 1
 
@@ -64,7 +72,9 @@ public final class CanvasView: NSView, Renderer {
 
     public func render(_ frame: RenderFrame) {
         let inProgressId = frame.inProgress?.id
-        let signature = frame.strokes.map(\.id).filter { $0 != inProgressId }
+        let signature = frame.strokes
+            .filter { $0.id != inProgressId }
+            .map { BakeSignatureEntry(id: $0.id, transform: $0.transform) }
         let resolvedScale = testOnly_overrideBackingScale ?? window?.backingScaleFactor ?? 1
         if signature != committedSignature || resolvedScale != backingScale {
             backingScale = resolvedScale
