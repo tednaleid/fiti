@@ -13,9 +13,20 @@ public struct StrokeRestoreEntry: Equatable, Sendable {
     }
 }
 
+public struct TransformEntry: Equatable, Sendable {
+    public let strokeId: StrokeId
+    public let transform: Transform
+
+    public init(strokeId: StrokeId, transform: Transform) {
+        self.strokeId = strokeId
+        self.transform = transform
+    }
+}
+
 public enum InverseOp: Equatable, Sendable {
     case deleteStroke(StrokeId)
     case restoreStroke(snapshot: Stroke, atIndex: Int)
     case deleteStrokes([StrokeId])
     case restoreStrokes(entries: [StrokeRestoreEntry])
+    case setTransforms(entries: [TransformEntry])
 }
