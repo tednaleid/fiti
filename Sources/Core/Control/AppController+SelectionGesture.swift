@@ -124,7 +124,12 @@ extension AppController {
             let updates = preview.map { (id: $0.key, transform: $0.value) }
             if !updates.isEmpty { _ = editor.transformStrokes(updates) }
             inFlightTransforms = [:]
-            recomputeSelectionBox()
+            if case .rotate = g {
+                // keep the oriented box at its rotated angle (don't snap back to upright)
+                // selectionBox already holds the final rotated box from the last move
+            } else {
+                recomputeSelectionBox()
+            }
         }
     }
 
@@ -153,9 +158,55 @@ extension AppController {
         return out
     }
 
-    // MARK: Task 8 stubs
+    // MARK: Resize + rotate gesture begin + move
 
-    func beginResize(corner: Corner, at point: StrokePoint) { /* Task 8 */ }
-    func beginRotate(at point: StrokePoint) { /* Task 8 */ }
-    func selectionMovedResizeOrRotate(_ point: StrokePoint, gesture: SelectionGesture) { /* Task 8 */ }
+    func beginResize(corner: Corner, at point: StrokePoint) {
+        guard let box = selectionBox else { return }
+        let cs = box.corners()  // TL, TR, BR, BL
+        let oppositeIndex: Int
+        switch corner {
+        case .topLeft: oppositeIndex = 2
+        case .topRight: oppositeIndex = 3
+        case .bottomRight: oppositeIndex = 0
+        case .bottomLeft: oppositeIndex = 1
+        }
+        let cornerIndex: Int
+        switch corner {
+        case .topLeft: cornerIndex = 0
+        case .topRight: cornerIndex = 1
+        case .bottomRight: cornerIndex = 2
+        case .bottomLeft: cornerIndex = 3
+        }
+        selectionGesture = .resize(startBox: box, startTransforms: snapshotTransforms(),
+                                   anchor: cs[oppositeIndex], startCorner: cs[cornerIndex])
+    }
+
+    func beginRotate(at point: StrokePoint) {
+        guard let box = selectionBox else { return }
+        selectionGesture = .rotate(startBox: box, startTransforms: snapshotTransforms(),
+                                   center: box.center, startPoint: point)
+    }
+
+    func selectionMovedResizeOrRotate(_ point: StrokePoint, gesture: SelectionGesture) {
+        let p = Point(x: point.x, y: point.y)
+        switch gesture {
+        case .resize(let startBox, let startTransforms, let anchor, let startCorner):
+            let (box, transforms) = SelectionTransforms.resize(
+                startBox: startBox, startTransforms: startTransforms,
+                drag: ResizeDrag(anchor: anchor, startCorner: startCorner, pointer: p, minFactor: 0.05))
+            selectionBox = box
+            inFlightTransforms = transforms
+        case .rotate(let startBox, let startTransforms, let center, let startPoint):
+            let (box, transforms) = SelectionTransforms.rotate(
+                startBox: startBox, startTransforms: startTransforms,
+                drag: RotateDrag(center: center,
+                                 startPointer: Point(x: startPoint.x, y: startPoint.y),
+                                 pointer: p,
+                                 snap15: false))  // Shift-snap wired in Task 9 via modifiers
+            selectionBox = box
+            inFlightTransforms = transforms
+        default:
+            break
+        }
+    }
 }

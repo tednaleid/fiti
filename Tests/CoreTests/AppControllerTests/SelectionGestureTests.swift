@@ -162,6 +162,44 @@ struct SelectionGestureTests {
         #expect(c.selectedStrokeIds == [ids[1]])
     }
 
+    // MARK: resize + rotate
+
+    @Test("dragging a corner scales the selection and commits one undoable op")
+    func cornerResize() {
+        let (c, editor, ids) = setup()
+        c.selectedStrokeIds = [ids[0]]
+        let box = c.selectionBox!
+        let br = box.corners()[2]   // bottomRight
+        let tl = box.corners()[0]   // anchor
+        c.pointerDown(StrokePoint(x: br.x, y: br.y))
+        // double the distance from the anchor along the diagonal
+        c.pointerMoved(StrokePoint(x: tl.x + (br.x - tl.x) * 2, y: tl.y + (br.y - tl.y) * 2))
+        c.pointerUp()
+        #expect(editor.doc.strokes[ids[0]]!.transform.scale == 2)
+        editor.undo()
+        #expect(editor.doc.strokes[ids[0]]!.transform.scale == 1)
+    }
+
+    @Test("dragging the rotate node rotates the group as a rigid unit, one undoable op")
+    func rotateGesture() {
+        let (c, editor, ids) = setup()
+        c.selectedStrokeIds = ids
+        let box = c.selectionBox!
+        let node = box.rotateNode(offset: AppController.rotateNodeOffset)
+        c.pointerDown(StrokePoint(x: node.x, y: node.y))
+        // move the pointer 90° around the center
+        let center = box.center
+        c.pointerMoved(StrokePoint(x: center.x, y: center.y + 50))
+        c.pointerUp()
+        // both strokes gained the same rotation delta (rigid)
+        let r0 = editor.doc.strokes[ids[0]]!.transform.rotate
+        let r1 = editor.doc.strokes[ids[1]]!.transform.rotate
+        #expect(abs(r0 - r1) < 1e-6)
+        #expect(abs(r0) > 1)   // actually rotated
+        editor.undo()
+        #expect(abs(editor.doc.strokes[ids[0]]!.transform.rotate) < 1e-6)
+    }
+
     // MARK: pen mode bypasses selection
 
     @Test("pointerDown while currentTool == .pen draws a stroke")
