@@ -101,9 +101,18 @@ public final class AppController {
     // Tool + selection state.
     public var onCurrentToolChanged: ((Tool) -> Void)?
 
+    var pendingSelectionClear = false
+
     public var currentTool: Tool = .pen {
         didSet {
             guard oldValue != currentTool else { return }
+            if currentTool == .pen {
+                if selectionGesture != nil {
+                    pendingSelectionClear = true   // defer until the gesture's pointerUp
+                } else {
+                    clearSelectionState()
+                }
+            }
             onCurrentToolChanged?(currentTool)
             refreshCursor()
         }
@@ -232,6 +241,10 @@ public final class AppController {
     public func pointerUp(modifiers: PointerModifiers) {
         lastInputAt = clock.now()
         guard mode != .inactive else { return }
+        if pendingSelectionClear {
+            selectionPointerUp(modifiers: modifiers)
+            return
+        }
         switch currentTool {
         case .pen: penPointerUp()
         case .selection: selectionPointerUp(modifiers: modifiers)

@@ -95,7 +95,7 @@ extension AppController {
             selectionBox = box
             inFlightTransforms = transforms
         case .resize, .rotate:
-            selectionMovedResizeOrRotate(point, gesture: gesture)  // Task 8
+            selectionMovedResizeOrRotate(point, gesture: gesture, modifiers: modifiers)
         }
     }
 
@@ -131,9 +131,21 @@ extension AppController {
                 recomputeSelectionBox()
             }
         }
+        if pendingSelectionClear {
+            pendingSelectionClear = false
+            clearSelectionState()
+        }
     }
 
     // MARK: Private helpers
+
+    func clearSelectionState() {
+        selectedStrokeIds = []
+        selectionBox = nil
+        inFlightTransforms = [:]
+        marqueeRect = nil
+        selectionGesture = nil
+    }
 
     private func orderedStrokes() -> [Stroke] {
         editor.doc.strokeOrder.compactMap { editor.doc.strokes[$0] }
@@ -187,7 +199,8 @@ extension AppController {
                                    center: box.center, startPoint: point)
     }
 
-    func selectionMovedResizeOrRotate(_ point: StrokePoint, gesture: SelectionGesture) {
+    func selectionMovedResizeOrRotate(_ point: StrokePoint, gesture: SelectionGesture,
+                                      modifiers: PointerModifiers) {
         let p = Point(x: point.x, y: point.y)
         switch gesture {
         case .resize(let startBox, let startTransforms, let anchor, let startCorner):
@@ -202,7 +215,7 @@ extension AppController {
                 drag: RotateDrag(center: center,
                                  startPointer: Point(x: startPoint.x, y: startPoint.y),
                                  pointer: p,
-                                 snap15: false))  // Shift-snap wired in Task 9 via modifiers
+                                 snap15: modifiers.shift))
             selectionBox = box
             inFlightTransforms = transforms
         default:

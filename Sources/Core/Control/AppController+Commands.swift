@@ -23,12 +23,19 @@ extension AppController {
         case .toggleAutoFade:
             autoFadeEnabled.toggle()
         case .clear:
+            runClear()
+        }
+    }
+
+    private func runClear() {
+        if currentTool == .selection {
             if !selectedStrokeIds.isEmpty {
                 _ = editor.eraseStrokes(ids: selectedStrokeIds)
                 selectedStrokeIds = []
-            } else {
-                clear()
             }
+            // no selection in selection mode → no-op (a "miss")
+        } else {
+            clear()
         }
     }
 }

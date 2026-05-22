@@ -175,7 +175,7 @@ struct RunCommandTests {
         #expect(c.currentWidth > strokeBefore.width)        // controller moved
     }
 
-    @Test("run(.clear) with non-empty selectedStrokeIds erases only those strokes")
+    @Test("run(.clear) in selection mode with non-empty selectedStrokeIds erases only those strokes")
     func clearWithSelectionErasesSelected() {
         let (c, editor, _) = make()
         c.activate()
@@ -185,6 +185,7 @@ struct RunCommandTests {
         c.pointerUp()
         let allIds = editor.doc.strokeOrder
         #expect(allIds.count == 2)
+        c.currentTool = .selection
         c.selectedStrokeIds = [allIds[0]]
         c.run(.clear)
         #expect(editor.doc.strokes[allIds[0]] == nil)
