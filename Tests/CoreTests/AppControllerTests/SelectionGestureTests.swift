@@ -185,7 +185,7 @@ struct SelectionGestureTests {
         let (c, editor, ids) = setup()
         c.selectedStrokeIds = ids
         let box = c.selectionBox!
-        let node = box.rotateNode(offset: AppController.rotateNodeOffset)
+        let node = box.rotateNode(offset: SelectionMetrics.rotateNodeOffset)
         c.pointerDown(StrokePoint(x: node.x, y: node.y))
         // move the pointer 90° around the center
         let center = box.center
@@ -198,6 +198,24 @@ struct SelectionGestureTests {
         #expect(abs(r0) > 1)   // actually rotated
         editor.undo()
         #expect(abs(editor.doc.strokes[ids[0]]!.transform.rotate) < 1e-6)
+    }
+
+    // MARK: cursor during a drag
+
+    @Test("translate drag shows the closed-hand cursor, reverting on release")
+    func translateShowsClosedHand() {
+        let (c, _, ids) = setup()
+        c.selectedStrokeIds = ids
+        let box = c.selectionBox!
+        // Hover the interior so the open-hand cursor is current.
+        c.pointerHover(StrokePoint(x: box.center.x, y: box.center.y), modifiers: .none)
+        #expect(c.currentCursor == .system(.openHand))
+        // Press inside the body to begin a translate — cursor flips to closed-hand.
+        c.pointerDown(StrokePoint(x: box.center.x, y: box.center.y))
+        #expect(c.currentCursor == .system(.closedHand))
+        // Release reverts to open-hand (still hovering the body).
+        c.pointerUp()
+        #expect(c.currentCursor == .system(.openHand))
     }
 
     // MARK: pen mode bypasses selection

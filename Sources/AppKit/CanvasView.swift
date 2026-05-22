@@ -145,8 +145,9 @@ public final class CanvasView: NSView, Renderer {
             ctx.stroke(r)
         }
 
-        // rotate node + connecting line from the top-edge midpoint
-        let node = box.rotateNode(offset: 20)
+        // rotate node + connecting line from the top-edge midpoint. The offset
+        // is shared with hit-testing so the node is drawn where it's grabbed.
+        let node = box.rotateNode(offset: SelectionMetrics.rotateNodeOffset)
         let topMid = CGPoint(x: (corners[0].x + corners[1].x) / 2, y: (corners[0].y + corners[1].y) / 2)
         ctx.setStrokeColor(NSColor.controlAccentColor.cgColor)
         ctx.setLineWidth(1)

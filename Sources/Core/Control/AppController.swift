@@ -152,10 +152,6 @@ public final class AppController {
 
     var lastHoverPoint: Point?
 
-    /// Hit-test tuning shared by region classification and chrome rendering.
-    static let handleHitRadius: Double = 8
-    static let rotateNodeOffset: Double = 20
-
     // Cursor publisher. Adapters subscribe to keep the rendered NSCursor in sync
     // with mode + currentColor + currentWidth. `nil` means inactive (system
     // cursor returns). Initial state is nil; refreshCursor() only fires when

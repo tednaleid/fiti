@@ -11,8 +11,9 @@ extension AppController {
             let region = SelectionMath.region(
                 at: lastHoverPoint ?? Point(x: .infinity, y: .infinity),
                 box: selectionBox,
-                handleRadius: Self.handleHitRadius,
-                rotateNodeOffset: Self.rotateNodeOffset)
+                handleRadius: SelectionMetrics.handleHitRadius,
+                rotateNodeOffset: SelectionMetrics.rotateNodeOffset,
+                rotateNodeRadius: SelectionMetrics.rotateNodeHitRadius)
             return .system(cursorFor(region: region, boxRotation: selectionBox?.rotation ?? 0,
                                      dragging: selectionGesture != nil))
         }
@@ -44,6 +45,9 @@ extension AppController {
     }
 
     func selectionPointerDown(_ point: StrokePoint, modifiers: PointerModifiers) {
+        // Starting a gesture flips the cursor (e.g. body open-hand → closed-hand);
+        // refresh on every exit since no mouseMoved arrives mid-drag.
+        defer { refreshCursor() }
         lastSelectionPoint = point
         lastHoverPoint = Point(x: point.x, y: point.y)
         let p = Point(x: point.x, y: point.y)
@@ -51,7 +55,8 @@ extension AppController {
         if modifiers.command {
             // Cmd = edit the selection set. Click toggles one stroke; drag marquees additively.
             let strokes = orderedStrokes()
-            if let hit = SelectionMath.hitTest(point: point, strokes: strokes, tolerance: Self.handleHitRadius) {
+            if let hit = SelectionMath.hitTest(point: point, strokes: strokes,
+                                               tolerance: SelectionMetrics.handleHitRadius) {
                 toggle(hit)
                 selectionGesture = nil
             } else {
@@ -61,8 +66,9 @@ extension AppController {
         }
 
         let region = SelectionMath.region(at: p, box: selectionBox,
-                                          handleRadius: Self.handleHitRadius,
-                                          rotateNodeOffset: Self.rotateNodeOffset)
+                                          handleRadius: SelectionMetrics.handleHitRadius,
+                                          rotateNodeOffset: SelectionMetrics.rotateNodeOffset,
+                                          rotateNodeRadius: SelectionMetrics.rotateNodeHitRadius)
         switch region {
         case .rotateHandle:
             beginRotate(at: point)            // Task 8
@@ -72,7 +78,8 @@ extension AppController {
             beginTranslate(at: point)
         case .outside:
             let strokes = orderedStrokes()
-            if let hit = SelectionMath.hitTest(point: point, strokes: strokes, tolerance: Self.handleHitRadius) {
+            if let hit = SelectionMath.hitTest(point: point, strokes: strokes,
+                                               tolerance: SelectionMetrics.handleHitRadius) {
                 selectedStrokeIds = [hit]
                 beginTranslate(at: point)
             } else {
@@ -100,6 +107,8 @@ extension AppController {
     }
 
     func selectionPointerUp(modifiers: PointerModifiers) {
+        // Ending the gesture flips the cursor back (e.g. closed-hand → open-hand).
+        defer { refreshCursor() }
         let gesture = selectionGesture
         selectionGesture = nil
         let endPoint = lastSelectionPoint
@@ -124,12 +133,9 @@ extension AppController {
             let updates = preview.map { (id: $0.key, transform: $0.value) }
             if !updates.isEmpty { _ = editor.transformStrokes(updates) }
             inFlightTransforms = [:]
-            if case .rotate = g {
-                // keep the oriented box at its rotated angle (don't snap back to upright)
-                // selectionBox already holds the final rotated box from the last move
-            } else {
-                recomputeSelectionBox()
-            }
+            // Rotate preserves the box's angle (selectionBox already holds the
+            // final rotated box); translate/resize recompute an upright box.
+            if case .rotate = g {} else { recomputeSelectionBox() }
         }
         if pendingSelectionClear {
             pendingSelectionClear = false
