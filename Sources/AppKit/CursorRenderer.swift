@@ -21,18 +21,55 @@ public final class CursorRenderer {
         case .brush(let color, let diameter):
             return makeBrushCursor(color: color, diameter: diameter)
         case .system(let system):
-            return makeSystemCursor(system)
+            return nsCursor(for: system)
         }
     }
 
-    private func makeSystemCursor(_ system: SystemCursor) -> NSCursor {
+    func nsCursor(for system: SystemCursor) -> NSCursor {
         switch system {
         case .arrow: return .arrow
         case .openHand: return .openHand
         case .closedHand: return .closedHand
-        case .resize, .rotate: return .arrow   // full mapping lands in Task 10
+        case .rotate: return Self.rotateCursor
+        case .resize(let angle): return Self.resizeCursor(angle: angle)
         }
     }
+
+    private static func resizeCursor(angle: Double) -> NSCursor {
+        switch Int(angle.rounded()) {
+        case 0: return .resizeLeftRight
+        case 90: return .resizeUpDown
+        case 45: return privateCursor("_windowResizeNorthEastSouthWestCursor") ?? .arrow
+        case 135: return privateCursor("_windowResizeNorthWestSouthEastCursor") ?? .arrow
+        default: return .arrow
+        }
+    }
+
+    /// Calls an undocumented NSCursor class selector by name; nil if unavailable.
+    private static func privateCursor(_ name: String) -> NSCursor? {
+        let sel = NSSelectorFromString(name)
+        guard NSCursor.responds(to: sel) else { return nil }
+        return NSCursor.perform(sel)?.takeUnretainedValue() as? NSCursor
+    }
+
+    /// A rotate cursor drawn programmatically (two curved arrows). No bundled asset.
+    private static let rotateCursor: NSCursor = {
+        let d: CGFloat = 20
+        let image = NSImage(size: NSSize(width: d, height: d), flipped: false) { _ in
+            let path = NSBezierPath()
+            path.appendArc(withCenter: NSPoint(x: d / 2, y: d / 2), radius: d / 2 - 3,
+                           startAngle: 40, endAngle: 320)
+            path.lineWidth = 2
+            NSColor.black.setStroke()
+            // soft white halo for contrast
+            guard let halo = path.copy() as? NSBezierPath else { return true }
+            halo.lineWidth = 4
+            NSColor(white: 1, alpha: 0.8).setStroke(); halo.stroke()
+            path.stroke()
+            return true
+        }
+        return NSCursor(image: image, hotSpot: NSPoint(x: d / 2, y: d / 2))
+    }()
 
     private func makeBrushCursor(color: RGBA, diameter: Double) -> NSCursor {
         // Inner ≈ visible stroke diameter. perfect-freehand's `size=N` produces
