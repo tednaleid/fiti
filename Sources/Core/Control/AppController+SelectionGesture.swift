@@ -4,6 +4,28 @@
 import Foundation
 
 extension AppController {
+    /// The cursor the AppKit adapter should render right now. Pure derived state.
+    public var currentCursor: CursorSpec? {
+        if mode == .inactive { return nil }
+        if currentTool == .selection {
+            let region = SelectionMath.region(
+                at: lastHoverPoint ?? Point(x: .infinity, y: .infinity),
+                box: selectionBox,
+                handleRadius: Self.handleHitRadius,
+                rotateNodeOffset: Self.rotateNodeOffset)
+            return .system(cursorFor(region: region, boxRotation: selectionBox?.rotation ?? 0,
+                                     dragging: selectionGesture != nil))
+        }
+        return .brush(color: currentColor, diameter: currentWidth)
+    }
+
+    func refreshCursor() {
+        let next = currentCursor
+        guard lastEmittedCursor != next else { return }
+        lastEmittedCursor = next
+        onCursorChanged?(next)
+    }
+
     public func pointerHover(_ point: StrokePoint, modifiers: PointerModifiers) {
         lastHoverPoint = Point(x: point.x, y: point.y)
         refreshCursor()
@@ -23,25 +45,39 @@ extension AppController {
 
     func selectionPointerDown(_ point: StrokePoint, modifiers: PointerModifiers) {
         lastSelectionPoint = point
-        let strokes = editor.doc.strokeOrder.compactMap { editor.doc.strokes[$0] }
-        if let hitId = SelectionMath.hitTest(point: point, strokes: strokes, tolerance: 4) {
-            if modifiers.command {
-                if selectedStrokeIds.contains(hitId) {
-                    selectedStrokeIds.removeAll { $0 == hitId }
-                } else {
-                    selectedStrokeIds.append(hitId)
-                }
+        lastHoverPoint = Point(x: point.x, y: point.y)
+        let p = Point(x: point.x, y: point.y)
+
+        if modifiers.command {
+            // Cmd = edit the selection set. Click toggles one stroke; drag marquees additively.
+            let strokes = orderedStrokes()
+            if let hit = SelectionMath.hitTest(point: point, strokes: strokes, tolerance: Self.handleHitRadius) {
+                toggle(hit)
                 selectionGesture = nil
             } else {
-                if selectedStrokeIds != [hitId] { selectedStrokeIds = [hitId] }
-                var originals: [StrokeId: Transform] = [:]
-                for id in selectedStrokeIds {
-                    if let s = editor.doc.strokes[id] { originals[id] = s.transform }
-                }
-                selectionGesture = .translate(startPoint: point, originalTransforms: originals)
+                selectionGesture = .marquee(startPoint: point, additive: true)
             }
-        } else {
-            selectionGesture = .marquee(startPoint: point)
+            return
+        }
+
+        let region = SelectionMath.region(at: p, box: selectionBox,
+                                          handleRadius: Self.handleHitRadius,
+                                          rotateNodeOffset: Self.rotateNodeOffset)
+        switch region {
+        case .rotateHandle:
+            beginRotate(at: point)            // Task 8
+        case .corner(let corner):
+            beginResize(corner: corner, at: point)  // Task 8
+        case .body:
+            beginTranslate(at: point)
+        case .outside:
+            let strokes = orderedStrokes()
+            if let hit = SelectionMath.hitTest(point: point, strokes: strokes, tolerance: Self.handleHitRadius) {
+                selectedStrokeIds = [hit]
+                beginTranslate(at: point)
+            } else {
+                selectionGesture = .marquee(startPoint: point, additive: false)
+            }
         }
     }
 
@@ -49,23 +85,17 @@ extension AppController {
         lastSelectionPoint = point
         guard let gesture = selectionGesture else { return }
         switch gesture {
-        case .marquee(let startPoint):
-            let rect = Rect(
-                x: min(startPoint.x, point.x),
-                y: min(startPoint.y, point.y),
-                width: abs(point.x - startPoint.x),
-                height: abs(point.y - startPoint.y)
-            )
-            marqueeRect = rect
-        case .translate(let startPoint, let originals):
-            let dx = point.x - startPoint.x
-            let dy = point.y - startPoint.y
-            var preview: [StrokeId: Transform] = [:]
-            for (id, original) in originals {
-                preview[id] = Transform(x: original.x + dx, y: original.y + dy,
-                                        scale: original.scale, rotate: original.rotate)
-            }
-            inFlightTransforms = preview
+        case .marquee(let startPoint, _):
+            marqueeRect = Rect(x: min(startPoint.x, point.x), y: min(startPoint.y, point.y),
+                               width: abs(point.x - startPoint.x), height: abs(point.y - startPoint.y))
+        case .translate(let startBox, let startTransforms, let startPoint):
+            let (box, transforms) = SelectionTransforms.translate(
+                startBox: startBox, startTransforms: startTransforms,
+                dx: point.x - startPoint.x, dy: point.y - startPoint.y)
+            selectionBox = box
+            inFlightTransforms = transforms
+        case .resize, .rotate:
+            selectionMovedResizeOrRotate(point, gesture: gesture)  // Task 8
         }
     }
 
@@ -76,29 +106,56 @@ extension AppController {
         lastSelectionPoint = nil
         let preview = inFlightTransforms
 
-        guard let g = gesture else {
-            inFlightTransforms = [:]
-            return
-        }
+        guard let g = gesture else { inFlightTransforms = [:]; return }
         switch g {
-        case .marquee(let startPoint):
-            inFlightTransforms = [:]
+        case .marquee(let startPoint, let additive):
             marqueeRect = nil
+            inFlightTransforms = [:]
             let end = endPoint ?? startPoint
-            let rect = Rect(
-                x: min(startPoint.x, end.x),
-                y: min(startPoint.y, end.y),
-                width: abs(end.x - startPoint.x),
-                height: abs(end.y - startPoint.y)
-            )
-            let strokes = editor.doc.strokeOrder.compactMap { editor.doc.strokes[$0] }
-            selectedStrokeIds = SelectionMath.marqueeHit(rect: rect, strokes: strokes)
-        case .translate:
-            let updates = preview.map { (id: $0.key, transform: $0.value) }
-            if !updates.isEmpty {
-                _ = editor.transformStrokes(updates)
+            let rect = Rect(x: min(startPoint.x, end.x), y: min(startPoint.y, end.y),
+                            width: abs(end.x - startPoint.x), height: abs(end.y - startPoint.y))
+            let hits = SelectionMath.marqueeHit(rect: rect, strokes: orderedStrokes())
+            if additive {
+                for id in hits { toggle(id) }
+            } else {
+                selectedStrokeIds = hits
             }
-            inFlightTransforms = [:]   // clear AFTER commit so the callback reads new transforms
+        case .translate, .resize, .rotate:
+            let updates = preview.map { (id: $0.key, transform: $0.value) }
+            if !updates.isEmpty { _ = editor.transformStrokes(updates) }
+            inFlightTransforms = [:]
+            recomputeSelectionBox()
         }
     }
+
+    // MARK: Private helpers
+
+    private func orderedStrokes() -> [Stroke] {
+        editor.doc.strokeOrder.compactMap { editor.doc.strokes[$0] }
+    }
+
+    private func toggle(_ id: StrokeId) {
+        if selectedStrokeIds.contains(id) {
+            selectedStrokeIds.removeAll { $0 == id }
+        } else {
+            selectedStrokeIds.append(id)
+        }
+    }
+
+    private func beginTranslate(at point: StrokePoint) {
+        guard let box = selectionBox else { return }
+        selectionGesture = .translate(startBox: box, startTransforms: snapshotTransforms(), startPoint: point)
+    }
+
+    func snapshotTransforms() -> [StrokeId: Transform] {
+        var out: [StrokeId: Transform] = [:]
+        for id in selectedStrokeIds { if let s = editor.doc.strokes[id] { out[id] = s.transform } }
+        return out
+    }
+
+    // MARK: Task 8 stubs
+
+    func beginResize(corner: Corner, at point: StrokePoint) { /* Task 8 */ }
+    func beginRotate(at point: StrokePoint) { /* Task 8 */ }
+    func selectionMovedResizeOrRotate(_ point: StrokePoint, gesture: SelectionGesture) { /* Task 8 */ }
 }

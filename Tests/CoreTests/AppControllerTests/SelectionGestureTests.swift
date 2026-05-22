@@ -125,6 +125,43 @@ struct SelectionGestureTests {
         #expect(seenAtCallback[ids[0]] == Transform(x: 10, y: 10, scale: 1, rotate: 0))
     }
 
+    // MARK: region-first multi-select
+
+    @Test("clicking a member of a multi-selection keeps the whole selection and translates it")
+    func clickMemberKeepsMultiSelection() {
+        let (c, editor, ids) = setup()
+        c.selectedStrokeIds = ids                      // both selected
+        c.pointerDown(StrokePoint(x: 20, y: 10))       // on stroke 0, which is inside the box
+        c.pointerMoved(StrokePoint(x: 30, y: 10))      // drag +10 x
+        c.pointerUp()
+        #expect(Set(c.selectedStrokeIds) == Set(ids))  // still both
+        #expect(editor.doc.strokes[ids[0]]?.transform.x == 10)
+        #expect(editor.doc.strokes[ids[1]]?.transform.x == 10)  // moved together
+    }
+
+    @Test("clicking empty interior of the selection box translates the group")
+    func clickEmptyInteriorTranslates() {
+        let (c, editor, ids) = setup()
+        c.selectedStrokeIds = ids
+        let box = c.selectionBox!
+        c.pointerDown(StrokePoint(x: box.center.x, y: box.center.y))  // empty interior
+        c.pointerMoved(StrokePoint(x: box.center.x + 5, y: box.center.y))
+        c.pointerUp()
+        #expect(Set(c.selectedStrokeIds) == Set(ids))
+        #expect(editor.doc.strokes[ids[0]]?.transform.x == 5)
+    }
+
+    @Test("Space+Cmd marquee toggles each intersected stroke")
+    func cmdMarqueeToggles() {
+        let (c, _, ids) = setup()
+        c.selectedStrokeIds = [ids[0]]                 // stroke 0 already selected
+        // Marquee over BOTH strokes with Cmd: stroke 0 removed, stroke 1 added.
+        c.pointerDown(StrokePoint(x: 0, y: 0), modifiers: PointerModifiers(command: true))
+        c.pointerMoved(StrokePoint(x: 200, y: 200), modifiers: PointerModifiers(command: true))
+        c.pointerUp(modifiers: PointerModifiers(command: true))
+        #expect(c.selectedStrokeIds == [ids[1]])
+    }
+
     // MARK: pen mode bypasses selection
 
     @Test("pointerDown while currentTool == .pen draws a stroke")

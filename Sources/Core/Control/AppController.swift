@@ -63,8 +63,10 @@ public final class AppController {
     // MARK: Selection gesture state
 
     enum SelectionGesture {
-        case marquee(startPoint: StrokePoint)
-        case translate(startPoint: StrokePoint, originalTransforms: [StrokeId: Transform])
+        case marquee(startPoint: StrokePoint, additive: Bool)
+        case translate(startBox: OrientedBox, startTransforms: [StrokeId: Transform], startPoint: StrokePoint)
+        case resize(startBox: OrientedBox, startTransforms: [StrokeId: Transform], anchor: Point, startCorner: Point)
+        case rotate(startBox: OrientedBox, startTransforms: [StrokeId: Transform], center: Point, startPoint: StrokePoint)
     }
 
     var selectionGesture: SelectionGesture?
@@ -152,29 +154,7 @@ public final class AppController {
     // and writes-while-inactive don't generate spurious events. Subscribers
     // that join after initialization should read `currentCursor` to sync.
     public var onCursorChanged: ((CursorSpec?) -> Void)?
-    private var lastEmittedCursor: CursorSpec?
-
-    /// The cursor the AppKit adapter should render right now. Pure derived state.
-    public var currentCursor: CursorSpec? {
-        if mode == .inactive { return nil }
-        if currentTool == .selection {
-            let region = SelectionMath.region(
-                at: lastHoverPoint ?? Point(x: .infinity, y: .infinity),
-                box: selectionBox,
-                handleRadius: Self.handleHitRadius,
-                rotateNodeOffset: Self.rotateNodeOffset)
-            return .system(cursorFor(region: region, boxRotation: selectionBox?.rotation ?? 0,
-                                     dragging: selectionGesture != nil))
-        }
-        return .brush(color: currentColor, diameter: currentWidth)
-    }
-
-    func refreshCursor() {
-        let next = currentCursor
-        guard lastEmittedCursor != next else { return }
-        lastEmittedCursor = next
-        onCursorChanged?(next)
-    }
+    var lastEmittedCursor: CursorSpec?
 
     public init(
         editor: Editor,
