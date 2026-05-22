@@ -31,7 +31,8 @@ The live-overlay rendering refactor (`f7d446d`) already draws in-flight (dragged
 | `Space` keyUp, no gesture in flight | `currentTool = .pen`; selection state cleared entirely |
 | `Space` keyUp **during** a pointer gesture (button down) | defer the revert+clear; apply it on the following `pointerUp` so the drag isn't yanked out |
 | `Esc` | deactivate fiti — its plain meaning, unchanged. No selection-specific handling: to clear a selection you just release Space. |
-| `Delete` with a non-empty selection | erase only the selected strokes (one undoable op) — reachable while holding Space |
+| `Delete` (Space held) with a selection | erase only the selected strokes (one undoable op) |
+| `Delete` (Space held) with no selection | **no-op** — you "missed"; nothing destructive happens while in selection mode |
 
 This removes the selection-aware `Esc` branch that shipped in the original selection tool (Task 8 made `main.swift`'s `onDeactivate` clear the selection before deactivating). That handler reverts to a plain `controller.deactivate()`.
 
@@ -58,7 +59,12 @@ When Cmd is held, handles are inactive and every gesture toggles membership:
 
 ### Delete / Clear
 
-Unchanged from the shipped behavior: `run(.clear)` is selection-aware (erases the selection when non-empty, else clears all); `Cmd+K` always routes through `clear()` and wipes everything. Both already reset `selectedStrokeIds`.
+`Delete` (the `KeyCommandRegistry` `.clear` binding → `run(.clear)`) becomes **tool-gated** so Space-held is a true mode where Delete can never nuke the whole drawing:
+
+- `currentTool == .selection` (Space held): if a selection exists, erase only those strokes (one undoable op) and clear the selection; if nothing is selected, **no-op**.
+- `currentTool == .pen` (Space not held): clear all strokes (the existing destructive behavior).
+
+`Cmd+K` is unaffected — it routes through `clear()` directly and always wipes everything, regardless of tool. This refines the shipped `run(.clear)`, which cleared-all whenever the selection was empty; under the transient lifetime the empty-selection case only happens in pen mode anyway, but gating on `currentTool` makes the "missed click in selection mode is harmless" guarantee explicit.
 
 ## Oriented selection box
 
@@ -187,6 +193,7 @@ The test boundary: region classification, cursor selection, gesture math, box li
 - transient lifetime: Space-up clears selection; Space-up *during* a gesture defers the clear to the next `pointerUp`; `Esc` deactivates fiti regardless of selection (no selection-specific branch).
 - `pointerHover` emits the correct `CursorSpec` per hovered region.
 - selection-set change recomputes the box at rotation 0.
+- tool-gated `run(.clear)`: in `.selection` with a selection → erases only those strokes; in `.selection` with no selection → no-op (strokes untouched, `canUndo` unchanged); in `.pen` → clears all. `clear()` (Cmd+K path) always wipes everything regardless of tool.
 - rigid group rotation: four strokes forming a box, select all, rotate — each stroke's resulting transform preserves the arrangement; one undo entry restores all.
 
 **AppKit (smoke):** `CursorRenderer` returns a non-nil `NSCursor` for every `SystemCursor` (including the diagonal-selector fallback path); `CanvasView.setSelectionBox` draws the rotated chrome (light pixel-sample).
@@ -210,7 +217,7 @@ The test boundary: region classification, cursor selection, gesture math, box li
 - [ ] The selection box is oriented — it tilts with the content, stays snug, and persists at its angle; the rotate node travels with it.
 - [ ] Hovering shows the right cursor per region: hand inside, the angle-correct diagonal on corners (even when the box is rotated), rotate arrows on the node, arrow outside.
 - [ ] Each gesture commits one undoable op; undo restores the prior transforms.
-- [ ] `Delete` with a selection erases only those strokes; `Esc` deactivates fiti (release Space to clear a selection); `Cmd+K` always clears everything.
+- [ ] `Delete` while Space is held erases the selection if any, else does nothing; `Delete` in pen mode (Space up) clears all; `Cmd+K` always clears everything regardless of tool. `Esc` deactivates fiti (release Space to clear a selection).
 - [ ] `Sources/Core/` has zero AppKit/CoreGraphics/Network/SwiftUI imports; region/cursor/gesture/lifetime logic is unit-tested without drawing.
 - [ ] Full suite stays under 5 seconds (`just check`).
 
