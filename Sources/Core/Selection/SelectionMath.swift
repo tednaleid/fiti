@@ -41,6 +41,32 @@ public enum SelectionMath {
         return union
     }
 
+    /// Classifies a world point against an oriented selection box.
+    /// Precedence: rotate node, then corners, then interior, else outside.
+    public static func region(at point: Point, box: OrientedBox?,
+                              handleRadius: Double, rotateNodeOffset: Double) -> SelectionRegion {
+        guard let box else { return .outside }
+        let local = box.toLocal(point)
+        let halfW = box.size.width / 2
+        let halfH = box.size.height / 2
+
+        let node = Point(x: 0, y: -halfH - rotateNodeOffset)
+        if hypot(local.x - node.x, local.y - node.y) <= handleRadius { return .rotateHandle }
+
+        let corners: [(Corner, Point)] = [
+            (.topLeft, Point(x: -halfW, y: -halfH)),
+            (.topRight, Point(x: halfW, y: -halfH)),
+            (.bottomRight, Point(x: halfW, y: halfH)),
+            (.bottomLeft, Point(x: -halfW, y: halfH))
+        ]
+        for (corner, c) in corners where hypot(local.x - c.x, local.y - c.y) <= handleRadius {
+            return .corner(corner)
+        }
+
+        if abs(local.x) <= halfW && abs(local.y) <= halfH { return .body }
+        return .outside
+    }
+
     // MARK: - Internals
 
     private static func transformed(points: [StrokePoint], by t: Transform) -> [StrokePoint] {
