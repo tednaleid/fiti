@@ -8,6 +8,7 @@ public final class NSEventInputSource: InputSource {
     public var onPointerDown: ((StrokePoint, PointerModifiers) -> Void)?
     public var onPointerMoved: ((StrokePoint, PointerModifiers) -> Void)?
     public var onPointerUp: ((PointerModifiers) -> Void)?
+    public var onPointerHover: ((StrokePoint, PointerModifiers) -> Void)?
     public var onDeactivate: (() -> Void)?
     public var onClear: (() -> Void)?
     public var onUndo: (() -> Void)?
@@ -55,6 +56,9 @@ extension NSEventInputSource: CanvasInputDelegate {
     public func canvasInput(_ view: CanvasInputView, mouseUpAt point: CGPoint, modifiers: PointerModifiers) {
         onPointerUp?(modifiers)
     }
+    public func canvasInput(_ view: CanvasInputView, mouseMovedAt point: CGPoint, modifiers: PointerModifiers) {
+        onPointerHover?(StrokePoint(x: Double(point.x), y: Double(point.y)), modifiers)
+    }
 }
 
 // MARK: - Pure key dispatch (testable without installing NSEvent monitors)
@@ -100,6 +104,7 @@ public protocol CanvasInputDelegate: AnyObject {
     func canvasInput(_ view: CanvasInputView, mouseDownAt point: CGPoint, modifiers: PointerModifiers)
     func canvasInput(_ view: CanvasInputView, mouseDraggedAt point: CGPoint, modifiers: PointerModifiers)
     func canvasInput(_ view: CanvasInputView, mouseUpAt point: CGPoint, modifiers: PointerModifiers)
+    func canvasInput(_ view: CanvasInputView, mouseMovedAt point: CGPoint, modifiers: PointerModifiers)
 }
 
 public final class CanvasInputView: NSView {
@@ -170,6 +175,10 @@ public final class CanvasInputView: NSView {
         // activation reset) can't strand us on arrow once the mouse re-enters
         // or moves within the canvas.
         if let cursor = fitiCursor { cursor.set() }
+        let p = convert(event.locationInWindow, from: nil)
+        let m = PointerModifiers(command: event.modifierFlags.contains(.command),
+                                 shift: event.modifierFlags.contains(.shift))
+        delegate?.canvasInput(self, mouseMovedAt: p, modifiers: m)
     }
 
     /// Set the cursor that should appear over this view, or nil to revert to

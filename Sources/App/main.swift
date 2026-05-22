@@ -96,6 +96,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0, modifiers: $1) }
         input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0, modifiers: $1) }
         input.onPointerUp     = { [weak self] in self?.controller.pointerUp(modifiers: $0) }
+        input.onPointerHover  = { [weak self] in self?.controller.pointerHover($0, modifiers: $1) }
         input.onDeactivate    = { [weak self] in self?.controller.deactivate() }
         input.onClear         = { [weak self] in self?.controller.clear() }
         input.onUndo          = { [weak self] in _ = self?.editor.undo() }
@@ -140,28 +141,13 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
             self?.canvas.setGlobalOpacity(opacity)
         }
 
-        controller.onSelectionChanged = { [weak self] ids in
-            guard let self else { return }
-            let bounds = SelectionMath.selectionBounds(
-                strokeIds: ids,
-                strokes: self.editor.doc.strokes
-            )
-            self.canvas.setSelectionBounds(bounds)
+        controller.onSelectionBoxChanged = { [weak self] box in
+            self?.canvas.setSelectionBox(box)
         }
 
         controller.onInFlightTransformsChanged = { [weak self] overrides in
             guard let self else { return }
-            let frame = RenderFrame.from(editor: self.editor,
-                                        canvasSize: self.canvasSize,
-                                        overrides: overrides)
-            self.canvas.render(frame)
-            let strokesById = (frame.strokes + frame.liveStrokes)
-                .reduce(into: [String: Stroke]()) { $0[$1.id] = $1 }
-            let bounds = SelectionMath.selectionBounds(
-                strokeIds: self.controller.selectedStrokeIds,
-                strokes: strokesById
-            )
-            self.canvas.setSelectionBounds(bounds)
+            self.canvas.render(RenderFrame.from(editor: self.editor, canvasSize: self.canvasSize, overrides: overrides))
         }
 
         controller.onMarqueeChanged = { [weak self] rect in

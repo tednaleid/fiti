@@ -43,12 +43,12 @@ public final class CanvasView: NSView, Renderer {
         needsDisplay = true
     }
 
-    public private(set) var selectionBounds: Rect?
+    public private(set) var selectionBox: OrientedBox?
     public private(set) var marqueeRect: Rect?
 
-    public func setSelectionBounds(_ rect: Rect?) {
-        guard selectionBounds != rect else { return }
-        selectionBounds = rect
+    public func setSelectionBox(_ box: OrientedBox?) {
+        guard selectionBox != box else { return }
+        selectionBox = box
         needsDisplay = true
     }
 
@@ -113,53 +113,47 @@ public final class CanvasView: NSView, Renderer {
         }
         // Reset alpha for selection/marquee overlays — they manage their own alpha.
         ctx.setAlpha(1.0)
-        if let sel = selectionBounds {
-            drawSelectionBox(sel, in: ctx)
+        if let box = selectionBox {
+            drawSelectionBox(box, in: ctx)
         }
         if let marq = marqueeRect {
             drawMarquee(marq, in: ctx)
         }
     }
 
-    private func drawSelectionBox(_ rect: Rect, in ctx: CGContext) {
-        let cgRect = CGRect(x: rect.x, y: rect.y, width: rect.width, height: rect.height)
-        let accentColor = NSColor.controlAccentColor
-
-        // Outline
+    private func drawSelectionBox(_ box: OrientedBox, in ctx: CGContext) {
+        let corners = box.corners().map { CGPoint(x: $0.x, y: $0.y) }
         ctx.saveGState()
-        accentColor.setStroke()
+        ctx.setStrokeColor(NSColor.controlAccentColor.cgColor)
         ctx.setLineWidth(1)
-        ctx.stroke(cgRect)
+        ctx.setLineDash(phase: 0, lengths: [5, 4])
+        ctx.beginPath()
+        ctx.move(to: corners[0])
+        for c in corners.dropFirst() { ctx.addLine(to: c) }
+        ctx.closePath()
+        ctx.strokePath()
+        ctx.setLineDash(phase: 0, lengths: [])
 
-        // Corner handles: 6x6pt squares centered on each corner
-        let handleSize: CGFloat = 6
-        let offset: CGFloat = handleSize / 2
-        let corners: [CGPoint] = [
-            CGPoint(x: cgRect.minX, y: cgRect.minY),
-            CGPoint(x: cgRect.maxX, y: cgRect.minY),
-            CGPoint(x: cgRect.minX, y: cgRect.maxY),
-            CGPoint(x: cgRect.maxX, y: cgRect.maxY)
-        ]
-        accentColor.setFill()
-        for corner in corners {
-            let handle = CGRect(x: corner.x - offset, y: corner.y - offset,
-                                width: handleSize, height: handleSize)
-            ctx.fill(handle)
+        // corner handles (6×6pt, filled accent, white outline)
+        let h: CGFloat = 6
+        for c in corners {
+            let r = CGRect(x: c.x - h / 2, y: c.y - h / 2, width: h, height: h)
+            ctx.setFillColor(NSColor.controlAccentColor.cgColor)
+            ctx.fill(r)
+            ctx.setStrokeColor(NSColor.white.cgColor)
+            ctx.setLineWidth(1)
+            ctx.stroke(r)
         }
 
-        // Rotation handle: circle 20pt above top midpoint, with a connecting line
-        let topMidX = cgRect.midX
-        let topY = cgRect.minY
-        let rotHandleRadius: CGFloat = 6
-        let rotHandleCenterY = topY - 20
+        // rotate node + connecting line from the top-edge midpoint
+        let node = box.rotateNode(offset: 20)
+        let topMid = CGPoint(x: (corners[0].x + corners[1].x) / 2, y: (corners[0].y + corners[1].y) / 2)
+        ctx.setStrokeColor(NSColor.controlAccentColor.cgColor)
         ctx.setLineWidth(1)
-        ctx.strokeEllipse(in: CGRect(x: topMidX - rotHandleRadius,
-                                     y: rotHandleCenterY - rotHandleRadius,
-                                     width: rotHandleRadius * 2,
-                                     height: rotHandleRadius * 2))
-        ctx.move(to: CGPoint(x: topMidX, y: topY))
-        ctx.addLine(to: CGPoint(x: topMidX, y: rotHandleCenterY + rotHandleRadius))
-        ctx.strokePath()
+        ctx.beginPath(); ctx.move(to: topMid); ctx.addLine(to: CGPoint(x: node.x, y: node.y)); ctx.strokePath()
+        let nodeRect = CGRect(x: node.x - 6, y: node.y - 6, width: 12, height: 12)
+        ctx.setFillColor(NSColor.black.cgColor); ctx.fillEllipse(in: nodeRect)
+        ctx.strokeEllipse(in: nodeRect)
         ctx.restoreGState()
     }
 
