@@ -52,10 +52,12 @@ Rule 3 fixes the multi-drag bug: any click inside the box grabs the entire group
 
 ### Cmd: editing the selection set
 
-When Cmd is held, handles are inactive and every gesture toggles membership:
+Cmd is a modifier *layered on top of the held Space* — there is no selection tool, and therefore no selection editing, unless Space is down. So every interaction here is really **Space+Cmd**. With Cmd also held, handles go inactive and every gesture toggles membership instead of manipulating:
 
-- **Cmd+click a stroke** → toggle that stroke in/out of the selection. No drag.
-- **Cmd+drag (anywhere)** → a marquee that, on release, toggles each stroke whose AABB it intersects (members are removed, non-members added). Symmetric with Cmd+click.
+- **Space+Cmd+click a stroke** → toggle that stroke in/out of the selection. No drag.
+- **Space+Cmd+drag (anywhere)** → a marquee that, on release, toggles each stroke whose AABB it intersects (members are removed, non-members added). Symmetric with the Cmd-click.
+
+Because Space is the precondition for the tool, `pointerDown(_:modifiers:)` only consults `modifiers.command` while `currentTool == .selection`; in pen mode the Cmd flag is ignored by the selection logic entirely.
 
 ### Delete / Clear
 
@@ -211,7 +213,7 @@ The test boundary: region classification, cursor selection, gesture math, box li
 ## Acceptance criteria
 
 - [ ] While holding Space, clicking any member of a multi-selection (or the empty interior of its box) drags the whole selection; releasing Space clears the selection.
-- [ ] Cmd+click toggles a single stroke; Cmd+drag marquee toggles each intersected stroke.
+- [ ] Space+Cmd+click toggles a single stroke; Space+Cmd+drag marquee toggles each intersected stroke (Cmd only matters while Space holds the selection tool).
 - [ ] Dragging a corner scales the selection uniformly with the opposite corner pinned; it cannot collapse or flip.
 - [ ] Dragging the rotate node rotates the selection around its center as a rigid unit (a box of strokes stays a box); Shift snaps to 15°.
 - [ ] The selection box is oriented — it tilts with the content, stays snug, and persists at its angle; the rotate node travels with it.
