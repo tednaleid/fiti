@@ -112,7 +112,9 @@ public final class AppController {
     public var selectedStrokeIds: [StrokeId] = [] {
         didSet {
             if oldValue != selectedStrokeIds {
+                recomputeSelectionBox()
                 onSelectionChanged?(selectedStrokeIds)
+                refreshCursor()
             }
         }
     }
@@ -131,6 +133,18 @@ public final class AppController {
         }
     }
 
+    public var onSelectionBoxChanged: ((OrientedBox?) -> Void)?
+
+    public var selectionBox: OrientedBox? {
+        didSet { if oldValue != selectionBox { onSelectionBoxChanged?(selectionBox) } }
+    }
+
+    var lastHoverPoint: Point?
+
+    /// Hit-test tuning shared by region classification and chrome rendering.
+    static let handleHitRadius: Double = 8
+    static let rotateNodeOffset: Double = 20
+
     // Cursor publisher. Adapters subscribe to keep the rendered NSCursor in sync
     // with mode + currentColor + currentWidth. `nil` means inactive (system
     // cursor returns). Initial state is nil; refreshCursor() only fires when
@@ -143,11 +157,19 @@ public final class AppController {
     /// The cursor the AppKit adapter should render right now. Pure derived state.
     public var currentCursor: CursorSpec? {
         if mode == .inactive { return nil }
-        if currentTool == .selection { return .system(.arrow) }
+        if currentTool == .selection {
+            let region = SelectionMath.region(
+                at: lastHoverPoint ?? Point(x: .infinity, y: .infinity),
+                box: selectionBox,
+                handleRadius: Self.handleHitRadius,
+                rotateNodeOffset: Self.rotateNodeOffset)
+            return .system(cursorFor(region: region, boxRotation: selectionBox?.rotation ?? 0,
+                                     dragging: selectionGesture != nil))
+        }
         return .brush(color: currentColor, diameter: currentWidth)
     }
 
-    private func refreshCursor() {
+    func refreshCursor() {
         let next = currentCursor
         guard lastEmittedCursor != next else { return }
         lastEmittedCursor = next

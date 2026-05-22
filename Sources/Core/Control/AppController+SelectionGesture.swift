@@ -4,6 +4,23 @@
 import Foundation
 
 extension AppController {
+    public func pointerHover(_ point: StrokePoint, modifiers: PointerModifiers) {
+        lastHoverPoint = Point(x: point.x, y: point.y)
+        refreshCursor()
+    }
+
+    func recomputeSelectionBox() {
+        guard let rect = SelectionMath.selectionBounds(strokeIds: selectedStrokeIds,
+                                                       strokes: editor.doc.strokes) else {
+            selectionBox = nil
+            return
+        }
+        selectionBox = OrientedBox(center: Point(x: rect.x + rect.width / 2,
+                                                 y: rect.y + rect.height / 2),
+                                   size: Size(width: rect.width, height: rect.height),
+                                   rotation: 0)
+    }
+
     func selectionPointerDown(_ point: StrokePoint, modifiers: PointerModifiers) {
         lastSelectionPoint = point
         let strokes = editor.doc.strokeOrder.compactMap { editor.doc.strokes[$0] }
