@@ -65,7 +65,7 @@ Per-stroke erase is HTTP-only — use `just inspect-erase ID`.
 
 ## Dig deeper
 
-- [`docs/architecture.md`](./docs/architecture.md) — module diagram, ports & adapters table, two-canvas split, dev HTTP surface
+- [`docs/architecture.md`](./docs/architecture.md) — module diagram, ports & adapters, Editor/undo model, modes & tools, selection gesture machine, rendering layers, dev HTTP surface
 - [`docs/specs/2026-05-16-fiti-roadmap.md`](./docs/specs/2026-05-16-fiti-roadmap.md) — what's next: menubar, toolbar, perfect-freehand, distribution
 - [`docs/specs/2026-05-16-fiti-poc-design.md`](./docs/specs/2026-05-16-fiti-poc-design.md) — POC design, scope, ports, HTTP routes, decision log
 - [`.llm/telestrator/renderer/lib/state.ts`](./.llm/telestrator/renderer/lib/state.ts) — telestrator's state machine (the conceptual ancestor)
