@@ -143,8 +143,8 @@ public final class AppController {
     /// The cursor the AppKit adapter should render right now. Pure derived state.
     public var currentCursor: CursorSpec? {
         if mode == .inactive { return nil }
-        if currentTool == .selection { return nil }
-        return CursorSpec(color: currentColor, diameter: currentWidth)
+        if currentTool == .selection { return .system(.arrow) }
+        return .brush(color: currentColor, diameter: currentWidth)
     }
 
     private func refreshCursor() {

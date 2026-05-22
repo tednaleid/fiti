@@ -1,23 +1,20 @@
-// ABOUTME: Cursor data the AppKit cursor adapter renders into an NSCursor.
-// ABOUTME: Today: filled circle for the pen tool. Future tool variants split this into an enum.
+// ABOUTME: Semantic cursor the AppKit adapter renders into an NSCursor. Core
+// ABOUTME: expresses intent (.brush for pen, .system for selection); the
+// ABOUTME: adapter maps it to a platform cursor.
 
 import Foundation
 
-public struct CursorSpec: Equatable, Sendable {
-    public let color: RGBA
-    public let diameter: Double
+public enum SystemCursor: Equatable, Sendable {
+    case arrow, openHand, closedHand
+    case resize(angle: Double)   // screen-space angle in {0,45,90,135}; adapter picks the platform cursor
+    case rotate
+}
 
-    public init(color: RGBA, diameter: Double) {
-        self.color = color
-        self.diameter = diameter
-    }
+public enum CursorSpec: Equatable, Sendable {
+    case brush(color: RGBA, diameter: Double)
+    case system(SystemCursor)
 
-    /// Picks an outline color that contrasts with the fill so the cursor stays
-    /// visible against backgrounds of similar color. Uses BT.601 relative
-    /// luminance on the RGB components only — alpha is ignored so a low-opacity
-    /// stroke color still picks an outline based on its color identity, not its
-    /// transparency. The outline alpha is 0.5 so the ring stays subtle and
-    /// doesn't compete with the fill color for the eye's attention.
+    /// Outline color contrasting with a brush fill (BT.601 luminance on RGB).
     public static func outlineColor(for fill: RGBA) -> RGBA {
         let luminance = 0.299 * fill.r + 0.587 * fill.g + 0.114 * fill.b
         return luminance > 0.5

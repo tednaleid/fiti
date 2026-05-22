@@ -7,13 +7,13 @@ struct CursorSpecTests {
     @Test("equal specs are ==")
     func equality() {
         let red = RGBA(r: 1, g: 0, b: 0, a: 0.8)
-        #expect(CursorSpec(color: red, diameter: 10) == CursorSpec(color: red, diameter: 10))
+        #expect(CursorSpec.brush(color: red, diameter: 10) == CursorSpec.brush(color: red, diameter: 10))
     }
 
     @Test("different diameter is !=")
     func diameterDiffers() {
         let red = RGBA(r: 1, g: 0, b: 0, a: 1)
-        #expect(CursorSpec(color: red, diameter: 10) != CursorSpec(color: red, diameter: 11))
+        #expect(CursorSpec.brush(color: red, diameter: 10) != CursorSpec.brush(color: red, diameter: 11))
     }
 
     @Test("dark fill picks white outline at 50% alpha")

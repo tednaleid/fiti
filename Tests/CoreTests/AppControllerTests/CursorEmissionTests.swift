@@ -38,7 +38,7 @@ struct CursorEmissionTests {
         let (c, rec) = makeWithRecorder()
         c.activate()
         #expect(rec.emissions.count == 1)
-        #expect(rec.emissions[0] == CursorSpec(color: c.currentColor, diameter: c.currentWidth))
+        #expect(rec.emissions[0] == .brush(color: c.currentColor, diameter: c.currentWidth))
     }
 
     @Test("deactivate emits nil")
@@ -55,7 +55,7 @@ struct CursorEmissionTests {
         c.activate()
         let blue = RGBA(r: 0, g: 0, b: 1, a: 1)
         c.currentColor = blue
-        #expect(rec.emissions.last == .some(CursorSpec(color: blue, diameter: c.currentWidth)))
+        #expect(rec.emissions.last == .some(.brush(color: blue, diameter: c.currentWidth)))
     }
 
     @Test("width change while active emits new spec")
@@ -63,7 +63,7 @@ struct CursorEmissionTests {
         let (c, rec) = makeWithRecorder()
         c.activate()
         c.currentWidth = 18
-        #expect(rec.emissions.last == .some(CursorSpec(color: c.currentColor, diameter: 18)))
+        #expect(rec.emissions.last == .some(.brush(color: c.currentColor, diameter: 18)))
     }
 
     @Test("color change while inactive does not emit (still nil)")
@@ -115,7 +115,7 @@ struct CursorEmissionTests {
         let (c, _) = makeWithRecorder()
         #expect(c.currentCursor == nil)
         c.activate()
-        #expect(c.currentCursor == CursorSpec(color: c.currentColor, diameter: c.currentWidth))
+        #expect(c.currentCursor == .brush(color: c.currentColor, diameter: c.currentWidth))
         c.deactivate()
         #expect(c.currentCursor == nil)
     }

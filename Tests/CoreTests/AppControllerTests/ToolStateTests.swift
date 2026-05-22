@@ -43,13 +43,13 @@ struct ToolStateTests {
         #expect(count == 0)
     }
 
-    @Test("cursor is nil (system arrow) while currentTool is .selection in an active mode")
+    @Test("cursor is .system(.arrow) while currentTool is .selection in an active mode")
     func cursorUnderSelection() {
         let c = make()
         c.activate()
         #expect(c.currentCursor != nil)
         c.currentTool = .selection
-        #expect(c.currentCursor == nil)
+        #expect(c.currentCursor == .system(.arrow))
         c.currentTool = .pen
         #expect(c.currentCursor != nil)
     }
