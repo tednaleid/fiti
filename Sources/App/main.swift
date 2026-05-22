@@ -162,7 +162,8 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
                                         canvasSize: self.canvasSize,
                                         overrides: overrides)
             self.canvas.render(frame)
-            let strokesById = frame.strokes.reduce(into: [String: Stroke]()) { $0[$1.id] = $1 }
+            let strokesById = (frame.strokes + frame.liveStrokes)
+                .reduce(into: [String: Stroke]()) { $0[$1.id] = $1 }
             let bounds = SelectionMath.selectionBounds(
                 strokeIds: self.controller.selectedStrokeIds,
                 strokes: strokesById

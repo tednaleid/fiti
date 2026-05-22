@@ -141,4 +141,91 @@ struct CanvasViewBakeTests {
         let secondImage = try #require(view.testOnly_committedImage)
         #expect(secondImage.width == 100)
     }
+
+    @Test("live strokes are not included in the bake signature")
+    func liveStrokesNotBaked() {
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
+        let committed = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 2,
+                               transform: .identity, points: [],
+                               pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        let dragged = Stroke(id: "b", color: RGBA(r: 0, g: 1, b: 0, a: 1), width: 2,
+                             transform: Transform(x: 10, y: 0, scale: 1, rotate: 0),
+                             points: [], pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        let frame = RenderFrame(strokes: [committed], liveStrokes: [dragged], inProgress: nil,
+                                canvasSize: Size(width: 100, height: 100))
+        view.render(frame)
+        #expect(view.bakeSignatureForTesting.map(\.id) == ["a"])
+        #expect(!view.bakeSignatureForTesting.map(\.id).contains("b"))
+    }
+
+    @Test("bake stays stable when only a live stroke moves")
+    func bakeStableAcrossLiveStrokeMove() throws {
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
+        let committed = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 2,
+                               transform: .identity,
+                               points: [StrokePoint(x: 0, y: 0), StrokePoint(x: 10, y: 10)],
+                               pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        let dragged = Stroke(id: "b", color: RGBA(r: 0, g: 1, b: 0, a: 1), width: 2,
+                             transform: .identity,
+                             points: [StrokePoint(x: 20, y: 20), StrokePoint(x: 30, y: 30)],
+                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+
+        // Frame A: committed=[a], live=[b @ T1]
+        let draggedT1 = Stroke(id: "b", color: dragged.color, width: dragged.width,
+                               transform: Transform(x: 5, y: 5, scale: 1, rotate: 0),
+                               points: dragged.points, pointerType: dragged.pointerType,
+                               pressureEnabled: dragged.pressureEnabled, createdAt: dragged.createdAt)
+        let frameA = RenderFrame(strokes: [committed], liveStrokes: [draggedT1], inProgress: nil,
+                                 canvasSize: Size(width: 100, height: 100))
+        view.render(frameA)
+        let imageAfterA = try #require(view.testOnly_committedImage)
+        let sigAfterA = view.bakeSignatureForTesting
+
+        // Frame B: committed=[a] (unchanged), live=[b @ T2] — only live stroke moved
+        let draggedT2 = Stroke(id: "b", color: dragged.color, width: dragged.width,
+                               transform: Transform(x: 25, y: 25, scale: 1, rotate: 0),
+                               points: dragged.points, pointerType: dragged.pointerType,
+                               pressureEnabled: dragged.pressureEnabled, createdAt: dragged.createdAt)
+        let frameB = RenderFrame(strokes: [committed], liveStrokes: [draggedT2], inProgress: nil,
+                                 canvasSize: Size(width: 100, height: 100))
+        view.render(frameB)
+        let imageAfterB = try #require(view.testOnly_committedImage)
+        let sigAfterB = view.bakeSignatureForTesting
+
+        // Signature and CGImage pointer must be unchanged — no re-bake occurred.
+        #expect(sigAfterA == sigAfterB)
+        #expect(imageAfterA === imageAfterB)
+    }
+
+    @Test("a live stroke renders at its transformed position")
+    func liveStrokeRendersAtTransformedPosition() throws {
+        // Canvas 200×200. Stroke points at y=50. With a y+80 translate the stroke
+        // moves to y=130. CGContext uses bottom-left origin, so:
+        //   CG y=50  → bitmap row 200-50  = 150 (original position, should be empty)
+        //   CG y=130 → bitmap row 200-130 = 70  (translated position, should be ink)
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 200, height: 200))
+        view.testOnly_overrideBackingScale = 1
+        let stroke = Stroke(id: "live", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 10,
+                            transform: Transform(x: 0, y: 80, scale: 1, rotate: 0),
+                            points: [StrokePoint(x: 50, y: 50),
+                                     StrokePoint(x: 100, y: 50),
+                                     StrokePoint(x: 150, y: 50)],
+                            pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        let frame = RenderFrame(strokes: [], liveStrokes: [stroke], inProgress: nil,
+                                canvasSize: Size(width: 200, height: 200))
+        view.render(frame)
+
+        let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+        view.cacheDisplay(in: view.bounds, to: rep)
+
+        // Translated position (y=130 in flipped view coords = row 130 from top): should have ink.
+        let atTranslated = try #require(rep.colorAt(x: 100, y: 130))
+        #expect(atTranslated.redComponent > 0.5,
+                "live stroke should render at translated position (view y=130)")
+
+        // Original position (view y=50): should be background (no stroke was committed there).
+        let atOriginal = try #require(rep.colorAt(x: 100, y: 50))
+        #expect(atOriginal.redComponent < 0.1,
+                "no ink should appear at original un-translated position (view y=50)")
+    }
 }

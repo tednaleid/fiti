@@ -1,6 +1,6 @@
 // ABOUTME: NSView that renders a RenderFrame via Core Graphics.
-// ABOUTME: Two-canvas split: committed strokes baked to a CGImage and
-// ABOUTME: redrawn only when strokeOrder or transforms change; in-progress drawn live.
+// ABOUTME: Two-canvas split: committed strokes baked to a CGImage; in-flight (dragged)
+// ABOUTME: and in-progress strokes drawn live so selection drags skip re-baking.
 
 import AppKit
 import CoreGraphics
@@ -72,6 +72,8 @@ public final class CanvasView: NSView, Renderer {
 
     public func render(_ frame: RenderFrame) {
         let inProgressId = frame.inProgress?.id
+        // Signature covers only committed strokes — live strokes are excluded by
+        // construction (they're in frame.liveStrokes, not frame.strokes).
         let signature = frame.strokes
             .filter { $0.id != inProgressId }
             .map { BakeSignatureEntry(id: $0.id, transform: $0.transform) }
@@ -102,6 +104,9 @@ public final class CanvasView: NSView, Renderer {
             ctx.scaleBy(x: 1, y: -1)
             ctx.draw(image, in: rect)
             ctx.restoreGState()
+        }
+        for live in frame.liveStrokes {
+            drawStroke(live, in: ctx, isInProgress: false)
         }
         if let live = frame.inProgress, !live.points.isEmpty {
             drawStroke(live, in: ctx, isInProgress: true)

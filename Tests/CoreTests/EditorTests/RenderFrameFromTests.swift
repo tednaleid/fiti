@@ -1,5 +1,5 @@
 // ABOUTME: Tests for the RenderFrame.from(editor:canvasSize:) helper.
-// ABOUTME: Verifies stroke ordering and in-progress stroke extraction.
+// ABOUTME: Verifies stroke ordering, in-progress extraction, and committed/live split.
 
 import Testing
 
@@ -29,5 +29,42 @@ struct RenderFrameFromTests {
         e.endStroke()
         let frame = RenderFrame.from(editor: e, canvasSize: Size(width: 100, height: 100))
         #expect(frame.inProgress == nil)
+    }
+
+    @Test("from(overrides:) routes overridden strokes to liveStrokes with the override applied")
+    @MainActor
+    func overridesGoLive() {
+        let e = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
+        _ = e.startStroke(color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
+        e.endStroke()
+        _ = e.startStroke(color: RGBA(r: 0, g: 1, b: 0, a: 1), width: 1, pointerType: .mouse)
+        e.endStroke()
+
+        let override = Transform(x: 20, y: 30, scale: 1, rotate: 0)
+        let frame = RenderFrame.from(editor: e, canvasSize: Size(width: 100, height: 100),
+                                     overrides: ["s-2": override])
+
+        // s-1 stays committed (no override)
+        #expect(frame.strokes.map { $0.id } == ["s-1"])
+        // s-2 goes live with the override transform applied
+        #expect(frame.liveStrokes.map { $0.id } == ["s-2"])
+        #expect(frame.liveStrokes.first?.transform == override)
+        // no cross-contamination
+        #expect(frame.strokes.first?.id != "s-2")
+        #expect(frame.liveStrokes.first?.id != "s-1")
+    }
+
+    @Test("from with empty overrides puts everything in strokes and nothing in liveStrokes")
+    @MainActor
+    func noOverridesAllCommitted() {
+        let e = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
+        _ = e.startStroke(color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
+        e.endStroke()
+        _ = e.startStroke(color: RGBA(r: 0, g: 1, b: 0, a: 1), width: 1, pointerType: .mouse)
+        e.endStroke()
+
+        let frame = RenderFrame.from(editor: e, canvasSize: Size(width: 100, height: 100))
+        #expect(frame.strokes.map { $0.id } == ["s-1", "s-2"])
+        #expect(frame.liveStrokes.isEmpty)
     }
 }
