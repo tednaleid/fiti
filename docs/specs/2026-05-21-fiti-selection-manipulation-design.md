@@ -30,9 +30,10 @@ The live-overlay rendering refactor (`f7d446d`) already draws in-flight (dragged
 | `Space` keyDown (not autorepeat), fiti active | `currentTool = .selection`; selection starts empty |
 | `Space` keyUp, no gesture in flight | `currentTool = .pen`; selection state cleared entirely |
 | `Space` keyUp **during** a pointer gesture (button down) | defer the revert+clear; apply it on the following `pointerUp` so the drag isn't yanked out |
-| `Esc` with a non-empty selection | clear the selection, stay in the selection tool |
-| `Esc` with an empty selection | deactivate fiti (existing behavior) |
+| `Esc` | deactivate fiti — its plain meaning, unchanged. No selection-specific handling: to clear a selection you just release Space. |
 | `Delete` with a non-empty selection | erase only the selected strokes (one undoable op) — reachable while holding Space |
+
+This removes the selection-aware `Esc` branch that shipped in the original selection tool (Task 8 made `main.swift`'s `onDeactivate` clear the selection before deactivating). That handler reverts to a plain `controller.deactivate()`.
 
 "Cleared entirely" means `selectedStrokeIds = []`, `selectionBox = nil`, `inFlightTransforms = [:]`, `marqueeRect = nil`, gesture state reset.
 
@@ -183,7 +184,7 @@ The test boundary: region classification, cursor selection, gesture math, box li
 **Core — `AppController` (recording doubles):**
 - region-first routing: clicking a member of a multi-selection keeps the whole selection and begins translate; empty-inside-box begins translate; corner → resize; node → rotate; outside-on-stroke replaces; outside-empty → marquee.
 - Cmd: click toggles one stroke; Cmd-marquee toggles each intersected.
-- transient lifetime: Space-up clears selection; Space-up *during* a gesture defers the clear to the next `pointerUp`; `Esc` clears selection then (empty) deactivates.
+- transient lifetime: Space-up clears selection; Space-up *during* a gesture defers the clear to the next `pointerUp`; `Esc` deactivates fiti regardless of selection (no selection-specific branch).
 - `pointerHover` emits the correct `CursorSpec` per hovered region.
 - selection-set change recomputes the box at rotation 0.
 - rigid group rotation: four strokes forming a box, select all, rotate — each stroke's resulting transform preserves the arrangement; one undo entry restores all.
@@ -209,7 +210,7 @@ The test boundary: region classification, cursor selection, gesture math, box li
 - [ ] The selection box is oriented — it tilts with the content, stays snug, and persists at its angle; the rotate node travels with it.
 - [ ] Hovering shows the right cursor per region: hand inside, the angle-correct diagonal on corners (even when the box is rotated), rotate arrows on the node, arrow outside.
 - [ ] Each gesture commits one undoable op; undo restores the prior transforms.
-- [ ] `Delete` with a selection erases only those strokes; `Esc` clears the selection (then deactivates when empty); `Cmd+K` always clears everything.
+- [ ] `Delete` with a selection erases only those strokes; `Esc` deactivates fiti (release Space to clear a selection); `Cmd+K` always clears everything.
 - [ ] `Sources/Core/` has zero AppKit/CoreGraphics/Network/SwiftUI imports; region/cursor/gesture/lifetime logic is unit-tested without drawing.
 - [ ] Full suite stays under 5 seconds (`just check`).
 
