@@ -1,6 +1,6 @@
 # fiti Roadmap
 
-Date: 2026-05-16 (refreshed 2026-05-20)
+Living document (started 2026-05-16, refreshed 2026-05-23).
 Status: Backlog. Items here are not committed scope. Each item becomes a brainstorm → design spec → implementation plan when it's time to land.
 
 ## What this is
@@ -58,11 +58,23 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 
 ## Open: stroke rendering & tools
 
+### Flatten overlapping same-opacity marks
+- [ ] Two 50%-opacity strokes that cross currently darken at the intersection (`1 − 0.5×0.5 = 0.75` coverage) because each is composited source-over with its own alpha. We want the union of same-opacity marks to read as one flat mark, so a `+` drawn at 50% looks uniformly 50% everywhere.
+- [ ] Fix is the "flatten, then composite once" trick (how highlighter layers work): render the union of a group's shapes at full opacity into an offscreen, then blit that offscreen once at the target alpha. Overlap is absorbed into the union.
+- [ ] Grouping: group committed items by exact `RGBA`, flatten each group, composite groups in z-order. Same-color marks merge; different colors still layer naturally. Known v1 edge: two *different* opacities of the same hue overlapping would need a per-pixel `max` blend — out of scope for v1, group by full RGBA.
+- [ ] Pipeline impact: this breaks the current per-item bake cache (`BakeSignatureEntry` per stroke), since a stroke's appearance now depends on its neighbors. Move to a per-color-group offscreen cache, re-baked when any group member changes (fine at annotation-scale stroke counts). Auto-fade global opacity stays a final multiplier over the composited result (and stops double-darkening under fade). Decide: in-progress live stroke probably accepts a transient seam where it crosses committed same-color marks until commit; default-on vs. a toggle (leaning default — the darkening reads as a bug).
+
 ### Perfect-freehand option sliders
 - [ ] v1 ships with `smoothing/thinning/streamline = 0.5` and `simulatePressure: true` hardcoded. Promote one or more to toolbar sliders only if real use reveals the defaults feel wrong (too laggy, too jittery, taper too aggressive). Likely candidates if anything turns out wrong: a single "smoothness" slider scaling `smoothing + streamline` together, then `thinning` if the velocity-taper feels off.
 
-### Shape tools
-- [ ] Rect, ellipse, arrow. Each becomes a `Stroke` variant with `kind: .rect | .ellipse | .arrow`. The model needs a discriminator; render path picks geometry by `kind`. Hit-testing for the selection tool also has to grow per-kind logic.
+### Shape tools (rect, ellipse, arrow)
+- [ ] Each new shape becomes a `CanvasItem` case (e.g. `.arrow(ArrowItem)`, `.rect(RectItem)`), **not** a `Stroke` with a `kind` discriminator — the `CanvasItem` sum type added with the text tool was built for exactly this. A new case gets selection, move/rotate/resize, and the color/size/opacity shortcuts essentially for free; render path switches on the case; hit-test/bounds grow a per-case branch in `SelectionMath`.
+
+#### Arrow tool
+- [ ] Activate with `a`; drag tail → head to place a clean arrow. Arrowhead is computed from the shaft direction (two barbs at ±~30°, length proportional to width). Bounds are exact and cheap from the endpoints — no measuring port needed (unlike text).
+- [ ] Recommended over gesture-detection. The shaft can reuse the hold-to-straighten/reorient gesture so it feels like the pen, straight-by-default.
+- [ ] Deferred alternative — *detect* a hand-drawn arrowhead on the end of a line and convert it to a real arrow (Notability-style). Punted because "did the user draw an arrowhead?" is fuzzy shape recognition with a high false-positive cost; build the `ArrowItem` primitive first, layer detection on later if wanted.
+- [ ] Open design questions: single vs. double-headed; filled triangle vs. open "V" head; does the head scale with width; curved arrows (lean no for v1, straight only).
 
 ### Eraser as a UI tool
 - [ ] Pointer in eraser mode finds the topmost stroke under it (hit-test) and calls `eraseStroke(id)`. The data path already works via HTTP; the UI surface is what's missing. Shares the hit-test helper with the selection tool — land that first or in the same milestone.

@@ -11,7 +11,7 @@ Add a selection tool that lets users pick previously-drawn strokes and manipulat
 
 - Non-uniform (per-axis) scale. The existing `Transform` struct stores `scale: Double` (uniform), and perfect-freehand stroke widths look weird under non-uniform scaling. Four corner handles only.
 - Per-stroke editing of style after creation (color, width, opacity). Selecting strokes does not unlock the toolbar's color/width sliders to retroactively restyle them. Separate future item.
-- Cross-display selection. The canvas is single-display (`docs/specs/2026-05-16-fiti-roadmap.md` "Multi-display"); when the richer one-window-per-display version lands, selection will need to be revisited.
+- Cross-display selection. The canvas is single-display (`docs/fiti-roadmap.md` "Multi-display"); when the richer one-window-per-display version lands, selection will need to be revisited.
 - A toolbar button for switching tools. Press-and-hold `Space` is the only entry point in v1; a toolbar button can land later with discoverability concerns.
 - Selection serialization across app restart. Strokes themselves don't persist yet (see Persistence in the roadmap), so neither does a selection over them.
 
