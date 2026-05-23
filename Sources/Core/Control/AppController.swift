@@ -214,6 +214,8 @@ public final class AppController {
             penPointerDown(point)
         case .selection:
             selectionPointerDown(point, modifiers: modifiers)
+        case .text:
+            break
         }
     }
 
@@ -227,6 +229,7 @@ public final class AppController {
         switch currentTool {
         case .pen: penPointerMoved(point)
         case .selection: selectionPointerMoved(point, modifiers: modifiers)
+        case .text: break
         }
     }
 
@@ -244,6 +247,7 @@ public final class AppController {
         switch currentTool {
         case .pen: penPointerUp()
         case .selection: selectionPointerUp(modifiers: modifiers)
+        case .text: break
         }
     }
 

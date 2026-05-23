@@ -24,6 +24,8 @@ extension AppController {
             autoFadeEnabled.toggle()
         case .clear:
             runClear()
+        case .selectTool(let tool):
+            currentTool = tool
         }
     }
 

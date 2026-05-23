@@ -36,12 +36,17 @@ struct KeyCommandRegistryTests {
         #expect(lookup("\u{7F}") == .clear)  // NSDeleteCharacter
     }
 
-    @Test("reserved slots (Space, 'c', 'e', 'p') resolve to nil")
+    @Test("reserved slots (Space, 'c', 'e') resolve to nil")
     func reservedSlotsAreUnbound() {
         #expect(lookup(" ") == nil)
         #expect(lookup("c") == nil)
         #expect(lookup("e") == nil)
-        #expect(lookup("p") == nil)
+    }
+
+    @Test("'t' selects text tool; 'p' selects pen tool")
+    func toolBindings() {
+        #expect(lookup("t") == .selectTool(.text))
+        #expect(lookup("p") == .selectTool(.pen))
     }
 
     @Test("uppercase variants without shift are not silently mapped")
@@ -55,7 +60,7 @@ struct KeyCommandRegistryTests {
 
     @Test("registry has exactly the documented number of bindings")
     func bindingCount() {
-        // 8 colors + 4 size/opacity (s/S/o/O) + 2 toggles (h/f) + 1 clear (delete) = 15
-        #expect(KeyCommandRegistry.bindings.count == 15)
+        // 8 colors + 4 size/opacity (s/S/o/O) + 2 toggles (h/f) + 1 clear (delete) + 2 tool (t/p) = 17
+        #expect(KeyCommandRegistry.bindings.count == 17)
     }
 }
