@@ -103,8 +103,11 @@ public final class KeyMonitor {
         if event.modifierFlags.contains(.command) { return event }
 
         switch event.keyCode {
-        case 53:  // Escape
-            controller.escapePressed()
+        case 53:  // Escape — pass through to the app-command key path
+            // (CanvasInputView.keyDown -> onDeactivate), which owns Esc and
+            // routes it through the layered escapePressed(). Acting here too
+            // would double-handle it (commit-then-deactivate).
+            return event
         case 36:  // Return / Enter
             if event.modifierFlags.contains(.shift) {
                 controller.insertNewline()

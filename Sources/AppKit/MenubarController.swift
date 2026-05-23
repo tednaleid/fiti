@@ -31,7 +31,9 @@ public final class MenubarController: NSObject {
         self.menu = NSMenu()
 
         self.activateItem = NSMenuItem(title: "Activate", action: #selector(activate), keyEquivalent: "f")
-        self.deactivateItem = NSMenuItem(title: "Deactivate", action: #selector(deactivate), keyEquivalent: "\u{1b}")
+        // No Esc key-equivalent here: Esc is handled by the canvas key path
+        // (routed through escapePressed) so it stays layered during text editing.
+        self.deactivateItem = NSMenuItem(title: "Deactivate", action: #selector(deactivate), keyEquivalent: "")
         self.preferencesItem = NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: ",")
         let clearItem = NSMenuItem(title: "Clear", action: #selector(clearAll), keyEquivalent: "k")
         self.undoItem = NSMenuItem(title: "Undo", action: #selector(undo), keyEquivalent: "z")

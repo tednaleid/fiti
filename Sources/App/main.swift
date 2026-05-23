@@ -98,7 +98,9 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0, modifiers: $1) }
         input.onPointerUp     = { [weak self] in self?.controller.pointerUp(modifiers: $0) }
         input.onPointerHover  = { [weak self] in self?.controller.pointerHover($0, modifiers: $1) }
-        input.onDeactivate    = { [weak self] in self?.controller.deactivate() }
+        // Esc (the "deactivate" key) routes through the layered escapePressed():
+        // while typing it commits the text and drops to pen; otherwise it deactivates.
+        input.onDeactivate    = { [weak self] in self?.controller.escapePressed() }
         input.onClear         = { [weak self] in self?.controller.clear() }
         input.onUndo          = { [weak self] in _ = self?.editor.undo() }
         input.onRedo          = { [weak self] in _ = self?.editor.redo() }

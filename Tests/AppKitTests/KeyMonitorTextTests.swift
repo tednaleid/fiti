@@ -90,16 +90,21 @@ struct KeyMonitorTextTests {
         #expect(controller.isEditingText, "session should still be active after Shift+Return")
     }
 
-    @Test("Escape ends the session and returns tool to .pen")
-    func escapeEndsSessionAndRestoresPen() {
+    @Test("Escape passes through while editing (the canvas key path owns it, not KeyMonitor)")
+    func escapePassesThroughWhileEditing() {
         let (monitor, controller) = make()
         beginTextSession(controller: controller)
+        #expect(controller.isEditingText)
         #expect(controller.currentTool == .text)
 
-        let result = monitor.handle(keyDown("\u{1B}", keyCode: 53))
-        #expect(result == nil, "Escape should be swallowed")
-        #expect(controller.textSession == nil, "session should be nil after Escape")
-        #expect(controller.currentTool == .pen, "tool should revert to .pen after Escape")
+        let event = keyDown("\u{1B}", keyCode: 53)
+        let result = monitor.handle(event)
+        // KeyMonitor must NOT act on Esc: the layered escapePressed() runs via the
+        // CanvasInputView key path (onDeactivate). If KeyMonitor also handled it,
+        // Esc would double-fire (commit-then-deactivate) — the bug this guards.
+        #expect(result === event, "Esc should pass through, not be swallowed by KeyMonitor")
+        #expect(controller.isEditingText, "KeyMonitor should not commit the session on Esc")
+        #expect(controller.currentTool == .text, "KeyMonitor should not change the tool on Esc")
     }
 
     @Test("while editing, 's' does not change currentWidth (shortcut suspended)")
