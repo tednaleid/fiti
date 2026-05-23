@@ -3,7 +3,7 @@
 
 import Foundation
 
-public struct RGBA: Equatable, Codable, Sendable {
+public struct RGBA: Equatable, Hashable, Codable, Sendable {
     public var r: Double
     public var g: Double
     public var b: Double

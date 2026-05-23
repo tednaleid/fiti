@@ -12,7 +12,7 @@ public protocol DevHTTPSurface: AnyObject {
     var canvasSize: Size { get }
     var undoDepth: Int { get }
     var redoDepth: Int { get }
-    var currentStrokeId: StrokeId? { get }
+    var currentStrokeId: ItemId? { get }
     var currentColor: RGBA { get }
     var currentWidth: Double { get }
     var drawingsVisible: Bool { get }
@@ -35,7 +35,7 @@ public protocol DevHTTPSurface: AnyObject {
     func clear()
     func undo() -> Bool
     func redo() -> Bool
-    func eraseStroke(_ id: StrokeId) -> Bool
+    func eraseStroke(_ id: ItemId) -> Bool
     func snapshotPNG() -> Data?
     func setColor(_ color: RGBA)
     func setWidth(_ width: Double)

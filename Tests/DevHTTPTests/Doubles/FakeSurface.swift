@@ -10,7 +10,7 @@ public final class FakeSurface: DevHTTPSurface {
     public var canvasSize: Size = Size(width: 1440, height: 900)
     public var undoDepth: Int = 0
     public var redoDepth: Int = 0
-    public var currentStrokeId: StrokeId?
+    public var currentStrokeId: ItemId?
     public var currentColor: RGBA = RGBA(r: 1, g: 0, b: 0, a: 1)
     public var currentWidth: Double = 6
     public var drawingsVisible: Bool = true
@@ -23,7 +23,7 @@ public final class FakeSurface: DevHTTPSurface {
     public var clearCalls = 0
     public var undoCalls = 0
     public var redoCalls = 0
-    public var erasedIds: [StrokeId] = []
+    public var erasedIds: [ItemId] = []
     public var pointerEvents: [(String, StrokePoint?)] = []
     public var snapshotPNGReturn: Data? = Data([0x89, 0x50, 0x4E, 0x47])
     public var lastTypedText: String?
@@ -40,7 +40,7 @@ public final class FakeSurface: DevHTTPSurface {
     public func clear() { clearCalls += 1 }
     public func undo() -> Bool { undoCalls += 1; return true }
     public func redo() -> Bool { redoCalls += 1; return true }
-    public func eraseStroke(_ id: StrokeId) -> Bool { erasedIds.append(id); return true }
+    public func eraseStroke(_ id: ItemId) -> Bool { erasedIds.append(id); return true }
     public func snapshotPNG() -> Data? { snapshotPNGReturn }
     public func setColor(_ color: RGBA) { currentColor = color }
     public func setWidth(_ width: Double) { currentWidth = width }

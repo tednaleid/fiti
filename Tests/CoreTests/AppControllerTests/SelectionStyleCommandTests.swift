@@ -41,7 +41,7 @@ struct SelectionStyleCommandTests {
         let ids = seedThreeItems(c, editor)
         let brushBefore = c.currentColor
         c.currentTool = .selection
-        c.selectedStrokeIds = ids
+        c.selectedItemIds = ids
         c.run(.pickColor(5))  // Green
         let green = QuickPickPalette.colors[5]
         for id in ids {
@@ -59,7 +59,7 @@ struct SelectionStyleCommandTests {
         let (c, editor, _) = make()
         let ids = seedThreeItems(c, editor)
         c.currentTool = .selection
-        c.selectedStrokeIds = [ids[2]]  // the text item at a=0.5
+        c.selectedItemIds = [ids[2]]  // the text item at a=0.5
         c.run(.bumpOpacity(.down))
         #expect(abs(editor.doc.items[ids[2]]!.color.a - 0.4) < 0.0001)
     }
@@ -72,7 +72,7 @@ struct SelectionStyleCommandTests {
             Issue.record("expected a stroke"); return
         }
         c.currentTool = .selection
-        c.selectedStrokeIds = ids
+        c.selectedItemIds = ids
         c.run(.bumpSize(.up))
         guard case .stroke(let strokeAfter)? = editor.doc.items[ids[0]] else {
             Issue.record("expected a stroke"); return
@@ -92,7 +92,7 @@ struct SelectionStyleCommandTests {
         let (c, editor, _) = make()
         let ids = seedThreeItems(c, editor)
         c.currentTool = .selection
-        c.selectedStrokeIds = ids
+        c.selectedItemIds = ids
         c.run(.pickColor(5))  // all three -> green
         _ = editor.undo()     // single step reverts all three
         guard case .stroke(let s)? = editor.doc.items[ids[0]] else {
@@ -106,7 +106,7 @@ struct SelectionStyleCommandTests {
         let (c, _, _) = make()
         c.currentColor = RGBA(r: 0, g: 0, b: 0, a: 1)
         c.currentTool = .selection
-        c.selectedStrokeIds = []  // nothing selected
+        c.selectedItemIds = []  // nothing selected
         c.run(.pickColor(5))      // Green
         let green = QuickPickPalette.colors[5]
         #expect(abs(c.currentColor.r - green.r) < 0.0001)  // brush changed (default path)

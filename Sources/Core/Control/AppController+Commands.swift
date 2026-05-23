@@ -40,7 +40,7 @@ extension AppController {
     /// true when it handled the command; false when it should fall through to
     /// default handling (no live selection, or a non-style command).
     private func applyStyleToSelection(_ command: KeyCommand) -> Bool {
-        guard currentTool == .selection, !selectedStrokeIds.isEmpty else { return false }
+        guard currentTool == .selection, !selectedItemIds.isEmpty else { return false }
         switch command {
         case .pickColor(let i):
             guard i >= 0, i < QuickPickPalette.colors.count else { return true }
@@ -59,7 +59,7 @@ extension AppController {
     }
 
     private func mutateSelection(_ transform: (CanvasItem) -> CanvasItem) {
-        let updated = selectedStrokeIds.compactMap { editor.doc.items[$0].map(transform) }
+        let updated = selectedItemIds.compactMap { editor.doc.items[$0].map(transform) }
         guard !updated.isEmpty else { return }
         _ = editor.replaceItems(updated)
     }
@@ -81,9 +81,9 @@ extension AppController {
 
     private func runClear() {
         if currentTool == .selection {
-            if !selectedStrokeIds.isEmpty {
-                _ = editor.eraseItems(ids: selectedStrokeIds)
-                selectedStrokeIds = []
+            if !selectedItemIds.isEmpty {
+                _ = editor.eraseItems(ids: selectedItemIds)
+                selectedItemIds = []
             }
             // no selection in selection mode → no-op (a "miss")
         } else {

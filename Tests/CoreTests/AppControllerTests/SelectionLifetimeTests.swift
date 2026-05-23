@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct SelectionLifetimeTests {
     // swiftlint:disable:next large_tuple
-    private func setup() -> (AppController, Editor, [StrokeId]) {
+    private func setup() -> (AppController, Editor, [ItemId]) {
         let clock = VirtualClock()
         let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
         let c = AppController(editor: editor, window: RecordingWindow(),
@@ -22,22 +22,22 @@ struct SelectionLifetimeTests {
     @Test("releasing Space (tool → pen) clears the selection")
     func releaseClears() {
         let (c, _, ids) = setup()
-        c.selectedStrokeIds = [ids[0]]
+        c.selectedItemIds = [ids[0]]
         c.currentTool = .pen
-        #expect(c.selectedStrokeIds == [])
+        #expect(c.selectedItemIds == [])
         #expect(c.selectionBox == nil)
     }
 
     @Test("releasing Space mid-gesture defers the clear until pointerUp")
     func deferredClear() {
         let (c, editor, ids) = setup()
-        c.selectedStrokeIds = ids
+        c.selectedItemIds = ids
         c.pointerDown(StrokePoint(x: 20, y: 10))     // grab the group (inside box)
         c.pointerMoved(StrokePoint(x: 25, y: 10))
         c.currentTool = .pen                          // Space released mid-drag
-        #expect(c.selectedStrokeIds == ids)           // NOT cleared yet
+        #expect(c.selectedItemIds == ids)           // NOT cleared yet
         c.pointerUp()                                 // gesture ends → deferred clear applies
-        #expect(c.selectedStrokeIds == [])
+        #expect(c.selectedItemIds == [])
         #expect(editor.doc.items[ids[0]]?.transform.x == 5)  // the drag still committed
     }
 

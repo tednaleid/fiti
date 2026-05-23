@@ -11,7 +11,7 @@ public final class SeededIdGenerator: IdGenerator, @unchecked Sendable {
         self.prefix = prefix
     }
 
-    public func newStrokeId() -> StrokeId {
+    public func newItemId() -> ItemId {
         counter += 1
         return "\(prefix)-\(counter)"
     }

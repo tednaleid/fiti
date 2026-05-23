@@ -184,7 +184,7 @@ struct RunCommandTests {
         #expect(c.currentWidth > strokeBefore.width)      // controller moved
     }
 
-    @Test("run(.clear) in selection mode with non-empty selectedStrokeIds erases only those strokes")
+    @Test("run(.clear) in selection mode with non-empty selectedItemIds erases only those strokes")
     func clearWithSelectionErasesSelected() {
         let (c, editor, _) = make()
         c.activate()
@@ -195,11 +195,11 @@ struct RunCommandTests {
         let allIds = editor.doc.itemOrder
         #expect(allIds.count == 2)
         c.currentTool = .selection
-        c.selectedStrokeIds = [allIds[0]]
+        c.selectedItemIds = [allIds[0]]
         c.run(.clear)
         #expect(editor.doc.items[allIds[0]] == nil)
         #expect(editor.doc.items[allIds[1]] != nil)
-        #expect(c.selectedStrokeIds == [])
+        #expect(c.selectedItemIds == [])
     }
 
     @Test("run(.clear) with empty selection clears everything (existing behavior)")
@@ -213,16 +213,16 @@ struct RunCommandTests {
         #expect(editor.doc.itemOrder.isEmpty)
     }
 
-    @Test("clear() resets selectedStrokeIds so the canvas selection indicator doesn't linger")
+    @Test("clear() resets selectedItemIds so the canvas selection indicator doesn't linger")
     func clearResetsSelection() {
         let (c, editor, _) = make()
         c.activate()
         c.pointerDown(StrokePoint(x: 0, y: 0))
         c.pointerUp()
-        c.selectedStrokeIds = editor.doc.itemOrder
-        #expect(!c.selectedStrokeIds.isEmpty)
+        c.selectedItemIds = editor.doc.itemOrder
+        #expect(!c.selectedItemIds.isEmpty)
         c.clear()
-        #expect(c.selectedStrokeIds == [])
+        #expect(c.selectedItemIds == [])
         #expect(editor.doc.items.isEmpty)
     }
 }

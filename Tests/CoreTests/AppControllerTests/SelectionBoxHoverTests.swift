@@ -6,7 +6,7 @@ import Testing
 @Suite("AppController selection box + hover")
 @MainActor
 struct SelectionBoxHoverTests {
-    private func setup() -> (AppController, [StrokeId]) {
+    private func setup() -> (AppController, [ItemId]) {
         let clock = VirtualClock()
         let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
         let c = AppController(editor: editor, window: RecordingWindow(),
@@ -18,10 +18,10 @@ struct SelectionBoxHoverTests {
         return (c, editor.doc.itemOrder)
     }
 
-    @Test("setting selectedStrokeIds computes a selection box at rotation 0")
+    @Test("setting selectedItemIds computes a selection box at rotation 0")
     func boxRecompute() {
         let (c, ids) = setup()
-        c.selectedStrokeIds = [ids[0]]
+        c.selectedItemIds = [ids[0]]
         #expect(c.selectionBox != nil)
         #expect(c.selectionBox?.rotation == 0)
     }
@@ -29,15 +29,15 @@ struct SelectionBoxHoverTests {
     @Test("clearing the selection clears the box")
     func boxClear() {
         let (c, ids) = setup()
-        c.selectedStrokeIds = [ids[0]]
-        c.selectedStrokeIds = []
+        c.selectedItemIds = [ids[0]]
+        c.selectedItemIds = []
         #expect(c.selectionBox == nil)
     }
 
     @Test("hovering the body emits an open-hand cursor")
     func hoverBody() {
         let (c, ids) = setup()
-        c.selectedStrokeIds = [ids[0]]
+        c.selectedItemIds = [ids[0]]
         let box = c.selectionBox!
         c.pointerHover(StrokePoint(x: box.center.x, y: box.center.y), modifiers: .none)
         #expect(c.currentCursor == .system(.openHand))
@@ -46,7 +46,7 @@ struct SelectionBoxHoverTests {
     @Test("hovering outside the box emits the arrow")
     func hoverOutside() {
         let (c, ids) = setup()
-        c.selectedStrokeIds = [ids[0]]
+        c.selectedItemIds = [ids[0]]
         c.pointerHover(StrokePoint(x: 1000, y: 1000), modifiers: .none)
         #expect(c.currentCursor == .system(.arrow))
     }

@@ -31,7 +31,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let clock = SystemClock()
-        editor = Editor(clock: clock, ids: UUIDStrokeIds())
+        editor = Editor(clock: clock, ids: UUIDItemIds())
         window = TransparentWindow()
         let frame = window.contentLayoutRect
 

@@ -34,7 +34,7 @@ extension AppController {
     }
 
     func recomputeSelectionBox() {
-        guard let rect = SelectionMath.selectionBoundsItems(ids: selectedStrokeIds,
+        guard let rect = SelectionMath.selectionBoundsItems(ids: selectedItemIds,
                                                             items: editor.doc.items) else {
             selectionBox = nil
             return
@@ -81,7 +81,7 @@ extension AppController {
             if let hit = SelectionMath.hitTestItem(at: p, items: editor.doc.items,
                                                    order: editor.doc.itemOrder,
                                                    tolerance: SelectionMetrics.handleHitRadius) {
-                selectedStrokeIds = [hit]
+                selectedItemIds = [hit]
                 beginTranslate(at: point)
             } else {
                 selectionGesture = .marquee(startPoint: point, additive: false)
@@ -129,7 +129,7 @@ extension AppController {
             if additive {
                 for id in hits { toggle(id) }
             } else {
-                selectedStrokeIds = hits
+                selectedItemIds = hits
             }
         case .translate, .resize, .rotate:
             let updates = preview.map { (id: $0.key, transform: $0.value) }
@@ -148,18 +148,18 @@ extension AppController {
     // MARK: Private helpers
 
     func clearSelectionState() {
-        selectedStrokeIds = []
+        selectedItemIds = []
         selectionBox = nil
         inFlightTransforms = [:]
         marqueeRect = nil
         selectionGesture = nil
     }
 
-    private func toggle(_ id: StrokeId) {
-        if selectedStrokeIds.contains(id) {
-            selectedStrokeIds.removeAll { $0 == id }
+    private func toggle(_ id: ItemId) {
+        if selectedItemIds.contains(id) {
+            selectedItemIds.removeAll { $0 == id }
         } else {
-            selectedStrokeIds.append(id)
+            selectedItemIds.append(id)
         }
     }
 
@@ -168,9 +168,9 @@ extension AppController {
         selectionGesture = .translate(startBox: box, startTransforms: snapshotTransforms(), startPoint: point)
     }
 
-    func snapshotTransforms() -> [StrokeId: Transform] {
-        var out: [StrokeId: Transform] = [:]
-        for id in selectedStrokeIds { if let t = editor.doc.items[id]?.transform { out[id] = t } }
+    func snapshotTransforms() -> [ItemId: Transform] {
+        var out: [ItemId: Transform] = [:]
+        for id in selectedItemIds { if let t = editor.doc.items[id]?.transform { out[id] = t } }
         return out
     }
 

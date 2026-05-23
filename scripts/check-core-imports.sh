@@ -10,9 +10,9 @@ if [ ! -d Sources/Core ]; then
 fi
 
 # Allow: Foundation, Testing (Swift Testing — only imported in test files but
-# safe to permit anywhere). Forbid: AppKit, CoreGraphics, Network, SwiftUI,
-# UIKit, Combine.
-FORBIDDEN='^import (AppKit|CoreGraphics|Network|SwiftUI|UIKit|Combine)\b'
+# safe to permit anywhere). Forbid: AppKit, CoreGraphics, CoreText, Network,
+# SwiftUI, UIKit, Combine.
+FORBIDDEN='^import (AppKit|CoreGraphics|CoreText|Network|SwiftUI|UIKit|Combine)\b'
 
 violations=$(grep -rEn "$FORBIDDEN" Sources/Core || true)
 

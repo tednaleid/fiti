@@ -4,7 +4,7 @@
 
 import Foundation
 
-public final class UUIDStrokeIds: IdGenerator {
+public final class UUIDItemIds: IdGenerator {
     public init() {}
-    public func newStrokeId() -> StrokeId { UUID().uuidString }
+    public func newItemId() -> ItemId { UUID().uuidString }
 }

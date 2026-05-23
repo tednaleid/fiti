@@ -1,4 +1,4 @@
-// ABOUTME: Tests for AppController.selectedStrokeIds and inFlightTransforms
+// ABOUTME: Tests for AppController.selectedItemIds and inFlightTransforms
 // ABOUTME: — pure state + publishers. Gesture-driven population is in
 // ABOUTME: SelectionGestureTests once the state machine lands.
 
@@ -20,19 +20,19 @@ struct SelectionStateTests {
         )
     }
 
-    @Test("selectedStrokeIds defaults to empty")
+    @Test("selectedItemIds defaults to empty")
     func selectedDefaultsEmpty() {
         let c = make()
-        #expect(c.selectedStrokeIds == [])
+        #expect(c.selectedItemIds == [])
     }
 
     @Test("onSelectionChanged fires on change")
     func selectionPublisher() {
         let c = make()
-        var values: [[StrokeId]] = []
+        var values: [[ItemId]] = []
         c.onSelectionChanged = { values.append($0) }
-        c.selectedStrokeIds = ["a", "b"]
-        c.selectedStrokeIds = []
+        c.selectedItemIds = ["a", "b"]
+        c.selectedItemIds = []
         #expect(values == [["a", "b"], []])
     }
 
@@ -41,7 +41,7 @@ struct SelectionStateTests {
         let c = make()
         var count = 0
         c.onSelectionChanged = { _ in count += 1 }
-        c.selectedStrokeIds = []
+        c.selectedItemIds = []
         #expect(count == 0)
     }
 

@@ -20,7 +20,7 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
     public var canvasSize: Size { canvasSizeProvider() }
     public var undoDepth: Int { controller.editor.undoStack.count }
     public var redoDepth: Int { controller.editor.redoStack.count }
-    public var currentStrokeId: StrokeId? { controller.editor.currentStrokeId }
+    public var currentStrokeId: ItemId? { controller.editor.currentStrokeId }
     public var currentColor: RGBA { controller.currentColor }
     public var currentWidth: Double { controller.currentWidth }
     public var drawingsVisible: Bool { controller.drawingsVisible }
@@ -71,7 +71,7 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
     public func clear() { controller.editor.clear() }
     public func undo() -> Bool { controller.editor.undo() }
     public func redo() -> Bool { controller.editor.redo() }
-    public func eraseStroke(_ id: StrokeId) -> Bool { controller.editor.eraseStroke(id) }
+    public func eraseStroke(_ id: ItemId) -> Bool { controller.editor.eraseStroke(id) }
 
     public func snapshotPNG() -> Data? {
         let frame = RenderFrame.from(editor: controller.editor, canvasSize: canvasSize)

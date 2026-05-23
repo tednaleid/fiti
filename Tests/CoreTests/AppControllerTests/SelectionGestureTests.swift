@@ -7,7 +7,7 @@ import Testing
 @MainActor
 struct SelectionGestureTests {
     // swiftlint:disable:next large_tuple
-    private func setup() -> (AppController, Editor, [StrokeId]) {
+    private func setup() -> (AppController, Editor, [ItemId]) {
         let clock = VirtualClock()
         let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
         let controller = AppController(
@@ -37,7 +37,7 @@ struct SelectionGestureTests {
         let (c, _, ids) = setup()
         c.pointerDown(StrokePoint(x: 20, y: 10))
         c.pointerUp()
-        #expect(c.selectedStrokeIds == [ids[0]])
+        #expect(c.selectedItemIds == [ids[0]])
     }
 
     @Test("clicking a second stroke replaces (not adds)")
@@ -47,7 +47,7 @@ struct SelectionGestureTests {
         c.pointerUp()
         c.pointerDown(StrokePoint(x: 110, y: 100))
         c.pointerUp()
-        #expect(c.selectedStrokeIds == [ids[1]])
+        #expect(c.selectedItemIds == [ids[1]])
     }
 
     @Test("Cmd-click toggles a stroke into / out of selection")
@@ -55,13 +55,13 @@ struct SelectionGestureTests {
         let (c, _, ids) = setup()
         c.pointerDown(StrokePoint(x: 20, y: 10), modifiers: PointerModifiers(command: true))
         c.pointerUp()
-        #expect(c.selectedStrokeIds == [ids[0]])
+        #expect(c.selectedItemIds == [ids[0]])
         c.pointerDown(StrokePoint(x: 110, y: 100), modifiers: PointerModifiers(command: true))
         c.pointerUp()
-        #expect(Set(c.selectedStrokeIds) == Set(ids))
+        #expect(Set(c.selectedItemIds) == Set(ids))
         c.pointerDown(StrokePoint(x: 20, y: 10), modifiers: PointerModifiers(command: true))
         c.pointerUp()
-        #expect(c.selectedStrokeIds == [ids[1]])
+        #expect(c.selectedItemIds == [ids[1]])
     }
 
     // MARK: marquee
@@ -72,7 +72,7 @@ struct SelectionGestureTests {
         c.pointerDown(StrokePoint(x: 0, y: 0))
         c.pointerMoved(StrokePoint(x: 50, y: 50))
         c.pointerUp()
-        #expect(c.selectedStrokeIds == [ids[0]])
+        #expect(c.selectedItemIds == [ids[0]])
     }
 
     @Test("a marquee that includes both strokes selects both")
@@ -81,17 +81,17 @@ struct SelectionGestureTests {
         c.pointerDown(StrokePoint(x: 0, y: 0))
         c.pointerMoved(StrokePoint(x: 200, y: 200))
         c.pointerUp()
-        #expect(Set(c.selectedStrokeIds) == Set(ids))
+        #expect(Set(c.selectedItemIds) == Set(ids))
     }
 
     @Test("marquee starting in empty space clears prior selection on commit")
     func marqueeClearsPriorSelection() {
         let (c, _, ids) = setup()
-        c.selectedStrokeIds = [ids[0], ids[1]]
+        c.selectedItemIds = [ids[0], ids[1]]
         c.pointerDown(StrokePoint(x: 500, y: 500))
         c.pointerMoved(StrokePoint(x: 550, y: 550))
         c.pointerUp()
-        #expect(c.selectedStrokeIds == [])
+        #expect(c.selectedItemIds == [])
     }
 
     // MARK: drag-translate
@@ -112,7 +112,7 @@ struct SelectionGestureTests {
     @Test("translate commits to editor BEFORE clearing inFlightTransforms so the [:] callback reads new transforms")
     func translateCommitsBeforeClearingOverlay() {
         let (c, editor, ids) = setup()
-        var seenAtCallback: [StrokeId: Transform] = [:]
+        var seenAtCallback: [ItemId: Transform] = [:]
         c.onInFlightTransformsChanged = { overrides in
             if overrides.isEmpty {
                 // Capture the editor's transform at the moment the overlay clears.
@@ -131,11 +131,11 @@ struct SelectionGestureTests {
     @Test("clicking a member of a multi-selection keeps the whole selection and translates it")
     func clickMemberKeepsMultiSelection() {
         let (c, editor, ids) = setup()
-        c.selectedStrokeIds = ids                      // both selected
+        c.selectedItemIds = ids                      // both selected
         c.pointerDown(StrokePoint(x: 20, y: 10))       // on stroke 0, which is inside the box
         c.pointerMoved(StrokePoint(x: 30, y: 10))      // drag +10 x
         c.pointerUp()
-        #expect(Set(c.selectedStrokeIds) == Set(ids))  // still both
+        #expect(Set(c.selectedItemIds) == Set(ids))  // still both
         #expect(editor.doc.items[ids[0]]?.transform.x == 10)
         #expect(editor.doc.items[ids[1]]?.transform.x == 10)  // moved together
     }
@@ -143,24 +143,24 @@ struct SelectionGestureTests {
     @Test("clicking empty interior of the selection box translates the group")
     func clickEmptyInteriorTranslates() {
         let (c, editor, ids) = setup()
-        c.selectedStrokeIds = ids
+        c.selectedItemIds = ids
         let box = c.selectionBox!
         c.pointerDown(StrokePoint(x: box.center.x, y: box.center.y))  // empty interior
         c.pointerMoved(StrokePoint(x: box.center.x + 5, y: box.center.y))
         c.pointerUp()
-        #expect(Set(c.selectedStrokeIds) == Set(ids))
+        #expect(Set(c.selectedItemIds) == Set(ids))
         #expect(editor.doc.items[ids[0]]?.transform.x == 5)
     }
 
     @Test("Space+Cmd marquee toggles each intersected stroke")
     func cmdMarqueeToggles() {
         let (c, _, ids) = setup()
-        c.selectedStrokeIds = [ids[0]]                 // stroke 0 already selected
+        c.selectedItemIds = [ids[0]]                 // stroke 0 already selected
         // Marquee over BOTH strokes with Cmd: stroke 0 removed, stroke 1 added.
         c.pointerDown(StrokePoint(x: 0, y: 0), modifiers: PointerModifiers(command: true))
         c.pointerMoved(StrokePoint(x: 200, y: 200), modifiers: PointerModifiers(command: true))
         c.pointerUp(modifiers: PointerModifiers(command: true))
-        #expect(c.selectedStrokeIds == [ids[1]])
+        #expect(c.selectedItemIds == [ids[1]])
     }
 
     // MARK: resize + rotate
@@ -168,7 +168,7 @@ struct SelectionGestureTests {
     @Test("dragging a corner scales the selection and commits one undoable op")
     func cornerResize() {
         let (c, editor, ids) = setup()
-        c.selectedStrokeIds = [ids[0]]
+        c.selectedItemIds = [ids[0]]
         let box = c.selectionBox!
         let br = box.corners()[2]   // bottomRight
         let tl = box.corners()[0]   // anchor
@@ -184,7 +184,7 @@ struct SelectionGestureTests {
     @Test("dragging the rotate node rotates the group as a rigid unit, one undoable op")
     func rotateGesture() {
         let (c, editor, ids) = setup()
-        c.selectedStrokeIds = ids
+        c.selectedItemIds = ids
         let box = c.selectionBox!
         let node = box.rotateNode(offset: SelectionMetrics.rotateNodeOffset)
         c.pointerDown(StrokePoint(x: node.x, y: node.y))
@@ -206,7 +206,7 @@ struct SelectionGestureTests {
     @Test("translate drag shows the closed-hand cursor, reverting on release")
     func translateShowsClosedHand() {
         let (c, _, ids) = setup()
-        c.selectedStrokeIds = ids
+        c.selectedItemIds = ids
         let box = c.selectionBox!
         // Hover the interior so the open-hand cursor is current.
         c.pointerHover(StrokePoint(x: box.center.x, y: box.center.y), modifiers: .none)
@@ -236,10 +236,10 @@ struct SelectionGestureTests {
     @Test("drawing a new stroke while having a selection clears the selection")
     func drawClearsSelection() {
         let (c, _, ids) = setup()
-        c.selectedStrokeIds = [ids[0]]
+        c.selectedItemIds = [ids[0]]
         c.currentTool = .pen
         c.pointerDown(StrokePoint(x: 300, y: 300))
         c.pointerUp()
-        #expect(c.selectedStrokeIds == [])
+        #expect(c.selectedItemIds == [])
     }
 }

@@ -1,7 +1,6 @@
 // ABOUTME: Stable identity for any canvas item (stroke, text, future shapes).
-// ABOUTME: StrokeId is a plain alias kept during the CanvasItem migration.
+// ABOUTME: A plain String; item ordering is carried by FitiDoc.itemOrder.
 
 import Foundation
 
 public typealias ItemId = String
-public typealias StrokeId = ItemId

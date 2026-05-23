@@ -16,7 +16,7 @@ public final class Editor {
     public private(set) var redoStack: [InverseOp] = []
     public var canUndo: Bool { !undoStack.isEmpty }
     public var canRedo: Bool { !redoStack.isEmpty }
-    public private(set) var currentStrokeId: StrokeId?
+    public private(set) var currentStrokeId: ItemId?
 
     private let clock: Clock
     private let ids: IdGenerator
@@ -30,9 +30,9 @@ public final class Editor {
     // MARK: - Drawing
 
     @discardableResult
-    public func startStroke(color: RGBA, width: Double, pointerType: PointerType) -> StrokeId {
+    public func startStroke(color: RGBA, width: Double, pointerType: PointerType) -> ItemId {
         precondition(currentStrokeId == nil, "stroke already in progress; call endStroke first")
-        let id = ids.newStrokeId()
+        let id = ids.newItemId()
         let stroke = Stroke(
             id: id,
             color: color,
@@ -82,7 +82,7 @@ public final class Editor {
     }
 
     @discardableResult
-    public func eraseStroke(_ id: StrokeId) -> Bool {
+    public func eraseStroke(_ id: ItemId) -> Bool {
         guard let item = doc.items[id] else { return false }
         let atIndex = doc.itemOrder.firstIndex(of: id) ?? doc.itemOrder.count
         doc.items.removeValue(forKey: id)
@@ -167,7 +167,7 @@ public final class Editor {
         return true
     }
 
-    public func newItemId() -> ItemId { ids.newStrokeId() }
+    public func newItemId() -> ItemId { ids.newItemId() }
 
     // MARK: - Undo / redo
 

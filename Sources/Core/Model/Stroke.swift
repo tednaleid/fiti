@@ -4,7 +4,7 @@
 import Foundation
 
 public struct Stroke: Equatable, Codable, Sendable {
-    public let id: StrokeId
+    public let id: ItemId
     public var color: RGBA
     public var width: Double
     public var transform: Transform
@@ -18,7 +18,7 @@ public struct Stroke: Equatable, Codable, Sendable {
     public var snappedToLine: Bool
 
     public init(
-        id: StrokeId,
+        id: ItemId,
         color: RGBA,
         width: Double,
         transform: Transform,

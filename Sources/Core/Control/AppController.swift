@@ -64,9 +64,9 @@ public final class AppController { // swiftlint:disable:this type_body_length
 
     enum SelectionGesture {
         case marquee(startPoint: StrokePoint, additive: Bool)
-        case translate(startBox: OrientedBox, startTransforms: [StrokeId: Transform], startPoint: StrokePoint)
-        case resize(startBox: OrientedBox, startTransforms: [StrokeId: Transform], anchor: Point, startCorner: Point)
-        case rotate(startBox: OrientedBox, startTransforms: [StrokeId: Transform], center: Point, startPoint: StrokePoint)
+        case translate(startBox: OrientedBox, startTransforms: [ItemId: Transform], startPoint: StrokePoint)
+        case resize(startBox: OrientedBox, startTransforms: [ItemId: Transform], anchor: Point, startCorner: Point)
+        case rotate(startBox: OrientedBox, startTransforms: [ItemId: Transform], center: Point, startPoint: StrokePoint)
     }
 
     var selectionGesture: SelectionGesture?
@@ -118,21 +118,21 @@ public final class AppController { // swiftlint:disable:this type_body_length
         }
     }
 
-    public var onSelectionChanged: (([StrokeId]) -> Void)?
+    public var onSelectionChanged: (([ItemId]) -> Void)?
 
-    public var selectedStrokeIds: [StrokeId] = [] {
+    public var selectedItemIds: [ItemId] = [] {
         didSet {
-            if oldValue != selectedStrokeIds {
+            if oldValue != selectedItemIds {
                 recomputeSelectionBox()
-                onSelectionChanged?(selectedStrokeIds)
+                onSelectionChanged?(selectedItemIds)
                 refreshCursor()
             }
         }
     }
 
-    public var onInFlightTransformsChanged: (([StrokeId: Transform]) -> Void)?
+    public var onInFlightTransformsChanged: (([ItemId: Transform]) -> Void)?
 
-    public var inFlightTransforms: [StrokeId: Transform] = [:] {
+    public var inFlightTransforms: [ItemId: Transform] = [:] {
         didSet { onInFlightTransformsChanged?(inFlightTransforms) }
     }
 
@@ -224,7 +224,7 @@ public final class AppController { // swiftlint:disable:this type_body_length
         guard mode != .inactive else { return }
         switch currentTool {
         case .pen:
-            if !selectedStrokeIds.isEmpty { selectedStrokeIds = [] }
+            if !selectedItemIds.isEmpty { selectedItemIds = [] }
             penPointerDown(point)
         case .selection:
             selectionPointerDown(point, modifiers: modifiers)
@@ -322,7 +322,7 @@ public final class AppController { // swiftlint:disable:this type_body_length
             mode = .activeIdle
         }
         editor.clear()
-        if !selectedStrokeIds.isEmpty { selectedStrokeIds = [] }
+        if !selectedItemIds.isEmpty { selectedItemIds = [] }
     }
 
     private func resetStrokeState() {

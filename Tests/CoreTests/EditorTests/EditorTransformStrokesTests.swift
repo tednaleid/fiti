@@ -6,9 +6,9 @@ import Testing
 @Suite("Editor.transformItems")
 @MainActor
 struct EditorTransformStrokesTests {
-    private func makeEditorWith(strokes count: Int) -> (Editor, [StrokeId]) {
+    private func makeEditorWith(strokes count: Int) -> (Editor, [ItemId]) {
         let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
-        var ids: [StrokeId] = []
+        var ids: [ItemId] = []
         for _ in 0..<count {
             let id = editor.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 2, pointerType: .mouse)
             editor.appendPoint(StrokePoint(x: 0, y: 0))

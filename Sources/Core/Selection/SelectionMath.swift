@@ -4,18 +4,18 @@
 import Foundation
 
 public enum SelectionMath {
-    /// Returns the topmost (latest in array) StrokeId whose transformed polyline
+    /// Returns the topmost (latest in array) ItemId whose transformed polyline
     /// passes within `stroke.width / 2 + tolerance` of `query`, or nil.
-    public static func hitTest(point query: StrokePoint, strokes: [Stroke], tolerance: Double) -> StrokeId? {
+    public static func hitTest(point query: StrokePoint, strokes: [Stroke], tolerance: Double) -> ItemId? {
         for stroke in strokes.reversed() where strokeHit(stroke, query: query, tolerance: tolerance) {
             return stroke.id
         }
         return nil
     }
 
-    /// Returns every StrokeId whose transformed AABB intersects `rect`,
+    /// Returns every ItemId whose transformed AABB intersects `rect`,
     /// preserving the original array's order (z-order from bottom up).
-    public static func marqueeHit(rect: Rect, strokes: [Stroke]) -> [StrokeId] {
+    public static func marqueeHit(rect: Rect, strokes: [Stroke]) -> [ItemId] {
         strokes.compactMap { stroke in
             guard let bounds = strokeAABB(stroke) else { return nil }
             return rect.intersects(bounds) ? stroke.id : nil
@@ -23,7 +23,7 @@ public enum SelectionMath {
     }
 
     /// AABB enclosing the union of every selected stroke's transformed points.
-    public static func selectionBounds(strokeIds: [StrokeId], strokes: [ItemId: CanvasItem]) -> Rect? {
+    public static func selectionBounds(strokeIds: [ItemId], strokes: [ItemId: CanvasItem]) -> Rect? {
         var union: Rect?
         for id in strokeIds {
             guard case .stroke(let s) = strokes[id], let bounds = strokeAABB(s) else { continue }

@@ -37,19 +37,19 @@ public struct RotateDrag {
 }
 
 public enum SelectionTransforms {
-    public static func translate(startBox: OrientedBox, startTransforms: [StrokeId: Transform],
-                                 dx: Double, dy: Double) -> (OrientedBox, [StrokeId: Transform]) {
+    public static func translate(startBox: OrientedBox, startTransforms: [ItemId: Transform],
+                                 dx: Double, dy: Double) -> (OrientedBox, [ItemId: Transform]) {
         var box = startBox
         box.center = Point(x: startBox.center.x + dx, y: startBox.center.y + dy)
-        var out: [StrokeId: Transform] = [:]
+        var out: [ItemId: Transform] = [:]
         for (id, t) in startTransforms {
             out[id] = Transform(x: t.x + dx, y: t.y + dy, scale: t.scale, rotate: t.rotate)
         }
         return (box, out)
     }
 
-    public static func resize(startBox: OrientedBox, startTransforms: [StrokeId: Transform],
-                              drag: ResizeDrag) -> (OrientedBox, [StrokeId: Transform]) {
+    public static func resize(startBox: OrientedBox, startTransforms: [ItemId: Transform],
+                              drag: ResizeDrag) -> (OrientedBox, [ItemId: Transform]) {
         let startDist = hypot(drag.startCorner.x - drag.anchor.x, drag.startCorner.y - drag.anchor.y)
         let nowDist = hypot(drag.pointer.x - drag.anchor.x, drag.pointer.y - drag.anchor.y)
         let s = startDist == 0 ? 1 : max(drag.minFactor, nowDist / startDist)
@@ -59,7 +59,7 @@ public enum SelectionTransforms {
         box.center = Point(x: drag.anchor.x + s * (startBox.center.x - drag.anchor.x),
                            y: drag.anchor.y + s * (startBox.center.y - drag.anchor.y))
 
-        var out: [StrokeId: Transform] = [:]
+        var out: [ItemId: Transform] = [:]
         for (id, t) in startTransforms {
             out[id] = Transform(x: drag.anchor.x + s * (t.x - drag.anchor.x),
                                 y: drag.anchor.y + s * (t.y - drag.anchor.y),
@@ -68,8 +68,8 @@ public enum SelectionTransforms {
         return (box, out)
     }
 
-    public static func rotate(startBox: OrientedBox, startTransforms: [StrokeId: Transform],
-                              drag: RotateDrag) -> (OrientedBox, [StrokeId: Transform]) {
+    public static func rotate(startBox: OrientedBox, startTransforms: [ItemId: Transform],
+                              drag: RotateDrag) -> (OrientedBox, [ItemId: Transform]) {
         let a0 = atan2(drag.startPointer.y - drag.center.y, drag.startPointer.x - drag.center.x)
         let a1 = atan2(drag.pointer.y - drag.center.y, drag.pointer.x - drag.center.x)
         var deg = (a1 - a0) * 180 / .pi
@@ -80,7 +80,7 @@ public enum SelectionTransforms {
 
         let rad = deg * .pi / 180
         let c = cos(rad), s = sin(rad)
-        var out: [StrokeId: Transform] = [:]
+        var out: [ItemId: Transform] = [:]
         for (id, t) in startTransforms {
             let dx = t.x - drag.center.x
             let dy = t.y - drag.center.y
