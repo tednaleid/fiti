@@ -16,9 +16,19 @@ public protocol DevHTTPSurface: AnyObject {
     var currentColor: RGBA { get }
     var currentWidth: Double { get }
     var drawingsVisible: Bool { get }
+    var currentTool: Tool { get }
+    var isEditingText: Bool { get }
+    var editingText: String? { get }
 
     func activate()
     func deactivate()
+    func setTool(_ tool: Tool)
+    func typeText(_ text: String)
+    func textNewline()
+    func textBackspace()
+    func textCommit()
+    func textEscape()
+    func moveTextCaret(_ direction: TextEditSession.CaretMove)
     func pointerDown(_ point: StrokePoint)
     func pointerMoved(_ point: StrokePoint)
     func pointerUp()

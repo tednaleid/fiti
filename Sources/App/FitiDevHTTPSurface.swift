@@ -24,9 +24,25 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
     public var currentColor: RGBA { controller.currentColor }
     public var currentWidth: Double { controller.currentWidth }
     public var drawingsVisible: Bool { controller.drawingsVisible }
+    public var currentTool: Tool { controller.currentTool }
+    public var isEditingText: Bool { controller.isEditingText }
+    public var editingText: String? { controller.textSession?.string }
 
     public func activate() { controller.activate() }
     public func deactivate() { controller.deactivate() }
+
+    // Auto-activate so the dev client can switch tools without first POSTing /activate.
+    public func setTool(_ tool: Tool) {
+        if controller.mode == .inactive { controller.activate() }
+        controller.currentTool = tool
+    }
+
+    public func typeText(_ text: String) { controller.insertText(text) }
+    public func textNewline() { controller.insertNewline() }
+    public func textBackspace() { controller.deleteBackward() }
+    public func textCommit() { controller.commitText() }
+    public func textEscape() { controller.escapePressed() }
+    public func moveTextCaret(_ direction: TextEditSession.CaretMove) { controller.moveCaret(direction) }
 
     public func setColor(_ color: RGBA) { controller.currentColor = color }
     public func setWidth(_ width: Double) { controller.currentWidth = width }

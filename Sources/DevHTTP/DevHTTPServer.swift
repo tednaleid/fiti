@@ -12,8 +12,8 @@ import Network
 // the class or replace the busy-wait with a semaphore signaled from the
 // NWListener state handler.
 public final class DevHTTPServer: @unchecked Sendable {
-    private let surface: DevHTTPSurface
-    private var router: Router
+    let surface: DevHTTPSurface
+    var router: Router
     private let listener: NWListener
     private let queue = DispatchQueue(label: "fiti.devhttp")
     public private(set) var boundPort: Int?
@@ -110,21 +110,7 @@ public final class DevHTTPServer: @unchecked Sendable {
 
         router.add("GET", "/state") { [weak self] _, _ in
             guard let self else { return .notFound() }
-            let payload: [String: Any] = [
-                "mode": String(describing: self.surface.mode),
-                "clickThrough": self.surface.clickThrough,
-                "canvasSize": ["width": self.surface.canvasSize.width, "height": self.surface.canvasSize.height],
-                "undoDepth": self.surface.undoDepth,
-                "redoDepth": self.surface.redoDepth,
-                "currentStrokeId": self.surface.currentStrokeId as Any,
-                "color": ["r": self.surface.currentColor.r,
-                          "g": self.surface.currentColor.g,
-                          "b": self.surface.currentColor.b,
-                          "a": self.surface.currentColor.a],
-                "width": self.surface.currentWidth,
-                "drawingsVisible": self.surface.drawingsVisible
-            ]
-            return .json(payload)
+            return self.handleState()
         }
 
         router.add("GET", "/doc") { [weak self] _, _ in
@@ -160,6 +146,7 @@ public final class DevHTTPServer: @unchecked Sendable {
         }
 
         installToolbarRoutes()
+        installTextRoutes()
         installHistoryRoutes()
         installSnapshotRoute()
     }
@@ -259,5 +246,26 @@ public final class DevHTTPServer: @unchecked Sendable {
         surface.setWidth(w)
         return .ok()
     }
+
+    @MainActor
+    private func handleState() -> HTTPResponse {
+        let payload: [String: Any] = [
+            "mode": String(describing: surface.mode),
+            "clickThrough": surface.clickThrough,
+            "canvasSize": ["width": surface.canvasSize.width, "height": surface.canvasSize.height],
+            "undoDepth": surface.undoDepth,
+            "redoDepth": surface.redoDepth,
+            "currentStrokeId": surface.currentStrokeId as Any,
+            "color": ["r": surface.currentColor.r, "g": surface.currentColor.g,
+                      "b": surface.currentColor.b, "a": surface.currentColor.a],
+            "width": surface.currentWidth,
+            "drawingsVisible": surface.drawingsVisible,
+            "currentTool": String(describing: surface.currentTool),
+            "isEditingText": surface.isEditingText,
+            "editingText": surface.editingText as Any
+        ]
+        return .json(payload)
+    }
+
 }
 #endif

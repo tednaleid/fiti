@@ -14,6 +14,9 @@ public final class FakeSurface: DevHTTPSurface {
     public var currentColor: RGBA = RGBA(r: 1, g: 0, b: 0, a: 1)
     public var currentWidth: Double = 6
     public var drawingsVisible: Bool = true
+    public var currentTool: Tool = .pen
+    public var isEditingText: Bool = false
+    public var editingText: String?
 
     public var activateCalls = 0
     public var deactivateCalls = 0
@@ -23,6 +26,9 @@ public final class FakeSurface: DevHTTPSurface {
     public var erasedIds: [StrokeId] = []
     public var pointerEvents: [(String, StrokePoint?)] = []
     public var snapshotPNGReturn: Data? = Data([0x89, 0x50, 0x4E, 0x47])
+    public var lastTypedText: String?
+    public var textActions: [String] = []
+    public var lastCaretMove: TextEditSession.CaretMove?
 
     public init() {}
 
@@ -39,4 +45,33 @@ public final class FakeSurface: DevHTTPSurface {
     public func setColor(_ color: RGBA) { currentColor = color }
     public func setWidth(_ width: Double) { currentWidth = width }
     public func setDrawingsVisible(_ visible: Bool) { drawingsVisible = visible }
+
+    public func setTool(_ tool: Tool) {
+        currentTool = tool
+        if tool == .text { isEditingText = true }
+    }
+
+    public func typeText(_ text: String) {
+        lastTypedText = text
+        textActions.append("type:\(text)")
+        editingText = (editingText ?? "") + text
+    }
+
+    public func textNewline() { textActions.append("newline") }
+    public func textBackspace() { textActions.append("backspace") }
+
+    public func textCommit() {
+        textActions.append("commit")
+        isEditingText = false
+    }
+
+    public func textEscape() {
+        textActions.append("escape")
+        isEditingText = false
+    }
+
+    public func moveTextCaret(_ direction: TextEditSession.CaretMove) {
+        lastCaretMove = direction
+        textActions.append("caret:\(direction)")
+    }
 }

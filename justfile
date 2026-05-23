@@ -254,6 +254,30 @@ inspect-show:
 inspect-hide:
     @curl -sf -X POST localhost:{{dev_port}}/drawings/hide
 
+[group('inspect')]
+inspect-tool TOOL:
+    @curl -sf -X POST localhost:{{dev_port}}/tool \
+        -H 'Content-Type: application/json' \
+        -d '{"tool":"{{TOOL}}"}'
+
+[group('inspect')]
+inspect-type TEXT:
+    @curl -sf -X POST localhost:{{dev_port}}/text \
+        -H 'Content-Type: application/json' \
+        -d '{"action":"type","text":"{{TEXT}}"}'
+
+[group('inspect')]
+inspect-key ACTION:
+    @curl -sf -X POST localhost:{{dev_port}}/text \
+        -H 'Content-Type: application/json' \
+        -d '{"action":"{{ACTION}}"}'
+
+[group('inspect')]
+inspect-caret DIR:
+    @curl -sf -X POST localhost:{{dev_port}}/text \
+        -H 'Content-Type: application/json' \
+        -d '{"action":"caret","direction":"{{DIR}}"}'
+
 # ─── assets / icons ─────────────────────────────────────────────────────
 
 # Render an SF Symbol as a black-on-white square PNG (icon starting point; inset 0.0 = edge-to-edge)
