@@ -265,6 +265,25 @@ render-symbol name output="" size="1024" inset="0.10":
     [ -z "$out" ] && out="{{name}}.png"
     ./scripts/render-symbol.swift "{{name}}" "$out" "{{size}}" "{{inset}}"
 
+# Nuke the macOS icon cache. Run after changing the app icon if Finder/Dock still
+# shows the old one. Pass --force to actually delete (requires sudo).
+[group('assets')]
+nuke-icon-cache force="":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Commands to clear macOS icon caches:"
+    echo "  sudo rm -rf /Library/Caches/com.apple.iconservices.store"
+    echo "  killall Dock Finder"
+    if [ "{{force}}" = "--force" ]; then
+        echo "Clearing caches (requires sudo)..."
+        sudo rm -rf /Library/Caches/com.apple.iconservices.store
+        sudo find /private/var/folders/ \( -name com.apple.dock.iconcache -or -name com.apple.iconservices \) -exec rm -rf {} \; 2>/dev/null || true
+        killall Dock; killall Finder
+        echo "Done. Dock and Finder restarted."
+    else
+        echo "Dry run. To execute: just nuke-icon-cache --force"
+    fi
+
 # ─── perfect-freehand fixture regen (dev-time only — runtime uses checked-in JSON) ───
 
 # Private guard: bail with a friendly install hint if bun isn't available.
