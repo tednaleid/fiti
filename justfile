@@ -254,6 +254,17 @@ inspect-show:
 inspect-hide:
     @curl -sf -X POST localhost:{{dev_port}}/drawings/hide
 
+# ─── assets / icons ─────────────────────────────────────────────────────
+
+# Render an SF Symbol as a black-on-white square PNG (icon starting point; inset 0.0 = edge-to-edge)
+[group('assets')]
+render-symbol name output="" size="1024" inset="0.10":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out="{{output}}"
+    [ -z "$out" ] && out="{{name}}.png"
+    ./scripts/render-symbol.swift "{{name}}" "$out" "{{size}}" "{{inset}}"
+
 # ─── perfect-freehand fixture regen (dev-time only — runtime uses checked-in JSON) ───
 
 # Private guard: bail with a friendly install hint if bun isn't available.
