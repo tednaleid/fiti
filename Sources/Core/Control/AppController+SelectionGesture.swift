@@ -33,8 +33,8 @@ extension AppController {
     }
 
     func recomputeSelectionBox() {
-        guard let rect = SelectionMath.selectionBounds(strokeIds: selectedStrokeIds,
-                                                       strokes: editor.doc.items) else {
+        guard let rect = SelectionMath.selectionBoundsItems(ids: selectedStrokeIds,
+                                                            items: editor.doc.items) else {
             selectionBox = nil
             return
         }
@@ -53,10 +53,10 @@ extension AppController {
         let p = Point(x: point.x, y: point.y)
 
         if modifiers.command {
-            // Cmd = edit the selection set. Click toggles one stroke; drag marquees additively.
-            let strokes = orderedStrokes()
-            if let hit = SelectionMath.hitTest(point: point, strokes: strokes,
-                                               tolerance: SelectionMetrics.handleHitRadius) {
+            // Cmd = edit the selection set. Click toggles one item; drag marquees additively.
+            if let hit = SelectionMath.hitTestItem(at: p, items: editor.doc.items,
+                                                   order: editor.doc.itemOrder,
+                                                   tolerance: SelectionMetrics.handleHitRadius) {
                 toggle(hit)
                 selectionGesture = nil
             } else {
@@ -77,9 +77,9 @@ extension AppController {
         case .body:
             beginTranslate(at: point)
         case .outside:
-            let strokes = orderedStrokes()
-            if let hit = SelectionMath.hitTest(point: point, strokes: strokes,
-                                               tolerance: SelectionMetrics.handleHitRadius) {
+            if let hit = SelectionMath.hitTestItem(at: p, items: editor.doc.items,
+                                                   order: editor.doc.itemOrder,
+                                                   tolerance: SelectionMetrics.handleHitRadius) {
                 selectedStrokeIds = [hit]
                 beginTranslate(at: point)
             } else {
@@ -123,7 +123,8 @@ extension AppController {
             let end = endPoint ?? startPoint
             let rect = Rect(x: min(startPoint.x, end.x), y: min(startPoint.y, end.y),
                             width: abs(end.x - startPoint.x), height: abs(end.y - startPoint.y))
-            let hits = SelectionMath.marqueeHit(rect: rect, strokes: orderedStrokes())
+            let hits = SelectionMath.marqueeHitItems(rect: rect, items: editor.doc.items,
+                                                      order: editor.doc.itemOrder)
             if additive {
                 for id in hits { toggle(id) }
             } else {
@@ -151,13 +152,6 @@ extension AppController {
         inFlightTransforms = [:]
         marqueeRect = nil
         selectionGesture = nil
-    }
-
-    private func orderedStrokes() -> [Stroke] {
-        editor.doc.itemOrder.compactMap {
-            guard case .stroke(let s) = editor.doc.items[$0] else { return nil }
-            return s
-        }
     }
 
     private func toggle(_ id: StrokeId) {
