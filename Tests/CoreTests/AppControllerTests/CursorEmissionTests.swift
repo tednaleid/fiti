@@ -120,4 +120,12 @@ struct CursorEmissionTests {
         c.deactivate()
         #expect(c.currentCursor == nil)
     }
+
+    @Test("text mode shows the I-beam cursor")
+    func textModeIBeam() {
+        let (c, _) = makeWithRecorder()
+        c.activate()
+        c.currentTool = .text
+        #expect(c.currentCursor == .system(.iBeam))
+    }
 }
