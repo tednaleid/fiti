@@ -203,8 +203,9 @@ inspect-stroke id:
 inspect-screenshot path=(".llm/inspect/screenshot-" + `date +%Y%m%d-%H%M%S` + ".png"):
     @mkdir -p .llm/inspect && curl -sf 'localhost:{{dev_port}}/snapshot.png' -o '{{path}}' && echo '{{path}}'
 
+# x/y default to 0 — omit them for `up` (the route ignores coordinates there).
 [group('inspect')]
-inspect-pointer event x y:
+inspect-pointer event x="0" y="0":
     @curl -sf -X POST localhost:{{dev_port}}/pointer \
         -H 'Content-Type: application/json' \
         -d '{"event":"{{event}}","x":{{x}},"y":{{y}}}' \
