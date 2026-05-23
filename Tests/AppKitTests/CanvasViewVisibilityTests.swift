@@ -15,7 +15,7 @@ struct CanvasViewVisibilityTests {
                             transform: .identity,
                             points: [StrokePoint(x: 10, y: 5), StrokePoint(x: 40, y: 5)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(strokes: [stroke], inProgress: nil,
+        view.render(RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 50, height: 50)))
         let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
         view.cacheDisplay(in: view.bounds, to: rep)
@@ -30,7 +30,7 @@ struct CanvasViewVisibilityTests {
                             transform: .identity,
                             points: [StrokePoint(x: 10, y: 5), StrokePoint(x: 40, y: 5)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(strokes: [stroke], inProgress: nil,
+        view.render(RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 50, height: 50)))
         view.drawingsVisible = false
         let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))

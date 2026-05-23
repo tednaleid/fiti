@@ -44,7 +44,7 @@ struct CanvasViewGlobalOpacityTests {
                             transform: .identity,
                             points: [StrokePoint(x: 10, y: 5), StrokePoint(x: 40, y: 5)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(strokes: [stroke], inProgress: nil,
+        view.render(RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 50, height: 50)))
         view.setGlobalOpacity(0.5)
         let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))

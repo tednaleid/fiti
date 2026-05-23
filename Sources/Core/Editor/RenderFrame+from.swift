@@ -6,28 +6,33 @@ import Foundation
 public extension RenderFrame {
     @MainActor
     static func from(editor: Editor, canvasSize: Size) -> RenderFrame {
-        from(editor: editor, canvasSize: canvasSize, overrides: [:])
+        from(editor: editor, canvasSize: canvasSize, overrides: [:], editingItemId: nil)
     }
 
     @MainActor
-    static func from(editor: Editor, canvasSize: Size, overrides: [StrokeId: Transform]) -> RenderFrame {
-        var committed: [Stroke] = []
-        var live: [Stroke] = []
+    static func from(editor: Editor, canvasSize: Size, overrides: [ItemId: Transform]) -> RenderFrame {
+        from(editor: editor, canvasSize: canvasSize, overrides: overrides, editingItemId: nil)
+    }
+
+    @MainActor
+    static func from(editor: Editor, canvasSize: Size,
+                     overrides: [ItemId: Transform], editingItemId: ItemId?) -> RenderFrame {
+        var committed: [CanvasItem] = []
+        var live: [CanvasItem] = []
         for id in editor.doc.itemOrder {
-            guard case .stroke(let s) = editor.doc.items[id] else { continue }
+            guard id != editingItemId, var item = editor.doc.items[id] else { continue }
             if let override = overrides[id] {
-                var moved = s
-                moved.transform = override
-                live.append(moved)
+                item.transform = override
+                live.append(item)
             } else {
-                committed.append(s)
+                committed.append(item)
             }
         }
-        let inProgress: Stroke? = editor.currentStrokeId.flatMap {
-            guard case .stroke(let s) = editor.doc.items[$0] else { return nil }
-            return s
+        let inProgress: Stroke? = editor.currentStrokeId.flatMap { id -> Stroke? in
+            if case .stroke(let s)? = editor.doc.items[id] { return s }
+            return nil
         }
-        return RenderFrame(strokes: committed, liveStrokes: live,
+        return RenderFrame(items: committed, liveItems: live,
                            inProgress: inProgress, canvasSize: canvasSize)
     }
 }

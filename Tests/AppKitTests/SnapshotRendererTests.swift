@@ -29,7 +29,7 @@ struct SnapshotRendererTests {
 
     @Test("empty frame produces a transparent PNG at the expected dimensions")
     func emptyFrame() throws {
-        let frame = RenderFrame(strokes: [], inProgress: nil,
+        let frame = RenderFrame(items: [], inProgress: nil,
                                 canvasSize: Size(width: 100, height: 50))
         let data = try #require(SnapshotRenderer.png(from: frame, scale: 1.0))
         #expect(data.prefix(8) == Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
@@ -46,7 +46,7 @@ struct SnapshotRendererTests {
                             transform: .identity,
                             points: [StrokePoint(x: 10, y: 25), StrokePoint(x: 90, y: 25)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        let frame = RenderFrame(strokes: [stroke], inProgress: nil,
+        let frame = RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 100, height: 50))
         let data = try #require(SnapshotRenderer.png(from: frame, scale: 1.0))
         let image = try #require(decode(data))
@@ -66,7 +66,7 @@ struct SnapshotRendererTests {
                           transform: .identity,
                           points: [StrokePoint(x: 0, y: 25), StrokePoint(x: 100, y: 25)],
                           pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        let frame = RenderFrame(strokes: [red, blue], inProgress: nil,
+        let frame = RenderFrame(items: [.stroke(red), .stroke(blue)], inProgress: nil,
                                 canvasSize: Size(width: 100, height: 50))
         let data = try #require(SnapshotRenderer.png(from: frame, scale: 1.0))
         let image = try #require(decode(data))

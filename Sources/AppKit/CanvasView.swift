@@ -1,13 +1,14 @@
 // ABOUTME: NSView that renders a RenderFrame via Core Graphics.
-// ABOUTME: Two-canvas split: committed strokes baked to a CGImage; in-flight (dragged)
+// ABOUTME: Two-canvas split: committed items baked to a CGImage; in-flight (dragged)
 // ABOUTME: and in-progress strokes drawn live so selection drags skip re-baking.
 
 import AppKit
 import CoreGraphics
 
 struct BakeSignatureEntry: Equatable {
-    let id: StrokeId
+    let id: ItemId
     let transform: Transform
+    let contentTag: Int   // strokes: stable (0); text: hash(string, fontName, fontSize, color)
 }
 
 public final class CanvasView: NSView, Renderer {
@@ -72,11 +73,11 @@ public final class CanvasView: NSView, Renderer {
 
     public func render(_ frame: RenderFrame) {
         let inProgressId = frame.inProgress?.id
-        // Signature covers only committed strokes — live strokes are excluded by
-        // construction (they're in frame.liveStrokes, not frame.strokes).
-        let signature = frame.strokes
+        // Signature covers only committed items — live items are excluded by
+        // construction (they're in frame.liveItems, not frame.items).
+        let signature = frame.items
             .filter { $0.id != inProgressId }
-            .map { BakeSignatureEntry(id: $0.id, transform: $0.transform) }
+            .map { BakeSignatureEntry(id: $0.id, transform: $0.transform, contentTag: contentTag(for: $0)) }
         let resolvedScale = testOnly_overrideBackingScale ?? window?.backingScaleFactor ?? 1
         if signature != committedSignature || resolvedScale != backingScale {
             backingScale = resolvedScale
@@ -85,6 +86,23 @@ public final class CanvasView: NSView, Renderer {
         }
         lastFrame = frame
         needsDisplay = true
+    }
+
+    private func contentTag(for item: CanvasItem) -> Int {
+        switch item {
+        case .stroke:
+            return 0
+        case .text(let t):
+            var hasher = Hasher()
+            hasher.combine(t.string)
+            hasher.combine(t.fontName)
+            hasher.combine(t.fontSize)
+            hasher.combine(t.color.r)
+            hasher.combine(t.color.g)
+            hasher.combine(t.color.b)
+            hasher.combine(t.color.a)
+            return hasher.finalize()
+        }
     }
 
     public override func draw(_ dirtyRect: NSRect) {
@@ -105,8 +123,8 @@ public final class CanvasView: NSView, Renderer {
             ctx.draw(image, in: rect)
             ctx.restoreGState()
         }
-        for live in frame.liveStrokes {
-            drawStroke(live, in: ctx, isInProgress: false)
+        for live in frame.liveItems {
+            drawItem(live, in: ctx, isInProgress: false)
         }
         if let live = frame.inProgress, !live.points.isEmpty {
             drawStroke(live, in: ctx, isInProgress: true)
@@ -175,7 +193,7 @@ public final class CanvasView: NSView, Renderer {
         ctx.restoreGState()
     }
 
-    private func bakeCommitted(_ frame: RenderFrame, exclude: StrokeId?) -> CGImage? {
+    private func bakeCommitted(_ frame: RenderFrame, exclude: ItemId?) -> CGImage? {
         let pointWidth = Int(frame.canvasSize.width)
         let pointHeight = Int(frame.canvasSize.height)
         guard pointWidth > 0, pointHeight > 0 else { return nil }
@@ -188,15 +206,15 @@ public final class CanvasView: NSView, Renderer {
             return nil
         }
         // Order matters: flip first (in pixel space — the CGContext is sized in
-        // pixels), then apply the scale CTM so drawStroke can keep using point
+        // pixels), then apply the scale CTM so drawing functions can use point
         // coordinates as if the context were point-sized.
         ctx.translateBy(x: 0, y: CGFloat(pixelHeight))
         ctx.scaleBy(x: 1, y: -1)
         ctx.scaleBy(x: backingScale, y: backingScale)
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
-        for stroke in frame.strokes where stroke.id != exclude {
-            drawStroke(stroke, in: ctx, isInProgress: false)
+        for item in frame.items where item.id != exclude {
+            drawItem(item, in: ctx, isInProgress: false)
         }
         return ctx.makeImage()
     }

@@ -17,7 +17,7 @@ struct CanvasViewPerfectFreehandTests {
                                      StrokePoint(x: 50, y: 15),
                                      StrokePoint(x: 90, y: 15)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(strokes: [stroke], inProgress: nil,
+        view.render(RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 100, height: 30)))
         let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
         view.cacheDisplay(in: view.bounds, to: rep)

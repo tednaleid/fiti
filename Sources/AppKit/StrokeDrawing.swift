@@ -1,7 +1,9 @@
-// ABOUTME: Shared stroke-rendering function used by CanvasView and
-// ABOUTME: SnapshotRenderer. Fills a perfect-freehand polygon outline.
+// ABOUTME: Shared item-rendering functions used by CanvasView and SnapshotRenderer.
+// ABOUTME: drawItem dispatches on CanvasItem case; drawStroke fills a freehand polygon.
 
+import AppKit
 import CoreGraphics
+import CoreText
 import Foundation
 import PerfectFreehand
 
@@ -37,5 +39,50 @@ public func drawStroke(_ stroke: Stroke, in ctx: CGContext, isInProgress: Bool) 
     path.closeSubpath()
     ctx.addPath(path)
     ctx.fillPath()
+    ctx.restoreGState()
+}
+
+public func drawItem(_ item: CanvasItem, in ctx: CGContext, isInProgress: Bool) {
+    switch item {
+    case .stroke(let s): drawStroke(s, in: ctx, isInProgress: isInProgress)
+    case .text(let t): drawText(t, in: ctx)
+    }
+}
+
+public func drawText(_ text: TextItem, in ctx: CGContext) {
+    ctx.saveGState()
+    let t = text.transform
+    if t != .identity {
+        if t.x != 0 || t.y != 0 {
+            ctx.translateBy(x: CGFloat(t.x), y: CGFloat(t.y))
+        }
+        if t.rotate != 0 {
+            ctx.rotate(by: CGFloat(t.rotate * .pi / 180.0))
+        }
+        if t.scale != 1 {
+            ctx.scaleBy(x: CGFloat(t.scale), y: CGFloat(t.scale))
+        }
+    }
+
+    let font = NSFont(name: text.fontName, size: CGFloat(text.fontSize))
+        ?? NSFont.systemFont(ofSize: CGFloat(text.fontSize))
+    let attrs: [NSAttributedString.Key: Any] = [
+        .font: font,
+        .foregroundColor: NSColor(
+            calibratedRed: CGFloat(text.color.r),
+            green: CGFloat(text.color.g),
+            blue: CGFloat(text.color.b),
+            alpha: CGFloat(text.color.a)
+        )
+    ]
+    let lineHeight = CGFloat(text.fontSize) * 1.2
+    let lines = text.string.components(separatedBy: "\n")
+    for (index, line) in lines.enumerated() {
+        let attrStr = NSAttributedString(string: line, attributes: attrs)
+        let line2 = CTLineCreateWithAttributedString(attrStr)
+        let yOffset = CGFloat(index) * lineHeight
+        ctx.textPosition = CGPoint(x: 0, y: yOffset)
+        CTLineDraw(line2, ctx)
+    }
     ctx.restoreGState()
 }

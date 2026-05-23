@@ -1,5 +1,5 @@
-// ABOUTME: Verifies CanvasView caches the committed bake and invalidates
-// ABOUTME: when strokeOrder changes.
+// ABOUTME: Verifies CanvasView caches the committed bake and invalidates when
+// ABOUTME: itemOrder, transforms, or text content changes.
 
 import AppKit
 import Testing
@@ -14,7 +14,7 @@ struct CanvasViewBakeTests {
                             transform: .identity,
                             points: [StrokePoint(x: 0, y: 0), StrokePoint(x: 50, y: 50)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        let frame = RenderFrame(strokes: [stroke], inProgress: nil,
+        let frame = RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 100, height: 100))
         view.render(frame)
         #expect(view.bakeSignatureForTesting.map(\.id) == ["a"])
@@ -26,12 +26,12 @@ struct CanvasViewBakeTests {
         let s1 = Stroke(id: "a", color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1,
                         transform: .identity, points: [], pointerType: .mouse,
                         pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(strokes: [s1], inProgress: nil,
+        view.render(RenderFrame(items: [.stroke(s1)], inProgress: nil,
                                 canvasSize: Size(width: 100, height: 100)))
         let s2 = Stroke(id: "b", color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1,
                         transform: .identity, points: [], pointerType: .mouse,
                         pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(strokes: [s1, s2], inProgress: nil,
+        view.render(RenderFrame(items: [.stroke(s1), .stroke(s2)], inProgress: nil,
                                 canvasSize: Size(width: 100, height: 100)))
         #expect(view.bakeSignatureForTesting.map(\.id) == ["a", "b"])
     }
@@ -43,7 +43,7 @@ struct CanvasViewBakeTests {
                             transform: .identity,
                             points: [StrokePoint(x: 10, y: 5), StrokePoint(x: 40, y: 5)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(strokes: [stroke], inProgress: nil,
+        view.render(RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 50, height: 50)))
         let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
         view.cacheDisplay(in: view.bounds, to: rep)
@@ -62,7 +62,7 @@ struct CanvasViewBakeTests {
         let live = Stroke(id: "b", color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1,
                           transform: .identity, points: [], pointerType: .mouse,
                           pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(strokes: [committed, live], inProgress: live,
+        view.render(RenderFrame(items: [.stroke(committed), .stroke(live)], inProgress: live,
                                 canvasSize: Size(width: 100, height: 100)))
         #expect(view.bakeSignatureForTesting.map(\.id) == ["a"])
     }
@@ -74,7 +74,7 @@ struct CanvasViewBakeTests {
                             transform: .identity,
                             points: [StrokePoint(x: 10, y: 25), StrokePoint(x: 40, y: 25)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(strokes: [stroke], inProgress: nil,
+        view.render(RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 50, height: 50)))
         let image = try #require(view.testOnly_committedImage)
         #expect(image.width == 50)
@@ -89,7 +89,7 @@ struct CanvasViewBakeTests {
                             transform: .identity,
                             points: [StrokePoint(x: 10, y: 25), StrokePoint(x: 40, y: 25)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(strokes: [stroke], inProgress: nil,
+        view.render(RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 50, height: 50)))
         let image = try #require(view.testOnly_committedImage)
         #expect(image.width == 100)
@@ -103,7 +103,7 @@ struct CanvasViewBakeTests {
                              transform: .identity,
                              points: [StrokePoint(x: 0, y: 0), StrokePoint(x: 10, y: 10)],
                              pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        let frame1 = RenderFrame(strokes: [stroke1], inProgress: nil,
+        let frame1 = RenderFrame(items: [.stroke(stroke1)], inProgress: nil,
                                  canvasSize: Size(width: 100, height: 100))
         view.render(frame1)
         let firstImage = try #require(view.testOnly_committedImage)
@@ -112,7 +112,7 @@ struct CanvasViewBakeTests {
                              transform: Transform(x: 50, y: 0, scale: 1, rotate: 0),
                              points: [StrokePoint(x: 0, y: 0), StrokePoint(x: 10, y: 10)],
                              pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        let frame2 = RenderFrame(strokes: [stroke2], inProgress: nil,
+        let frame2 = RenderFrame(items: [.stroke(stroke2)], inProgress: nil,
                                  canvasSize: Size(width: 100, height: 100))
         view.render(frame2)
         let secondImage = try #require(view.testOnly_committedImage)
@@ -128,7 +128,7 @@ struct CanvasViewBakeTests {
                             transform: .identity,
                             points: [StrokePoint(x: 10, y: 25), StrokePoint(x: 40, y: 25)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        let frame = RenderFrame(strokes: [stroke], inProgress: nil,
+        let frame = RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 50, height: 50))
 
         view.testOnly_overrideBackingScale = 1
@@ -142,7 +142,7 @@ struct CanvasViewBakeTests {
         #expect(secondImage.width == 100)
     }
 
-    @Test("live strokes are not included in the bake signature")
+    @Test("live items are not included in the bake signature")
     func liveStrokesNotBaked() {
         let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
         let committed = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 2,
@@ -151,7 +151,7 @@ struct CanvasViewBakeTests {
         let dragged = Stroke(id: "b", color: RGBA(r: 0, g: 1, b: 0, a: 1), width: 2,
                              transform: Transform(x: 10, y: 0, scale: 1, rotate: 0),
                              points: [], pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        let frame = RenderFrame(strokes: [committed], liveStrokes: [dragged], inProgress: nil,
+        let frame = RenderFrame(items: [.stroke(committed)], liveItems: [.stroke(dragged)], inProgress: nil,
                                 canvasSize: Size(width: 100, height: 100))
         view.render(frame)
         #expect(view.bakeSignatureForTesting.map(\.id) == ["a"])
@@ -175,7 +175,7 @@ struct CanvasViewBakeTests {
                                transform: Transform(x: 5, y: 5, scale: 1, rotate: 0),
                                points: dragged.points, pointerType: dragged.pointerType,
                                pressureEnabled: dragged.pressureEnabled, createdAt: dragged.createdAt)
-        let frameA = RenderFrame(strokes: [committed], liveStrokes: [draggedT1], inProgress: nil,
+        let frameA = RenderFrame(items: [.stroke(committed)], liveItems: [.stroke(draggedT1)], inProgress: nil,
                                  canvasSize: Size(width: 100, height: 100))
         view.render(frameA)
         let imageAfterA = try #require(view.testOnly_committedImage)
@@ -186,7 +186,7 @@ struct CanvasViewBakeTests {
                                transform: Transform(x: 25, y: 25, scale: 1, rotate: 0),
                                points: dragged.points, pointerType: dragged.pointerType,
                                pressureEnabled: dragged.pressureEnabled, createdAt: dragged.createdAt)
-        let frameB = RenderFrame(strokes: [committed], liveStrokes: [draggedT2], inProgress: nil,
+        let frameB = RenderFrame(items: [.stroke(committed)], liveItems: [.stroke(draggedT2)], inProgress: nil,
                                  canvasSize: Size(width: 100, height: 100))
         view.render(frameB)
         let imageAfterB = try #require(view.testOnly_committedImage)
@@ -195,6 +195,27 @@ struct CanvasViewBakeTests {
         // Signature and CGImage pointer must be unchanged — no re-bake occurred.
         #expect(sigAfterA == sigAfterB)
         #expect(imageAfterA === imageAfterB)
+    }
+
+    @Test("a text item whose string changes produces a different bake signature")
+    func textContentChangeYieldsDifferentSignature() {
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
+
+        func frameWithText(_ string: String) -> RenderFrame {
+            let text = TextItem(id: "t1", string: string, fontName: "Helvetica", fontSize: 16,
+                                color: RGBA(r: 0, g: 0, b: 0, a: 1), transform: .identity,
+                                bounds: Size(width: 50, height: 20), createdAt: 0)
+            return RenderFrame(items: [.text(text)], inProgress: nil,
+                               canvasSize: Size(width: 100, height: 100))
+        }
+
+        view.render(frameWithText("hello"))
+        let sig1 = view.bakeSignatureForTesting
+
+        view.render(frameWithText("world"))
+        let sig2 = view.bakeSignatureForTesting
+
+        #expect(sig1 != sig2, "different string should produce a different bake signature")
     }
 
     @Test("a live stroke renders at its transformed position")
@@ -211,7 +232,7 @@ struct CanvasViewBakeTests {
                                      StrokePoint(x: 100, y: 50),
                                      StrokePoint(x: 150, y: 50)],
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        let frame = RenderFrame(strokes: [], liveStrokes: [stroke], inProgress: nil,
+        let frame = RenderFrame(items: [], liveItems: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 200, height: 200))
         view.render(frame)
 

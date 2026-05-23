@@ -8,7 +8,7 @@ struct PortDoublesTests {
     @Test("RecordingRenderer captures every frame")
     func recordingRenderer() {
         let r = RecordingRenderer()
-        let frame = RenderFrame(strokes: [], inProgress: nil, canvasSize: Size(width: 100, height: 100))
+        let frame = RenderFrame(items: [], inProgress: nil, canvasSize: Size(width: 100, height: 100))
         r.render(frame)
         r.render(frame)
         #expect(r.frames.count == 2)
