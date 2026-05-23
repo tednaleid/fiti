@@ -1,6 +1,6 @@
 // ABOUTME: Active-app keyboard shortcut adapter. Installs an NSEvent local
-// ABOUTME: monitor while mode != .inactive; translates keyDown/keyUp into tool
-// ABOUTME: switches (Space) or KeyCommands via KeyCommandRegistry.
+// ABOUTME: monitor while mode != .inactive; translates keyDown/keyUp into text
+// ABOUTME: input (while editing), tool switches (Space), or KeyCommands.
 
 import AppKit
 
@@ -53,6 +53,12 @@ public final class KeyMonitor {
     /// event (bound key dispatched or Space tool switch); returns the original
     /// event to pass it through (unbound, Cmd-modified, or multi-character).
     internal func handle(_ event: NSEvent) -> NSEvent? {
+        // Text-capture branch: while a session is active, route all keyDown
+        // events to the text input handler, bypassing shortcuts entirely.
+        if controller.isEditingText, event.type == .keyDown {
+            return handleTextKey(event)
+        }
+
         // charactersIgnoringModifiers ignores everything *except* shift, so
         // Shift+S arrives as "S". Lowercase before building the binding —
         // the registry uses lowercase + an explicit shift flag.
@@ -61,18 +67,8 @@ public final class KeyMonitor {
               let ch = chars.lowercased().first else {
             return event
         }
-        // Space press-and-hold: keyDown → selection, keyUp → pen.
-        if ch == " " {
-            if event.type == .keyDown {
-                if event.isARepeat { return nil }
-                controller.currentTool = .selection
-                return nil
-            }
-            if event.type == .keyUp {
-                controller.currentTool = .pen
-                return nil
-            }
-        }
+        // Space press-and-hold: keyDown → selection (pen only), keyUp → pen.
+        if ch == " " { return handleSpace(event) }
         // Only dispatch registry commands for keyDown; pass keyUp through.
         guard event.type == .keyDown else { return event }
         // Cmd combos belong to the menubar (Cmd+Z, Cmd+K, Cmd+S, ...).
@@ -81,5 +77,60 @@ public final class KeyMonitor {
         guard let command = KeyCommandRegistry.command(for: binding) else { return event }
         controller.run(command)
         return nil
+    }
+
+    /// Handles Space press-and-hold: keyDown → selection tool (from pen), keyUp → pen.
+    /// Guards ensure Space in other tool modes is a no-op rather than a forced switch.
+    private func handleSpace(_ event: NSEvent) -> NSEvent? {
+        if event.type == .keyDown {
+            if event.isARepeat { return nil }
+            if controller.currentTool == .pen {
+                controller.currentTool = .selection
+            }
+            return nil
+        }
+        if event.type == .keyUp {
+            if controller.currentTool == .selection {
+                controller.currentTool = .pen
+            }
+            return nil
+        }
+        return event
+    }
+
+    private func handleTextKey(_ event: NSEvent) -> NSEvent? {
+        // Cmd-combos pass through to the menubar (Cmd+Z, Cmd+K, etc.).
+        if event.modifierFlags.contains(.command) { return event }
+
+        switch event.keyCode {
+        case 53:  // Escape
+            controller.escapePressed()
+        case 36:  // Return / Enter
+            if event.modifierFlags.contains(.shift) {
+                controller.insertNewline()
+            } else {
+                controller.commitText()
+            }
+        case 51:  // Delete / Backspace
+            controller.deleteBackward()
+        case 123, 124, 126, 125:  // Arrow keys
+            handleArrow(keyCode: event.keyCode)
+        default:
+            if let chars = event.characters, !chars.isEmpty,
+               chars.unicodeScalars.allSatisfy({ $0.value >= 0x20 }) {
+                controller.insertText(chars)
+            }
+        }
+        return nil
+    }
+
+    private func handleArrow(keyCode: UInt16) {
+        switch keyCode {
+        case 123: controller.moveCaret(.left)
+        case 124: controller.moveCaret(.right)
+        case 126: controller.moveCaret(.up)
+        case 125: controller.moveCaret(.down)
+        default: break
+        }
     }
 }
