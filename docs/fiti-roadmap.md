@@ -22,39 +22,23 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 - [x] Disappearing drawings (auto-fade) — opt-in toolbar toggle (clock glyph). 10s solid + 2s linear fade, then `editor.clear()` in one undoable op. `Sources/Core/Control/AppController.swift` owns the state machine; `Sources/AppKit/TimerFadeTicker.swift` drives the 30Hz tick.
 - [x] Active-app keyboard shortcuts — `1`-`8` (color), `s` / `Shift+S` (size), `o` / `Shift+O` (opacity), `h` (hide), `f` (auto-fade), `Delete` (clear). Pure-Core `KeyCommandRegistry` is the source of truth, dispatched by `Sources/AppKit/KeyMonitor.swift`. Discoverable via toolbar tooltips and the menubar "Drawing" submenu.
 - [x] Canvas follows the toolbar to whichever monitor it lives on. `NSWindow.didChangeScreenNotification` observer on the toolbar panel relocates the full-screen canvas; drawings clear on monitor switch (one-`Cmd+Z` restores at original coordinates).
+- [x] Tool system — pen / selection / text as a `currentTool` orthogonal to `Mode`. Shortcuts `p` (pen), `t` (text), `Space` (press-and-hold for selection, restores the prior tool on release); pen/text toolbar buttons indicate the active tool. `Sources/Core/Model/Tool.swift`, `KeyCommandRegistry`, `Sources/AppKit/KeyMonitor.swift`, `Sources/AppKit/ToolbarController.swift`.
+- [x] Selection tool — click / `Cmd`-click / drag-marquee to select; drag the body to translate, corner handles to scale, the rotation node to rotate (`Shift` snaps 15°); `Delete` erases the selection (one undoable op), `Delete` with no selection still clears all. Core math in `Sources/Core/Selection/` (`SelectionMath`, `SelectionTransforms`, `OrientedBox`); gesture routing in `Sources/Core/Control/AppController+SelectionGesture.swift`; chrome in `Sources/AppKit/CanvasView.swift`. `Editor` gained item-generic `transformItems` / `eraseItems`.
+- [x] Text tool — `t` places a caret; type to set text in the current color/size (Helvetica, `Shift+Return` for newlines, `Return` commits); click existing text to edit. Text is a first-class `CanvasItem` so it selects/moves/rotates/resizes like strokes. Layout bounds are frozen at commit via the `TextMeasuring` port (see `docs/architecture.md` "Text geometry"). `Sources/Core/Model/{CanvasItem,TextItem}.swift`, `Sources/Core/Control/AppController+TextTool.swift`, `Sources/AppKit/CoreTextMeasurer.swift`.
+- [x] Restyle the selection — with the selection tool and a live selection, the color/size/opacity shortcuts (`1`-`8`, `s` / `Shift+S`, `o` / `Shift+O`) retarget the selected items instead of the drawing defaults (text re-measured via the port), one undo step each. `Sources/Core/Control/AppController+Commands.swift`.
+- [x] App icon — Icon Composer `fiti.icon` wired via `project.yml` (`ASSETCATALOG_COMPILER_APPICON_NAME`). The menubar status item keeps its SF Symbol glyph by design — SF Symbols are fine in the menu bar but not licensed for app icons.
 
 ## Open: visibility & interaction
 
 ### Global hide/show hotkey
 - [ ] Toolbar already has a hide/show button; need a system-wide hotkey so you can toggle visibility without going through the toolbar. Default: `Opt+H`. Wire through `KeyboardShortcuts.Name.toggleDrawingsVisible` so it gets the same rebind-in-Preferences treatment as the activation hotkey.
 - [ ] `Opt+H` in most apps types the `˙` combining-diacritic. That character is rarely needed in normal typing; rebinding is the escape hatch for anyone who does need it.
-- [ ] Fall-through when there's nothing to hide: if `editor.doc.strokes.isEmpty`, the hotkey should *not* intercept the keystroke — pass it through so apps still see `Opt+H` and the `˙` character types normally. Only swallow the event when there's actually something to toggle.
+- [ ] Fall-through when there's nothing to hide: if `editor.doc.itemOrder.isEmpty`, the hotkey should *not* intercept the keystroke — pass it through so apps still see `Opt+H` and the `˙` character types normally. Only swallow the event when there's actually something to toggle.
   - Implementation tension: `KeyboardShortcuts` is Carbon-backed (`RegisterEventHotKey`), which always intercepts at the OS level — there's no "decline" return code. Two options to get fall-through: (a) after receiving the event, re-synthesise and post the original keypress via `CGEventPost` when we want to "let it through" — gross but doesn't need extra entitlements; (b) bypass the library for this one binding and use a `CGEventTap` (needs Accessibility permission in System Settings → Privacy & Security). Option (a) is the lower-friction default; revisit if it has noticeable latency or feels janky.
 - [ ] The hotkey works regardless of fiti's activation state — it's purely about whether marks are rendered. Activating fiti is still `Opt+F`.
 
-### Keyboard slots reserved for future tools
-- [ ] `e`: eraser tool (when Eraser as a UI tool ships).
-- [ ] `p`: pen tool (default; only useful once a non-pen tool exists to switch back from).
-- [ ] `Space`: selection tool (press-and-hold, see selection design). Tentative; final choice between `Space` and a dedicated letter gets decided in the selection-tool brainstorm.
-- These slots are deliberately absent from `KeyCommandRegistry` today. The registry's tests assert they resolve to `nil` so a future binding can't be added silently.
-
-### Selection tool
-- [ ] Selection / pointer tool that lets the user pick previously drawn strokes and manipulate them.
-  - Click on a stroke: select it (replaces previous selection).
-  - `Cmd`-click: add/remove from selection.
-  - Drag from empty area: rubber-band a marquee box; release selects all strokes whose bounding box intersects the marquee.
-  - Once selected, the selection bounding box renders with eight resize handles (corners and midpoints) and a separate rotation handle anchored above the top edge.
-  - Drag the body of the selection to translate. Drag a corner/edge handle to scale (Shift to lock aspect ratio). Drag the rotation handle to rotate around the selection center.
-  - `Delete` with a selection removes only the selected strokes (one undoable op). With no selection, `Delete` keeps its current behavior of clearing everything.
-  - `Esc` or click in empty space dismisses the selection.
-- [ ] Activated by the keyboard shortcut item above (`Space` press-and-hold leaning likeliest, TBD in design). Returns to pen when released or another tool selected.
-- [ ] Implementation surface:
-  - New `AppController.Mode` case (`.activeSelecting`) or a parallel "current tool" state independent of mode. The latter scales better as more tools land.
-  - `Editor` gains `transformStrokes(ids:translate:scale:rotate:)` as a single undoable op so one drag = one undo entry.
-  - `Editor` gains `eraseStrokes(ids:)` (or extends the existing `eraseStroke`) as a batched single undoable op for the Delete-selected case.
-  - Hit-testing helper in Core: point-in-polygon for perfect-freehand strokes, distance-from-path within `width/2 + tolerance` for any legacy uniform strokes.
-  - Bounding-box / marquee math also in Core (testable without AppKit).
-  - Selection rendering (handles, marquee outline) lives in `Sources/AppKit/CanvasView.swift` since it's a presentation concern.
+### Reserved keyboard slot
+- [ ] `e`: eraser tool, when "Eraser as a UI tool" (below) ships. Deliberately absent from `KeyCommandRegistry` today; the registry's tests assert it resolves to `nil` so a binding can't be added silently. (`t`, `p`, and `Space` were reserved here too and have since shipped.)
 
 ## Open: stroke rendering & tools
 
@@ -77,12 +61,9 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 - [ ] Open design questions: single vs. double-headed; filled triangle vs. open "V" head; does the head scale with width; curved arrows (lean no for v1, straight only).
 
 ### Eraser as a UI tool
-- [ ] Pointer in eraser mode finds the topmost stroke under it (hit-test) and calls `eraseStroke(id)`. The data path already works via HTTP; the UI surface is what's missing. Shares the hit-test helper with the selection tool — land that first or in the same milestone.
+- [ ] A `.eraser` tool whose pointer finds the topmost item under it and erases it. The hit-test helper now exists (`SelectionMath.hitTestItem`, shared with the selection tool) and `Editor.eraseItems` is in place — the data path already works via HTTP, so this is mostly a tool-routing + cursor surface. Activate with `e` (see reserved slot above).
 
 ## Open: distribution & polish
-
-### App icon
-- [ ] Fiti currently ships with the default macOS app placeholder icon. Even though `LSUIElement = true` keeps it out of the Dock, the icon still appears in Finder, the menubar status item (currently a system theatermask glyph), and the cask "About" panel. Reference: `../limn/scripts/generate-app-icon.py` renders an `Assets.xcassets/AppIcon.appiconset` from a single source PNG/SVG via `sips` at all 10 required sizes. Mnemonic: "fiti" is short for graffiti — a brush, spraycan, or marker silhouette would fit.
 
 ### Persistence
 - [ ] Strokes don't survive app restart. For real daily-driver usage we probably want a session that persists, with a "clear" that's separate from "quit." Could be as simple as JSON-encoding `FitiDoc` to `~/Library/Application Support/fiti/session.json` on every change. Needs a versioned doc shape so future schema changes are migratable.
@@ -109,4 +90,4 @@ These are punted, not forgotten, but I'm not planning to revisit them soon:
 ## Open questions worth answering before picking anything up
 
 1. **What's the upgrade story when the document shape changes?** Persistence implies versioned doc; we should pick that scheme before writing the first version to disk.
-2. **Do we want a "presentation mode" preset?** One hotkey that activates, hides all previous marks, and resets the color/width to defaults — useful for "start a fresh annotation pass." Becomes more interesting once keyboard shortcuts and disappearing drawings exist.
+2. **Do we want a "presentation mode" preset?** One hotkey that activates, hides all previous marks, and resets the color/width to defaults — useful for "start a fresh annotation pass." Now actionable: keyboard shortcuts and disappearing drawings both ship.
