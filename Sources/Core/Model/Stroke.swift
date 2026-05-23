@@ -3,8 +3,6 @@
 
 import Foundation
 
-public typealias StrokeId = String
-
 public struct Stroke: Equatable, Codable, Sendable {
     public let id: StrokeId
     public var color: RGBA
