@@ -168,7 +168,7 @@ struct MenubarControllerTests {
         _ = editor.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
         editor.endStroke()
         try fire("Clear", in: menubar)
-        #expect(editor.doc.strokeOrder.isEmpty)
+        #expect(editor.doc.itemOrder.isEmpty)
     }
 
     @Test("Undo menu action calls editor.undo()")
@@ -177,7 +177,7 @@ struct MenubarControllerTests {
         _ = editor.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
         editor.endStroke()
         try fire("Undo", in: menubar)
-        #expect(editor.doc.strokeOrder.isEmpty)
+        #expect(editor.doc.itemOrder.isEmpty)
         #expect(editor.canRedo == true)
     }
 }

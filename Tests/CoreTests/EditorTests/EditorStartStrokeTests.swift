@@ -26,29 +26,31 @@ struct EditorStartStrokeTests {
         let id = editor.startStroke(color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 4, pointerType: .mouse)
         #expect(id == "s-1")
         #expect(editor.currentStrokeId == "s-1")
-        let stroke = editor.doc.strokes["s-1"]
-        #expect(stroke != nil)
-        #expect(stroke?.color.r == 1)
-        #expect(stroke?.width == 4)
-        #expect(stroke?.transform == .identity)
-        #expect(stroke?.points.isEmpty == true)
-        #expect(stroke?.pointerType == .mouse)
-        #expect(stroke?.pressureEnabled == false)
-        #expect(stroke?.createdAt == 100)
+        guard case .stroke(let stroke)? = editor.doc.items["s-1"] else {
+            Issue.record("expected a stroke item")
+            return
+        }
+        #expect(stroke.color.r == 1)
+        #expect(stroke.width == 4)
+        #expect(stroke.transform == .identity)
+        #expect(stroke.points.isEmpty == true)
+        #expect(stroke.pointerType == .mouse)
+        #expect(stroke.pressureEnabled == false)
+        #expect(stroke.createdAt == 100)
     }
 
-    @Test("appends id to strokeOrder")
+    @Test("appends id to itemOrder")
     func appendsToOrder() {
         let editor = makeEditor().editor
         _ = editor.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
-        #expect(editor.doc.strokeOrder == ["s-1"])
+        #expect(editor.doc.itemOrder == ["s-1"])
     }
 
-    @Test("pushes a deleteStroke onto the undo stack")
+    @Test("pushes a deleteItem onto the undo stack")
     func pushesUndo() {
         let editor = makeEditor().editor
         _ = editor.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
-        #expect(editor.undoStack == [.deleteStroke("s-1")])
+        #expect(editor.undoStack == [.deleteItem("s-1")])
         #expect(editor.redoStack.isEmpty)
     }
 }

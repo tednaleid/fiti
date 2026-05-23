@@ -1,15 +1,15 @@
-// ABOUTME: The drawing document — keyed-map of strokes plus an ordered list.
-// ABOUTME: Scratch-style: map for identity, list for z-order. CRDT-friendly.
+// ABOUTME: The drawing document — keyed map of items plus an ordered id list.
+// ABOUTME: Map for identity, list for z-order. CRDT-friendly.
 
 import Foundation
 
 public struct FitiDoc: Equatable, Codable, Sendable {
-    public var strokes: [StrokeId: Stroke]
-    public var strokeOrder: [StrokeId]
+    public var items: [ItemId: CanvasItem]
+    public var itemOrder: [ItemId]
 
-    public init(strokes: [StrokeId: Stroke] = [:], strokeOrder: [StrokeId] = []) {
-        self.strokes = strokes
-        self.strokeOrder = strokeOrder
+    public init(items: [ItemId: CanvasItem] = [:], itemOrder: [ItemId] = []) {
+        self.items = items
+        self.itemOrder = itemOrder
     }
 
     public static let empty = FitiDoc()

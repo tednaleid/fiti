@@ -18,7 +18,7 @@ extension AppController {
         guard autoFadeEnabled else { return }
         guard mode != .activeDrawing else { return }
 
-        if editor.doc.strokes.isEmpty {
+        if editor.doc.items.isEmpty {
             lastInputAt = nil
             fadeOpacity = 1.0
             return

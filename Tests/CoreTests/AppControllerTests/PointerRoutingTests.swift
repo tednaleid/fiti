@@ -25,7 +25,8 @@ struct PointerRoutingTests {
         c.pointerDown(StrokePoint(x: 10, y: 20))
         #expect(c.mode == .activeDrawing)
         #expect(c.editor.currentStrokeId == "s-1")
-        #expect(c.editor.doc.strokes["s-1"]?.points.first?.x == 10)
+        guard case .stroke(let s)? = c.editor.doc.items["s-1"] else { Issue.record("missing"); return }
+        #expect(s.points.first?.x == 10)
     }
 
     @Test("pointerMoved in activeDrawing appends a point")
@@ -35,7 +36,8 @@ struct PointerRoutingTests {
         c.pointerDown(StrokePoint(x: 0, y: 0))
         c.pointerMoved(StrokePoint(x: 1, y: 1))
         c.pointerMoved(StrokePoint(x: 2, y: 2))
-        #expect(c.editor.doc.strokes["s-1"]?.points.count == 3)
+        guard case .stroke(let s)? = c.editor.doc.items["s-1"] else { Issue.record("missing"); return }
+        #expect(s.points.count == 3)
     }
 
     @Test("pointerUp in activeDrawing ends the stroke and returns to activeIdle")
@@ -53,7 +55,7 @@ struct PointerRoutingTests {
         let c = make()
         c.pointerDown(StrokePoint(x: 0, y: 0))
         #expect(c.mode == .inactive)
-        #expect(c.editor.doc.strokes.isEmpty)
+        #expect(c.editor.doc.items.isEmpty)
     }
 
     @Test("deactivate mid-draw ends the in-progress stroke")
@@ -65,7 +67,8 @@ struct PointerRoutingTests {
         c.deactivate()
         #expect(c.mode == .inactive)
         #expect(c.editor.currentStrokeId == nil)
-        #expect(c.editor.doc.strokes["s-1"]?.points.count == 2)
+        guard case .stroke(let s)? = c.editor.doc.items["s-1"] else { Issue.record("missing"); return }
+        #expect(s.points.count == 2)
     }
 
     @Test("clear() empties the editor doc")
@@ -74,9 +77,9 @@ struct PointerRoutingTests {
         c.activate()
         c.pointerDown(StrokePoint(x: 0, y: 0))
         c.pointerUp()
-        #expect(c.editor.doc.strokeOrder.count == 1)
+        #expect(c.editor.doc.itemOrder.count == 1)
         c.clear()
-        #expect(c.editor.doc.strokeOrder.isEmpty)
+        #expect(c.editor.doc.itemOrder.isEmpty)
     }
 
     @Test("clear() while drawing ends the in-progress stroke first")
@@ -86,7 +89,7 @@ struct PointerRoutingTests {
         c.pointerDown(StrokePoint(x: 0, y: 0))
         c.clear()
         #expect(c.editor.currentStrokeId == nil)
-        #expect(c.editor.doc.strokeOrder.isEmpty)
+        #expect(c.editor.doc.itemOrder.isEmpty)
         #expect(c.mode == .activeIdle)
     }
 }

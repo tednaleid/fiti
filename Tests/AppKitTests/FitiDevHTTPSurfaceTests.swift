@@ -57,8 +57,8 @@ struct FitiDevHTTPSurfaceTests {
         let rig = makeBridge()
         rig.bridge.pointerDown(StrokePoint(x: 0, y: 0))
         rig.bridge.pointerUp()
-        #expect(rig.controller.editor.doc.strokeOrder.count == 1)
+        #expect(rig.controller.editor.doc.itemOrder.count == 1)
         rig.bridge.clear()
-        #expect(rig.controller.editor.doc.strokeOrder.isEmpty)
+        #expect(rig.controller.editor.doc.itemOrder.isEmpty)
     }
 }

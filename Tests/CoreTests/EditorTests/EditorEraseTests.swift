@@ -1,5 +1,5 @@
 // ABOUTME: Tests for eraseStroke — delete-by-id with undo support.
-// ABOUTME: Covers removal from doc, strokeOrder, and undo restoration at original index.
+// ABOUTME: Covers removal from doc, itemOrder, and undo restoration at original index.
 
 import Testing
 
@@ -10,15 +10,15 @@ struct EditorEraseTests {
         Editor(clock: VirtualClock(now: 0), ids: SeededIdGenerator(prefix: "s"))
     }
 
-    @Test("erases an existing stroke and removes from strokeOrder")
+    @Test("erases an existing stroke and removes from itemOrder")
     func erases() {
         let e = makeEditor()
         _ = e.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
         e.endStroke()
         let did = e.eraseStroke("s-1")
         #expect(did)
-        #expect(e.doc.strokes.isEmpty)
-        #expect(e.doc.strokeOrder.isEmpty)
+        #expect(e.doc.items.isEmpty)
+        #expect(e.doc.itemOrder.isEmpty)
     }
 
     @Test("returns false for unknown stroke")
@@ -34,10 +34,10 @@ struct EditorEraseTests {
         e.endStroke()
         _ = e.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
         e.endStroke()
-        #expect(e.doc.strokeOrder == ["s-1", "s-2"])
+        #expect(e.doc.itemOrder == ["s-1", "s-2"])
         _ = e.eraseStroke("s-1")
-        #expect(e.doc.strokeOrder == ["s-2"])
+        #expect(e.doc.itemOrder == ["s-2"])
         _ = e.undo()
-        #expect(e.doc.strokeOrder == ["s-1", "s-2"])
+        #expect(e.doc.itemOrder == ["s-1", "s-2"])
     }
 }

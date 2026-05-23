@@ -43,32 +43,35 @@ public final class Editor {
             pressureEnabled: false,
             createdAt: clock.now()
         )
-        doc.strokes[id] = stroke
-        doc.strokeOrder.append(id)
+        doc.items[id] = .stroke(stroke)
+        doc.itemOrder.append(id)
         currentStrokeId = id
-        pushUndo(.deleteStroke(id))
+        pushUndo(.deleteItem(id))
         emit(.local)
         return id
     }
 
     public func appendPoint(_ point: StrokePoint) {
-        guard let id = currentStrokeId else { return }
-        doc.strokes[id]?.points.append(point)
+        guard let id = currentStrokeId, case .stroke(var s)? = doc.items[id] else { return }
+        s.points.append(point)
+        doc.items[id] = .stroke(s)
         emit(.local)
     }
 
     public func straightenCurrentStroke() {
-        guard let id = currentStrokeId else { return }
-        guard let stroke = doc.strokes[id], stroke.points.count >= 2 else { return }
-        doc.strokes[id]?.points = [stroke.points.first!, stroke.points.last!]
-        doc.strokes[id]?.snappedToLine = true
+        guard let id = currentStrokeId, case .stroke(var s)? = doc.items[id],
+              s.points.count >= 2 else { return }
+        s.points = [s.points.first!, s.points.last!]
+        s.snappedToLine = true
+        doc.items[id] = .stroke(s)
         emit(.local)
     }
 
     public func moveCurrentStrokeEndpoint(to point: StrokePoint) {
-        guard let id = currentStrokeId else { return }
-        guard let stroke = doc.strokes[id], !stroke.points.isEmpty else { return }
-        doc.strokes[id]?.points[stroke.points.count - 1] = point
+        guard let id = currentStrokeId, case .stroke(var s)? = doc.items[id],
+              !s.points.isEmpty else { return }
+        s.points[s.points.count - 1] = point
+        doc.items[id] = .stroke(s)
         emit(.local)
     }
 
@@ -80,43 +83,43 @@ public final class Editor {
 
     @discardableResult
     public func eraseStroke(_ id: StrokeId) -> Bool {
-        guard let stroke = doc.strokes[id] else { return false }
-        let atIndex = doc.strokeOrder.firstIndex(of: id) ?? doc.strokeOrder.count
-        doc.strokes.removeValue(forKey: id)
-        doc.strokeOrder.removeAll { $0 == id }
-        pushUndo(.restoreStroke(snapshot: stroke, atIndex: atIndex))
+        guard let item = doc.items[id] else { return false }
+        let atIndex = doc.itemOrder.firstIndex(of: id) ?? doc.itemOrder.count
+        doc.items.removeValue(forKey: id)
+        doc.itemOrder.removeAll { $0 == id }
+        pushUndo(.restoreItem(snapshot: item, atIndex: atIndex))
         emit(.local)
         return true
     }
 
     @discardableResult
-    public func eraseStrokes(ids: [StrokeId]) -> Bool {
-        let presentIds = ids.filter { doc.strokes[$0] != nil }
+    public func eraseItems(ids: [ItemId]) -> Bool {
+        let presentIds = ids.filter { doc.items[$0] != nil }
         guard !presentIds.isEmpty else { return false }
-        let entries: [StrokeRestoreEntry] = presentIds.compactMap { id in
-            guard let s = doc.strokes[id] else { return nil }
-            let idx = doc.strokeOrder.firstIndex(of: id) ?? doc.strokeOrder.count
-            return StrokeRestoreEntry(snapshot: s, atIndex: idx)
+        let entries: [ItemRestoreEntry] = presentIds.compactMap { id in
+            guard let item = doc.items[id] else { return nil }
+            let idx = doc.itemOrder.firstIndex(of: id) ?? doc.itemOrder.count
+            return ItemRestoreEntry(snapshot: item, atIndex: idx)
         }
         for id in presentIds {
-            doc.strokes.removeValue(forKey: id)
-            doc.strokeOrder.removeAll { $0 == id }
+            doc.items.removeValue(forKey: id)
+            doc.itemOrder.removeAll { $0 == id }
         }
-        pushUndo(.restoreStrokes(entries: entries))
+        pushUndo(.restoreItems(entries: entries))
         emit(.local)
         return true
     }
 
     @discardableResult
-    public func transformStrokes(_ updates: [(id: StrokeId, transform: Transform)]) -> Bool {
-        let known = updates.filter { doc.strokes[$0.id] != nil }
+    public func transformItems(_ updates: [(id: ItemId, transform: Transform)]) -> Bool {
+        let known = updates.filter { doc.items[$0.id] != nil }
         guard !known.isEmpty else { return false }
         let oldEntries: [TransformEntry] = known.compactMap { update in
-            guard let stroke = doc.strokes[update.id] else { return nil }
-            return TransformEntry(strokeId: update.id, transform: stroke.transform)
+            guard let item = doc.items[update.id] else { return nil }
+            return TransformEntry(itemId: update.id, transform: item.transform)
         }
         for update in known {
-            doc.strokes[update.id]?.transform = update.transform
+            doc.items[update.id]?.transform = update.transform
         }
         pushUndo(.setTransforms(entries: oldEntries))
         emit(.local)
@@ -124,16 +127,34 @@ public final class Editor {
     }
 
     public func clear() {
-        guard !doc.strokeOrder.isEmpty else { return }
-        let entries: [StrokeRestoreEntry] = doc.strokeOrder.enumerated().compactMap { idx, id in
-            guard let s = doc.strokes[id] else { return nil }
-            return StrokeRestoreEntry(snapshot: s, atIndex: idx)
+        guard !doc.itemOrder.isEmpty else { return }
+        let entries: [ItemRestoreEntry] = doc.itemOrder.enumerated().compactMap { idx, id in
+            guard let item = doc.items[id] else { return nil }
+            return ItemRestoreEntry(snapshot: item, atIndex: idx)
         }
-        doc.strokes.removeAll()
-        doc.strokeOrder.removeAll()
+        doc.items.removeAll()
+        doc.itemOrder.removeAll()
         if currentStrokeId != nil { currentStrokeId = nil }
-        pushUndo(.restoreStrokes(entries: entries))
+        pushUndo(.restoreItems(entries: entries))
         emit(.local)
+    }
+
+    // MARK: - Item-generic mutations
+
+    public func addItem(_ item: CanvasItem) {
+        doc.items[item.id] = item
+        doc.itemOrder.append(item.id)
+        pushUndo(.deleteItem(item.id))
+        emit(.local)
+    }
+
+    @discardableResult
+    public func replaceItem(_ item: CanvasItem) -> Bool {
+        guard let prior = doc.items[item.id] else { return false }
+        doc.items[item.id] = item
+        pushUndo(.replaceItems(entries: [prior]))
+        emit(.local)
+        return true
     }
 
     // MARK: - Undo / redo
@@ -160,62 +181,72 @@ public final class Editor {
 
     private func applyInverse(_ op: InverseOp) -> InverseOp? {
         switch op {
-        case .deleteStroke(let id):       return applyDeleteStroke(id)
-        case .restoreStroke(let s, let i): return applyRestoreStroke(snapshot: s, atIndex: i)
-        case .deleteStrokes(let ids):     return applyDeleteStrokes(ids)
-        case .restoreStrokes(let entries): return applyRestoreStrokes(entries)
-        case .setTransforms(let entries): return applySetTransforms(entries)
+        case .deleteItem(let id):              return applyDeleteItem(id)
+        case .restoreItem(let s, let i):       return applyRestoreItem(snapshot: s, atIndex: i)
+        case .deleteItems(let ids):            return applyDeleteItems(ids)
+        case .restoreItems(let entries):       return applyRestoreItems(entries)
+        case .setTransforms(let entries):      return applySetTransforms(entries)
+        case .replaceItems(let entries):       return applyReplaceItems(entries)
         }
     }
 
-    private func applyDeleteStroke(_ id: StrokeId) -> InverseOp? {
-        guard let stroke = doc.strokes[id] else { return nil }
-        let atIndex = doc.strokeOrder.firstIndex(of: id) ?? doc.strokeOrder.count
-        doc.strokes.removeValue(forKey: id)
-        doc.strokeOrder.removeAll { $0 == id }
-        return .restoreStroke(snapshot: stroke, atIndex: atIndex)
+    private func applyDeleteItem(_ id: ItemId) -> InverseOp? {
+        guard let item = doc.items[id] else { return nil }
+        let atIndex = doc.itemOrder.firstIndex(of: id) ?? doc.itemOrder.count
+        doc.items.removeValue(forKey: id)
+        doc.itemOrder.removeAll { $0 == id }
+        return .restoreItem(snapshot: item, atIndex: atIndex)
     }
 
-    private func applyRestoreStroke(snapshot: Stroke, atIndex: Int) -> InverseOp? {
-        doc.strokes[snapshot.id] = snapshot
-        let insertAt = max(0, min(atIndex, doc.strokeOrder.count))
-        doc.strokeOrder.insert(snapshot.id, at: insertAt)
-        return .deleteStroke(snapshot.id)
+    private func applyRestoreItem(snapshot: CanvasItem, atIndex: Int) -> InverseOp? {
+        doc.items[snapshot.id] = snapshot
+        let insertAt = max(0, min(atIndex, doc.itemOrder.count))
+        doc.itemOrder.insert(snapshot.id, at: insertAt)
+        return .deleteItem(snapshot.id)
     }
 
-    private func applyDeleteStrokes(_ ids: [StrokeId]) -> InverseOp? {
-        var entries: [StrokeRestoreEntry] = []
+    private func applyDeleteItems(_ ids: [ItemId]) -> InverseOp? {
+        var entries: [ItemRestoreEntry] = []
         for id in ids {
-            guard let stroke = doc.strokes[id] else { continue }
-            let idx = doc.strokeOrder.firstIndex(of: id) ?? doc.strokeOrder.count
-            entries.append(StrokeRestoreEntry(snapshot: stroke, atIndex: idx))
+            guard let item = doc.items[id] else { continue }
+            let idx = doc.itemOrder.firstIndex(of: id) ?? doc.itemOrder.count
+            entries.append(ItemRestoreEntry(snapshot: item, atIndex: idx))
         }
         for id in ids {
-            doc.strokes.removeValue(forKey: id)
-            doc.strokeOrder.removeAll { $0 == id }
+            doc.items.removeValue(forKey: id)
+            doc.itemOrder.removeAll { $0 == id }
         }
-        return .restoreStrokes(entries: entries)
+        return .restoreItems(entries: entries)
     }
 
-    private func applyRestoreStrokes(_ entries: [StrokeRestoreEntry]) -> InverseOp? {
+    private func applyRestoreItems(_ entries: [ItemRestoreEntry]) -> InverseOp? {
         // Insert in ascending atIndex order so earlier inserts don't shift later ones.
         let sorted = entries.sorted { $0.atIndex < $1.atIndex }
         for entry in sorted {
-            doc.strokes[entry.snapshot.id] = entry.snapshot
-            let insertAt = max(0, min(entry.atIndex, doc.strokeOrder.count))
-            doc.strokeOrder.insert(entry.snapshot.id, at: insertAt)
+            doc.items[entry.snapshot.id] = entry.snapshot
+            let insertAt = max(0, min(entry.atIndex, doc.itemOrder.count))
+            doc.itemOrder.insert(entry.snapshot.id, at: insertAt)
         }
-        return .deleteStrokes(entries.map { $0.snapshot.id })
+        return .deleteItems(entries.map { $0.snapshot.id })
     }
 
     private func applySetTransforms(_ entries: [TransformEntry]) -> InverseOp? {
         var currentEntries: [TransformEntry] = []
         for entry in entries {
-            guard let stroke = doc.strokes[entry.strokeId] else { continue }
-            currentEntries.append(TransformEntry(strokeId: entry.strokeId, transform: stroke.transform))
-            doc.strokes[entry.strokeId]?.transform = entry.transform
+            guard let item = doc.items[entry.itemId] else { continue }
+            currentEntries.append(TransformEntry(itemId: entry.itemId, transform: item.transform))
+            doc.items[entry.itemId]?.transform = entry.transform
         }
         return .setTransforms(entries: currentEntries)
+    }
+
+    private func applyReplaceItems(_ entries: [CanvasItem]) -> InverseOp? {
+        var current: [CanvasItem] = []
+        for item in entries {
+            if let now = doc.items[item.id] { current.append(now) }
+            doc.items[item.id] = item
+        }
+        return .replaceItems(entries: current)
     }
 
     // MARK: - Undo plumbing

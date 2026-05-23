@@ -27,10 +27,10 @@ public enum SelectionMath {
     }
 
     /// AABB enclosing the union of every selected stroke's transformed points.
-    public static func selectionBounds(strokeIds: [StrokeId], strokes: [String: Stroke]) -> Rect? {
+    public static func selectionBounds(strokeIds: [StrokeId], strokes: [ItemId: CanvasItem]) -> Rect? {
         var union: Rect?
         for id in strokeIds {
-            guard let s = strokes[id] else { continue }
+            guard case .stroke(let s) = strokes[id] else { continue }
             guard let bounds = aabb(of: transformed(points: s.points, by: s.transform)) else { continue }
             if let current = union {
                 union = unionRect(current, bounds)

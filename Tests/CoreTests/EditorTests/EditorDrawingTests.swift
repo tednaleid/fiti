@@ -16,14 +16,15 @@ struct EditorDrawingTests {
         _ = e.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
         e.appendPoint(StrokePoint(x: 0, y: 0))
         e.appendPoint(StrokePoint(x: 5, y: 5))
-        #expect(e.doc.strokes["s-1"]?.points.count == 2)
+        guard case .stroke(let s)? = e.doc.items["s-1"] else { Issue.record("missing"); return }
+        #expect(s.points.count == 2)
     }
 
     @Test("appendPoint is a no-op when no stroke is in progress")
     func appendNoOp() {
         let e = makeEditor()
         e.appendPoint(StrokePoint(x: 0, y: 0))
-        #expect(e.doc.strokes.isEmpty)
+        #expect(e.doc.items.isEmpty)
     }
 
     @Test("endStroke clears currentStrokeId; doc retains the stroke")
@@ -33,6 +34,7 @@ struct EditorDrawingTests {
         e.appendPoint(StrokePoint(x: 1, y: 1))
         e.endStroke()
         #expect(e.currentStrokeId == nil)
-        #expect(e.doc.strokes["s-1"]?.points.count == 1)
+        guard case .stroke(let s)? = e.doc.items["s-1"] else { Issue.record("missing"); return }
+        #expect(s.points.count == 1)
     }
 }

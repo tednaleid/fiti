@@ -26,7 +26,7 @@ struct SelectionGestureTests {
         controller.pointerMoved(StrokePoint(x: 120, y: 100))
         controller.pointerUp()
         controller.currentTool = .selection
-        return (controller, editor, editor.doc.strokeOrder)
+        return (controller, editor, editor.doc.itemOrder)
     }
 
     // MARK: click-to-select
@@ -102,10 +102,10 @@ struct SelectionGestureTests {
         c.pointerMoved(StrokePoint(x: 25, y: 15))
         c.pointerMoved(StrokePoint(x: 30, y: 20))
         c.pointerUp()
-        #expect(editor.doc.strokes[ids[0]]?.transform.x == 10)
-        #expect(editor.doc.strokes[ids[0]]?.transform.y == 10)
+        #expect(editor.doc.items[ids[0]]?.transform.x == 10)
+        #expect(editor.doc.items[ids[0]]?.transform.y == 10)
         editor.undo()
-        #expect(editor.doc.strokes[ids[0]]?.transform == .identity)
+        #expect(editor.doc.items[ids[0]]?.transform == .identity)
     }
 
     @Test("translate commits to editor BEFORE clearing inFlightTransforms so the [:] callback reads new transforms")
@@ -116,7 +116,7 @@ struct SelectionGestureTests {
             if overrides.isEmpty {
                 // Capture the editor's transform at the moment the overlay clears.
                 // If commit happened first, this is the post-drag value.
-                seenAtCallback[ids[0]] = editor.doc.strokes[ids[0]]?.transform
+                seenAtCallback[ids[0]] = editor.doc.items[ids[0]]?.transform
             }
         }
         c.pointerDown(StrokePoint(x: 20, y: 10))
@@ -135,8 +135,8 @@ struct SelectionGestureTests {
         c.pointerMoved(StrokePoint(x: 30, y: 10))      // drag +10 x
         c.pointerUp()
         #expect(Set(c.selectedStrokeIds) == Set(ids))  // still both
-        #expect(editor.doc.strokes[ids[0]]?.transform.x == 10)
-        #expect(editor.doc.strokes[ids[1]]?.transform.x == 10)  // moved together
+        #expect(editor.doc.items[ids[0]]?.transform.x == 10)
+        #expect(editor.doc.items[ids[1]]?.transform.x == 10)  // moved together
     }
 
     @Test("clicking empty interior of the selection box translates the group")
@@ -148,7 +148,7 @@ struct SelectionGestureTests {
         c.pointerMoved(StrokePoint(x: box.center.x + 5, y: box.center.y))
         c.pointerUp()
         #expect(Set(c.selectedStrokeIds) == Set(ids))
-        #expect(editor.doc.strokes[ids[0]]?.transform.x == 5)
+        #expect(editor.doc.items[ids[0]]?.transform.x == 5)
     }
 
     @Test("Space+Cmd marquee toggles each intersected stroke")
@@ -175,9 +175,9 @@ struct SelectionGestureTests {
         // double the distance from the anchor along the diagonal
         c.pointerMoved(StrokePoint(x: tl.x + (br.x - tl.x) * 2, y: tl.y + (br.y - tl.y) * 2))
         c.pointerUp()
-        #expect(editor.doc.strokes[ids[0]]!.transform.scale == 2)
+        #expect(editor.doc.items[ids[0]]?.transform.scale == 2)
         editor.undo()
-        #expect(editor.doc.strokes[ids[0]]!.transform.scale == 1)
+        #expect(editor.doc.items[ids[0]]?.transform.scale == 1)
     }
 
     @Test("dragging the rotate node rotates the group as a rigid unit, one undoable op")
@@ -192,12 +192,12 @@ struct SelectionGestureTests {
         c.pointerMoved(StrokePoint(x: center.x, y: center.y + 50))
         c.pointerUp()
         // both strokes gained the same rotation delta (rigid)
-        let r0 = editor.doc.strokes[ids[0]]!.transform.rotate
-        let r1 = editor.doc.strokes[ids[1]]!.transform.rotate
+        let r0 = editor.doc.items[ids[0]]!.transform.rotate
+        let r1 = editor.doc.items[ids[1]]!.transform.rotate
         #expect(abs(r0 - r1) < 1e-6)
         #expect(abs(r0) > 1)   // actually rotated
         editor.undo()
-        #expect(abs(editor.doc.strokes[ids[0]]!.transform.rotate) < 1e-6)
+        #expect(abs(editor.doc.items[ids[0]]!.transform.rotate) < 1e-6)
     }
 
     // MARK: cursor during a drag
@@ -224,10 +224,10 @@ struct SelectionGestureTests {
     func penIgnoresSelection() {
         let (c, editor, _) = setup()
         c.currentTool = .pen
-        let before = editor.doc.strokes.count
+        let before = editor.doc.items.count
         c.pointerDown(StrokePoint(x: 300, y: 300))
         c.pointerUp()
-        #expect(editor.doc.strokes.count == before + 1)
+        #expect(editor.doc.items.count == before + 1)
     }
 
     // MARK: drawing new stroke clears selection

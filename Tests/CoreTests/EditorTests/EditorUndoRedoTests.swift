@@ -20,11 +20,11 @@ struct EditorUndoRedoTests {
     func undoRemoves() {
         let e = makeEditor()
         drawOne(e)
-        #expect(e.doc.strokes.count == 1)
+        #expect(e.doc.items.count == 1)
         let did = e.undo()
         #expect(did)
-        #expect(e.doc.strokes.isEmpty)
-        #expect(e.doc.strokeOrder.isEmpty)
+        #expect(e.doc.items.isEmpty)
+        #expect(e.doc.itemOrder.isEmpty)
     }
 
     @Test("redo restores the undone stroke byte-identically")

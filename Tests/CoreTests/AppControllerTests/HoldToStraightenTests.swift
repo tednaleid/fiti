@@ -88,7 +88,8 @@ struct HoldToStraightenTests {
         det.fire()
         #expect(c.isRubberBanding == true)
         let id = c.editor.currentStrokeId!
-        let pts = c.editor.doc.strokes[id]!.points
+        guard case .stroke(let s)? = c.editor.doc.items[id] else { Issue.record("missing"); return }
+        let pts = s.points
         #expect(pts.count == 2)
         #expect(pts.first == StrokePoint(x: 0, y: 0))
         #expect(pts.last == StrokePoint(x: 15, y: 0))
@@ -105,7 +106,8 @@ struct HoldToStraightenTests {
         det.fire()
         #expect(c.isRubberBanding == false)
         let id = c.editor.currentStrokeId!
-        #expect(c.editor.doc.strokes[id]!.points.count == 4)
+        guard case .stroke(let s)? = c.editor.doc.items[id] else { Issue.record("missing"); return }
+        #expect(s.points.count == 4)
     }
 
     @Test("during rubber-band, pointerMoved updates the endpoint instead of appending")
@@ -117,7 +119,8 @@ struct HoldToStraightenTests {
         det.fire()  // snap → rubber-band
         c.pointerMoved(StrokePoint(x: 100, y: 50))  // should update endpoint
         let id = c.editor.currentStrokeId!
-        let pts = c.editor.doc.strokes[id]!.points
+        guard case .stroke(let s)? = c.editor.doc.items[id] else { Issue.record("missing"); return }
+        let pts = s.points
         #expect(pts.count == 2)
         #expect(pts.last == StrokePoint(x: 100, y: 50))
     }

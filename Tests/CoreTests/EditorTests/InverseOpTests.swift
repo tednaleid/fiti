@@ -1,24 +1,26 @@
-// ABOUTME: Tests for InverseOp + StrokeRestoreEntry — the data records
+// ABOUTME: Tests for InverseOp + ItemRestoreEntry — the data records
 // ABOUTME: that describe how to reverse a doc mutation.
 
 import Testing
 
 @Suite("InverseOp")
 struct InverseOpTests {
-    @Test("StrokeRestoreEntry is equatable")
+    @Test("ItemRestoreEntry is equatable")
     func restoreEquatable() {
         let s = Stroke(id: "a", color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, transform: .identity, points: [], pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        #expect(StrokeRestoreEntry(snapshot: s, atIndex: 0) == StrokeRestoreEntry(snapshot: s, atIndex: 0))
-        #expect(StrokeRestoreEntry(snapshot: s, atIndex: 0) != StrokeRestoreEntry(snapshot: s, atIndex: 1))
+        let item = CanvasItem.stroke(s)
+        #expect(ItemRestoreEntry(snapshot: item, atIndex: 0) == ItemRestoreEntry(snapshot: item, atIndex: 0))
+        #expect(ItemRestoreEntry(snapshot: item, atIndex: 0) != ItemRestoreEntry(snapshot: item, atIndex: 1))
     }
 
-    @Test("deleteStroke / restoreStroke / deleteStrokes / restoreStrokes are equatable")
+    @Test("deleteItem / restoreItem / deleteItems / restoreItems are equatable")
     func opEquatable() {
         let s = Stroke(id: "a", color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, transform: .identity, points: [], pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        #expect(InverseOp.deleteStroke("a") == .deleteStroke("a"))
-        #expect(InverseOp.restoreStroke(snapshot: s, atIndex: 0) == .restoreStroke(snapshot: s, atIndex: 0))
-        #expect(InverseOp.deleteStrokes(["a"]) == .deleteStrokes(["a"]))
-        let entry = StrokeRestoreEntry(snapshot: s, atIndex: 0)
-        #expect(InverseOp.restoreStrokes(entries: [entry]) == .restoreStrokes(entries: [entry]))
+        let item = CanvasItem.stroke(s)
+        #expect(InverseOp.deleteItem("a") == .deleteItem("a"))
+        #expect(InverseOp.restoreItem(snapshot: item, atIndex: 0) == .restoreItem(snapshot: item, atIndex: 0))
+        #expect(InverseOp.deleteItems(["a"]) == .deleteItems(["a"]))
+        let entry = ItemRestoreEntry(snapshot: item, atIndex: 0)
+        #expect(InverseOp.restoreItems(entries: [entry]) == .restoreItems(entries: [entry]))
     }
 }

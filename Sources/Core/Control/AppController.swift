@@ -288,7 +288,7 @@ public final class AppController {
     private func handleStationary() {
         guard mode == .activeDrawing, !isRubberBanding else { return }
         guard let id = editor.currentStrokeId,
-              let stroke = editor.doc.strokes[id] else { return }
+              case .stroke(let stroke)? = editor.doc.items[id] else { return }
         guard isSubstantiallyStraight(points: stroke.points) else { return }
         editor.straightenCurrentStroke()
         isRubberBanding = true
@@ -296,7 +296,7 @@ public final class AppController {
 
     public func clear() {
         // If a stroke is in progress, end it first so its points are committed
-        // before they're cleared (matches the eraseStroke / undo invariant that
+        // before they're cleared (matches the eraseItems / undo invariant that
         // a snapshot of the doc is consistent after every public method returns).
         if mode == .activeDrawing {
             resetStrokeState()

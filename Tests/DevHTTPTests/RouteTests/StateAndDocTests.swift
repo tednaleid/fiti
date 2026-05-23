@@ -53,10 +53,10 @@ struct StateAndDocTests {
         let surface = FakeSurface()
         let s = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 2, transform: .identity,
                        points: [StrokePoint(x: 1, y: 2)], pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        surface.doc = FitiDoc(strokes: ["a": s], strokeOrder: ["a"])
+        surface.doc = FitiDoc(items: ["a": .stroke(s)], itemOrder: ["a"])
         let server = try startServer(surface); defer { server.stop() }
         let (status, json) = try await get(server, "/doc")
         #expect(status == 200)
-        #expect((json["strokeOrder"] as? [String]) == ["a"])
+        #expect((json["itemOrder"] as? [String]) == ["a"])
     }
 }

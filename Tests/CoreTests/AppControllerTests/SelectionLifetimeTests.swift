@@ -16,7 +16,7 @@ struct SelectionLifetimeTests {
         c.activate()
         c.pointerDown(StrokePoint(x: 10, y: 10)); c.pointerMoved(StrokePoint(x: 30, y: 20)); c.pointerUp()
         c.currentTool = .selection
-        return (c, editor, editor.doc.strokeOrder)
+        return (c, editor, editor.doc.itemOrder)
     }
 
     @Test("releasing Space (tool → pen) clears the selection")
@@ -38,15 +38,15 @@ struct SelectionLifetimeTests {
         #expect(c.selectedStrokeIds == ids)           // NOT cleared yet
         c.pointerUp()                                 // gesture ends → deferred clear applies
         #expect(c.selectedStrokeIds == [])
-        #expect(editor.doc.strokes[ids[0]]?.transform.x == 5)  // the drag still committed
+        #expect(editor.doc.items[ids[0]]?.transform.x == 5)  // the drag still committed
     }
 
     @Test("Delete in selection mode with no selection is a no-op")
     func deleteNoSelectionNoOp() {
         let (c, editor, _) = setup()
-        let before = editor.doc.strokes.count
+        let before = editor.doc.items.count
         c.run(.clear)
-        #expect(editor.doc.strokes.count == before)   // nothing cleared
+        #expect(editor.doc.items.count == before)   // nothing cleared
     }
 
     @Test("Delete in pen mode clears everything")
@@ -54,6 +54,6 @@ struct SelectionLifetimeTests {
         let (c, editor, _) = setup()
         c.currentTool = .pen
         c.run(.clear)
-        #expect(editor.doc.strokes.isEmpty)
+        #expect(editor.doc.items.isEmpty)
     }
 }

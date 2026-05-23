@@ -1,5 +1,5 @@
 // ABOUTME: Tests for clear — empties the doc but is undo-able.
-// ABOUTME: Exercises the multi-stroke restoreStrokes path in applyInverse.
+// ABOUTME: Exercises the multi-stroke restoreItems path in applyInverse.
 
 import Testing
 
@@ -18,11 +18,11 @@ struct EditorClearTests {
         _ = e.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
         e.endStroke()
         e.clear()
-        #expect(e.doc.strokes.isEmpty)
-        #expect(e.doc.strokeOrder.isEmpty)
+        #expect(e.doc.items.isEmpty)
+        #expect(e.doc.itemOrder.isEmpty)
     }
 
-    @Test("undo restores all strokes at their original strokeOrder positions")
+    @Test("undo restores all strokes at their original itemOrder positions")
     func undoRestoresAll() {
         let e = makeEditor()
         _ = e.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
@@ -50,7 +50,7 @@ struct EditorClearTests {
         #expect(e.currentStrokeId == "s-1")
         e.clear()
         #expect(e.currentStrokeId == nil)
-        #expect(e.doc.strokes.isEmpty)
+        #expect(e.doc.items.isEmpty)
         // Should be able to start a fresh stroke immediately (no precondition trip)
         _ = e.startStroke(color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1, pointerType: .mouse)
         #expect(e.currentStrokeId == "s-2")

@@ -37,7 +37,7 @@ struct FadeTickTests {
         ticker.start()  // verify the autoFade guard catches even an externally-started ticker
         clock.advance(by: 1000)
         ticker.tick(at: clock.now())
-        #expect(editor.doc.strokes.isEmpty == false)
+        #expect(editor.doc.items.isEmpty == false)
         #expect(c.fadeOpacity == 1.0)
     }
 
@@ -68,7 +68,7 @@ struct FadeTickTests {
         c.autoFadeEnabled = true
         clock.advance(by: 10)
         ticker.tick(at: clock.now())
-        #expect(editor.doc.strokes.isEmpty == true)
+        #expect(editor.doc.items.isEmpty == true)
         #expect(c.fadeOpacity == 1.0)
     }
 
@@ -76,7 +76,7 @@ struct FadeTickTests {
     func tickExpiresClearsSelection() {
         let (c, clock, ticker, editor) = make()
         drawOneStroke(c)
-        c.selectedStrokeIds = editor.doc.strokeOrder
+        c.selectedStrokeIds = editor.doc.itemOrder
         #expect(!c.selectedStrokeIds.isEmpty)
         c.autoFadeEnabled = true
         clock.advance(by: 10)
@@ -100,7 +100,7 @@ struct FadeTickTests {
         c.autoFadeEnabled = true
         clock.advance(by: 10)
         ticker.tick(at: clock.now())
-        #expect(editor.doc.strokes.isEmpty == true)
+        #expect(editor.doc.items.isEmpty == true)
         _ = editor.undo()
         clock.advance(by: 0.05)
         ticker.tick(at: clock.now())  // re-arms lastInputAt to now
@@ -118,7 +118,7 @@ struct FadeTickTests {
         c.pointerDown(StrokePoint(x: 0, y: 0))  // mode = .activeDrawing
         clock.advance(by: 15)
         ticker.tick(at: clock.now())
-        #expect(editor.doc.strokes.isEmpty == false)
+        #expect(editor.doc.items.isEmpty == false)
     }
 
     @Test("pointerDown sets lastInputAt — subsequent expiration honors it")
@@ -131,7 +131,7 @@ struct FadeTickTests {
         c.pointerDown(StrokePoint(x: 1, y: 1))  // lastInputAt = 5; mode now activeDrawing
         clock.advance(by: 7)                     // total elapsed 12 from t=0; mid-stroke guard active
         ticker.tick(at: clock.now())
-        #expect(editor.doc.strokes.isEmpty == false)  // guard prevents expire
+        #expect(editor.doc.items.isEmpty == false)  // guard prevents expire
         #expect(c.mode == .activeDrawing)
     }
 
@@ -147,7 +147,7 @@ struct FadeTickTests {
         clock.advance(by: 5)                     // 5s past pointerUp — still solid (age 5)
         ticker.tick(at: clock.now())
         #expect(c.fadeOpacity == 1.0)
-        #expect(editor.doc.strokes.isEmpty == false)
+        #expect(editor.doc.items.isEmpty == false)
     }
 
     @Test("pointerUp sets lastInputAt and the window starts fresh from there")
@@ -161,6 +161,6 @@ struct FadeTickTests {
         clock.advance(by: 5)                     // 5s past pointerUp
         ticker.tick(at: clock.now())
         #expect(c.fadeOpacity == 1.0)            // age = 5s, still solid
-        #expect(editor.doc.strokes.isEmpty == false)
+        #expect(editor.doc.items.isEmpty == false)
     }
 }

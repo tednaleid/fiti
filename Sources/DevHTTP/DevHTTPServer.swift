@@ -133,7 +133,8 @@ public final class DevHTTPServer: @unchecked Sendable {
         }
 
         router.add("GET", "/strokes/:id") { [weak self] _, params in
-            guard let self, let id = params["id"], let stroke = self.surface.doc.strokes[id] else { return .notFound() }
+            guard let self, let id = params["id"],
+                  case .stroke(let stroke)? = self.surface.doc.items[id] else { return .notFound() }
             return .json(encode: stroke)
         }
 

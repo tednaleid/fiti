@@ -12,7 +12,7 @@ struct StrokeRoutesTests {
         let surface = FakeSurface()
         let s = Stroke(id: "abc", color: RGBA(r: 0, g: 1, b: 0, a: 1), width: 3, transform: .identity,
                        points: [StrokePoint(x: 5, y: 5)], pointerType: .mouse, pressureEnabled: false, createdAt: 0)
-        surface.doc = FitiDoc(strokes: ["abc": s], strokeOrder: ["abc"])
+        surface.doc = FitiDoc(items: ["abc": .stroke(s)], itemOrder: ["abc"])
         let server = try DevHTTPServer(surface: surface, port: 0); try server.start(); defer { server.stop() }
         let port = try #require(server.boundPort)
         let url = try #require(URL(string: "http://localhost:\(port)/strokes/abc"))

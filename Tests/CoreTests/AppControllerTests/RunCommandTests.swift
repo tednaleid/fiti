@@ -136,11 +136,11 @@ struct RunCommandTests {
         c.pointerMoved(StrokePoint(x: 5, y: 5))
         // Mid-stroke clear:
         c.run(.clear)
-        #expect(editor.doc.strokes.isEmpty == true)
+        #expect(editor.doc.items.isEmpty == true)
         #expect(c.mode == .activeIdle)
         // One undo brings the just-finalized stroke back.
         _ = editor.undo()
-        #expect(editor.doc.strokes.isEmpty == false)
+        #expect(editor.doc.items.isEmpty == false)
     }
 
     @Test("pickColor mid-stroke leaves the in-progress stroke unchanged")
@@ -149,14 +149,18 @@ struct RunCommandTests {
         c.currentColor = RGBA(r: 1, g: 0, b: 0, a: 1)  // Red
         c.activate()
         c.pointerDown(StrokePoint(x: 0, y: 0))
-        guard let id = editor.currentStrokeId, let strokeBefore = editor.doc.strokes[id] else {
+        guard let id = editor.currentStrokeId,
+              case .stroke(let strokeBefore)? = editor.doc.items[id] else {
             Issue.record("expected an in-progress stroke")
             return
         }
         c.run(.pickColor(5))  // Green
-        let strokeAfter = editor.doc.strokes[id]
-        #expect(strokeAfter?.color == strokeBefore.color)  // unchanged
-        #expect(c.currentColor != strokeBefore.color)      // controller moved
+        guard case .stroke(let strokeAfter)? = editor.doc.items[id] else {
+            Issue.record("expected stroke still present")
+            return
+        }
+        #expect(strokeAfter.color == strokeBefore.color)  // unchanged
+        #expect(c.currentColor != strokeBefore.color)     // controller moved
     }
 
     @Test("bumpSize mid-stroke leaves the in-progress stroke width unchanged")
@@ -165,14 +169,18 @@ struct RunCommandTests {
         c.currentWidth = 10
         c.activate()
         c.pointerDown(StrokePoint(x: 0, y: 0))
-        guard let id = editor.currentStrokeId, let strokeBefore = editor.doc.strokes[id] else {
+        guard let id = editor.currentStrokeId,
+              case .stroke(let strokeBefore)? = editor.doc.items[id] else {
             Issue.record("expected an in-progress stroke")
             return
         }
         c.run(.bumpSize(.up))
-        let strokeAfter = editor.doc.strokes[id]
-        #expect(strokeAfter?.width == strokeBefore.width)  // unchanged
-        #expect(c.currentWidth > strokeBefore.width)        // controller moved
+        guard case .stroke(let strokeAfter)? = editor.doc.items[id] else {
+            Issue.record("expected stroke still present")
+            return
+        }
+        #expect(strokeAfter.width == strokeBefore.width)  // unchanged
+        #expect(c.currentWidth > strokeBefore.width)      // controller moved
     }
 
     @Test("run(.clear) in selection mode with non-empty selectedStrokeIds erases only those strokes")
@@ -183,13 +191,13 @@ struct RunCommandTests {
         c.pointerUp()
         c.pointerDown(StrokePoint(x: 10, y: 10))
         c.pointerUp()
-        let allIds = editor.doc.strokeOrder
+        let allIds = editor.doc.itemOrder
         #expect(allIds.count == 2)
         c.currentTool = .selection
         c.selectedStrokeIds = [allIds[0]]
         c.run(.clear)
-        #expect(editor.doc.strokes[allIds[0]] == nil)
-        #expect(editor.doc.strokes[allIds[1]] != nil)
+        #expect(editor.doc.items[allIds[0]] == nil)
+        #expect(editor.doc.items[allIds[1]] != nil)
         #expect(c.selectedStrokeIds == [])
     }
 
@@ -199,9 +207,9 @@ struct RunCommandTests {
         c.activate()
         c.pointerDown(StrokePoint(x: 0, y: 0))
         c.pointerUp()
-        #expect(editor.doc.strokeOrder.count == 1)
+        #expect(editor.doc.itemOrder.count == 1)
         c.run(.clear)
-        #expect(editor.doc.strokeOrder.isEmpty)
+        #expect(editor.doc.itemOrder.isEmpty)
     }
 
     @Test("clear() resets selectedStrokeIds so the canvas selection indicator doesn't linger")
@@ -210,10 +218,10 @@ struct RunCommandTests {
         c.activate()
         c.pointerDown(StrokePoint(x: 0, y: 0))
         c.pointerUp()
-        c.selectedStrokeIds = editor.doc.strokeOrder
+        c.selectedStrokeIds = editor.doc.itemOrder
         #expect(!c.selectedStrokeIds.isEmpty)
         c.clear()
         #expect(c.selectedStrokeIds == [])
-        #expect(editor.doc.strokes.isEmpty)
+        #expect(editor.doc.items.isEmpty)
     }
 }

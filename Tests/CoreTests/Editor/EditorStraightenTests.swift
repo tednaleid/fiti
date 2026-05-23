@@ -20,7 +20,8 @@ struct EditorStraightenTests {
         e.appendPoint(StrokePoint(x: 6, y: -1))
         e.appendPoint(StrokePoint(x: 10, y: 0))
         e.straightenCurrentStroke()
-        let pts = e.doc.strokes[id]!.points
+        guard case .stroke(let s)? = e.doc.items[id] else { Issue.record("missing"); return }
+        let pts = s.points
         #expect(pts.count == 2)
         #expect(pts.first == StrokePoint(x: 0, y: 0))
         #expect(pts.last == StrokePoint(x: 10, y: 0))
@@ -33,9 +34,11 @@ struct EditorStraightenTests {
         let id = e.startStroke(color: red, width: 4, pointerType: .mouse)
         e.appendPoint(StrokePoint(x: 0, y: 0))
         e.appendPoint(StrokePoint(x: 10, y: 0))
-        #expect(e.doc.strokes[id]?.snappedToLine == false)
+        guard case .stroke(let sBefore)? = e.doc.items[id] else { Issue.record("missing"); return }
+        #expect(sBefore.snappedToLine == false)
         e.straightenCurrentStroke()
-        #expect(e.doc.strokes[id]?.snappedToLine == true)
+        guard case .stroke(let sAfter)? = e.doc.items[id] else { Issue.record("missing"); return }
+        #expect(sAfter.snappedToLine == true)
     }
 
     @Test("straightenCurrentStroke is a no-op when no stroke in progress")
@@ -50,7 +53,8 @@ struct EditorStraightenTests {
         _ = e.startStroke(color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 4, pointerType: .mouse)
         e.appendPoint(StrokePoint(x: 0, y: 0))
         e.straightenCurrentStroke()
-        #expect(e.doc.strokes[e.currentStrokeId!]!.points.count == 1)
+        guard case .stroke(let s)? = e.doc.items[e.currentStrokeId!] else { Issue.record("missing"); return }
+        #expect(s.points.count == 1)
     }
 
     @Test("moveCurrentStrokeEndpoint replaces the last point in place")
@@ -60,7 +64,8 @@ struct EditorStraightenTests {
         e.appendPoint(StrokePoint(x: 0, y: 0))
         e.appendPoint(StrokePoint(x: 10, y: 10))
         e.moveCurrentStrokeEndpoint(to: StrokePoint(x: 20, y: 5))
-        let pts = e.doc.strokes[id]!.points
+        guard case .stroke(let s)? = e.doc.items[id] else { Issue.record("missing"); return }
+        let pts = s.points
         #expect(pts.count == 2)
         #expect(pts.last == StrokePoint(x: 20, y: 5))
     }
@@ -81,8 +86,8 @@ struct EditorStraightenTests {
         e.straightenCurrentStroke()
         e.moveCurrentStrokeEndpoint(to: StrokePoint(x: 15, y: 0))
         e.endStroke()
-        #expect(e.doc.strokes[id] != nil)
+        #expect(e.doc.items[id] != nil)
         #expect(e.undo())
-        #expect(e.doc.strokes[id] == nil)
+        #expect(e.doc.items[id] == nil)
     }
 }

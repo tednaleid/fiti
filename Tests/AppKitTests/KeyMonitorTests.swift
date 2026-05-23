@@ -130,9 +130,9 @@ struct KeyMonitorTests {
         controller.activate()
         controller.pointerDown(StrokePoint(x: 0, y: 0))
         controller.pointerUp()
-        #expect(editor.doc.strokes.isEmpty == false)
+        #expect(editor.doc.items.isEmpty == false)
         _ = monitor.handle(keyEvent("\u{7F}"))  // NSDeleteCharacter
-        #expect(editor.doc.strokes.isEmpty == true)
+        #expect(editor.doc.items.isEmpty == true)
     }
 
     @Test("'c' is no longer bound; passes through")
@@ -144,7 +144,7 @@ struct KeyMonitorTests {
         let event = keyEvent("c")
         let result = monitor.handle(event)
         #expect(result === event, "'c' should pass through unchanged now that delete is the clear binding")
-        #expect(editor.doc.strokes.isEmpty == false)
+        #expect(editor.doc.items.isEmpty == false)
     }
 
     @Test("Space keyDown sets currentTool to .selection")

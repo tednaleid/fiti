@@ -30,7 +30,7 @@ extension AppController {
     private func runClear() {
         if currentTool == .selection {
             if !selectedStrokeIds.isEmpty {
-                _ = editor.eraseStrokes(ids: selectedStrokeIds)
+                _ = editor.eraseItems(ids: selectedStrokeIds)
                 selectedStrokeIds = []
             }
             // no selection in selection mode → no-op (a "miss")

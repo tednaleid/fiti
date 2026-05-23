@@ -13,8 +13,8 @@ public extension RenderFrame {
     static func from(editor: Editor, canvasSize: Size, overrides: [StrokeId: Transform]) -> RenderFrame {
         var committed: [Stroke] = []
         var live: [Stroke] = []
-        for id in editor.doc.strokeOrder {
-            guard let s = editor.doc.strokes[id] else { continue }
+        for id in editor.doc.itemOrder {
+            guard case .stroke(let s) = editor.doc.items[id] else { continue }
             if let override = overrides[id] {
                 var moved = s
                 moved.transform = override
@@ -23,7 +23,10 @@ public extension RenderFrame {
                 committed.append(s)
             }
         }
-        let inProgress = editor.currentStrokeId.flatMap { editor.doc.strokes[$0] }
+        let inProgress: Stroke? = editor.currentStrokeId.flatMap {
+            guard case .stroke(let s) = editor.doc.items[$0] else { return nil }
+            return s
+        }
         return RenderFrame(strokes: committed, liveStrokes: live,
                            inProgress: inProgress, canvasSize: canvasSize)
     }

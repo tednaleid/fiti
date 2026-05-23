@@ -3,30 +3,29 @@
 
 import Foundation
 
-public struct StrokeRestoreEntry: Equatable, Sendable {
-    public let snapshot: Stroke
+public struct ItemRestoreEntry: Equatable, Sendable {
+    public let snapshot: CanvasItem
     public let atIndex: Int
-
-    public init(snapshot: Stroke, atIndex: Int) {
+    public init(snapshot: CanvasItem, atIndex: Int) {
         self.snapshot = snapshot
         self.atIndex = atIndex
     }
 }
 
 public struct TransformEntry: Equatable, Sendable {
-    public let strokeId: StrokeId
+    public let itemId: ItemId
     public let transform: Transform
-
-    public init(strokeId: StrokeId, transform: Transform) {
-        self.strokeId = strokeId
+    public init(itemId: ItemId, transform: Transform) {
+        self.itemId = itemId
         self.transform = transform
     }
 }
 
 public enum InverseOp: Equatable, Sendable {
-    case deleteStroke(StrokeId)
-    case restoreStroke(snapshot: Stroke, atIndex: Int)
-    case deleteStrokes([StrokeId])
-    case restoreStrokes(entries: [StrokeRestoreEntry])
+    case deleteItem(ItemId)
+    case restoreItem(snapshot: CanvasItem, atIndex: Int)
+    case deleteItems([ItemId])
+    case restoreItems(entries: [ItemRestoreEntry])
     case setTransforms(entries: [TransformEntry])
+    case replaceItems(entries: [CanvasItem])   // restore prior full values
 }

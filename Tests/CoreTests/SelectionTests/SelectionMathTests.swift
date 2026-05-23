@@ -101,14 +101,14 @@ struct SelectionMathTests {
         let s1 = makeStroke(id: "a", points: [StrokePoint(x: 0, y: 0), StrokePoint(x: 10, y: 10)])
         let s2 = makeStroke(id: "b", points: [StrokePoint(x: 20, y: 20), StrokePoint(x: 30, y: 40)])
         let bounds = SelectionMath.selectionBounds(strokeIds: ["a", "b"],
-                                                   strokes: ["a": s1, "b": s2])
+                                                   strokes: ["a": .stroke(s1), "b": .stroke(s2)])
         #expect(bounds == Rect(x: 0, y: 0, width: 30, height: 40))
     }
 
     @Test("selectionBounds with empty id list returns nil")
     func boundsEmpty() {
         let bounds = SelectionMath.selectionBounds(strokeIds: [],
-                                                   strokes: [String: Stroke]())
+                                                   strokes: [ItemId: CanvasItem]())
         #expect(bounds == nil)
     }
 
@@ -116,7 +116,7 @@ struct SelectionMathTests {
     func boundsUnknownId() {
         let s = makeStroke(id: "a", points: [StrokePoint(x: 5, y: 5), StrokePoint(x: 15, y: 15)])
         let bounds = SelectionMath.selectionBounds(strokeIds: ["a", "missing"],
-                                                   strokes: ["a": s])
+                                                   strokes: ["a": .stroke(s)])
         #expect(bounds == Rect(x: 5, y: 5, width: 10, height: 10))
     }
 }

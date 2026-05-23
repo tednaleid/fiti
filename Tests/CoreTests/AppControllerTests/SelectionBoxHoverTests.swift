@@ -15,7 +15,7 @@ struct SelectionBoxHoverTests {
         c.activate()
         c.pointerDown(StrokePoint(x: 10, y: 10)); c.pointerMoved(StrokePoint(x: 30, y: 20)); c.pointerUp()
         c.currentTool = .selection
-        return (c, editor.doc.strokeOrder)
+        return (c, editor.doc.itemOrder)
     }
 
     @Test("setting selectedStrokeIds computes a selection box at rotation 0")

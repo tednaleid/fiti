@@ -34,7 +34,7 @@ extension AppController {
 
     func recomputeSelectionBox() {
         guard let rect = SelectionMath.selectionBounds(strokeIds: selectedStrokeIds,
-                                                       strokes: editor.doc.strokes) else {
+                                                       strokes: editor.doc.items) else {
             selectionBox = nil
             return
         }
@@ -131,7 +131,7 @@ extension AppController {
             }
         case .translate, .resize, .rotate:
             let updates = preview.map { (id: $0.key, transform: $0.value) }
-            if !updates.isEmpty { _ = editor.transformStrokes(updates) }
+            if !updates.isEmpty { _ = editor.transformItems(updates) }
             inFlightTransforms = [:]
             // Rotate preserves the box's angle (selectionBox already holds the
             // final rotated box); translate/resize recompute an upright box.
@@ -154,7 +154,10 @@ extension AppController {
     }
 
     private func orderedStrokes() -> [Stroke] {
-        editor.doc.strokeOrder.compactMap { editor.doc.strokes[$0] }
+        editor.doc.itemOrder.compactMap {
+            guard case .stroke(let s) = editor.doc.items[$0] else { return nil }
+            return s
+        }
     }
 
     private func toggle(_ id: StrokeId) {
@@ -172,7 +175,7 @@ extension AppController {
 
     func snapshotTransforms() -> [StrokeId: Transform] {
         var out: [StrokeId: Transform] = [:]
-        for id in selectedStrokeIds { if let s = editor.doc.strokes[id] { out[id] = s.transform } }
+        for id in selectedStrokeIds { if let t = editor.doc.items[id]?.transform { out[id] = t } }
         return out
     }
 
