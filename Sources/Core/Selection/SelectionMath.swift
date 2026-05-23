@@ -7,12 +7,8 @@ public enum SelectionMath {
     /// Returns the topmost (latest in array) StrokeId whose transformed polyline
     /// passes within `stroke.width / 2 + tolerance` of `query`, or nil.
     public static func hitTest(point query: StrokePoint, strokes: [Stroke], tolerance: Double) -> StrokeId? {
-        for stroke in strokes.reversed() {
-            let halfWidth = stroke.width / 2 + tolerance
-            let pts = transformed(points: stroke.points, by: stroke.transform)
-            if minDistanceFromPolyline(point: query, polyline: pts) <= halfWidth {
-                return stroke.id
-            }
+        for stroke in strokes.reversed() where strokeHit(stroke, query: query, tolerance: tolerance) {
+            return stroke.id
         }
         return nil
     }
@@ -21,7 +17,7 @@ public enum SelectionMath {
     /// preserving the original array's order (z-order from bottom up).
     public static func marqueeHit(rect: Rect, strokes: [Stroke]) -> [StrokeId] {
         strokes.compactMap { stroke in
-            guard let bounds = aabb(of: transformed(points: stroke.points, by: stroke.transform)) else { return nil }
+            guard let bounds = strokeAABB(stroke) else { return nil }
             return rect.intersects(bounds) ? stroke.id : nil
         }
     }
@@ -30,8 +26,7 @@ public enum SelectionMath {
     public static func selectionBounds(strokeIds: [StrokeId], strokes: [ItemId: CanvasItem]) -> Rect? {
         var union: Rect?
         for id in strokeIds {
-            guard case .stroke(let s) = strokes[id] else { continue }
-            guard let bounds = aabb(of: transformed(points: s.points, by: s.transform)) else { continue }
+            guard case .stroke(let s) = strokes[id], let bounds = strokeAABB(s) else { continue }
             if let current = union {
                 union = unionRect(current, bounds)
             } else {
@@ -52,9 +47,7 @@ public enum SelectionMath {
             guard let item = items[id] else { continue }
             switch item {
             case .stroke(let s):
-                let halfWidth = s.width / 2 + tolerance
-                let pts = transformed(points: s.points, by: s.transform)
-                if minDistanceFromPolyline(point: query, polyline: pts) <= halfWidth { return id }
+                if strokeHit(s, query: query, tolerance: tolerance) { return id }
             case .text(let t):
                 if pointInTextItem(point, text: t, tolerance: tolerance) { return id }
             }
@@ -112,6 +105,18 @@ public enum SelectionMath {
     }
 
     // MARK: - Internals
+
+    /// True if `query` lies within `stroke.width / 2 + tolerance` of the stroke's transformed polyline.
+    private static func strokeHit(_ stroke: Stroke, query: StrokePoint, tolerance: Double) -> Bool {
+        let halfWidth = stroke.width / 2 + tolerance
+        let pts = transformed(points: stroke.points, by: stroke.transform)
+        return minDistanceFromPolyline(point: query, polyline: pts) <= halfWidth
+    }
+
+    /// World-space AABB of a single stroke's transformed points, or nil if it has none.
+    private static func strokeAABB(_ stroke: Stroke) -> Rect? {
+        aabb(of: transformed(points: stroke.points, by: stroke.transform))
+    }
 
     private static func transformed(points: [StrokePoint], by t: Transform) -> [StrokePoint] {
         guard t != .identity else { return points }
@@ -184,7 +189,7 @@ public enum SelectionMath {
     private static func worldAABB(of item: CanvasItem) -> Rect? {
         switch item {
         case .stroke(let s):
-            return aabb(of: transformed(points: s.points, by: s.transform))
+            return strokeAABB(s)
         case .text(let t):
             let corners = textWorldCorners(t)
             guard let first = corners.first else { return nil }
@@ -236,6 +241,6 @@ public enum SelectionMath {
                               size: Size(width: w + tolerance * 2, height: h + tolerance * 2),
                               rotation: text.transform.rotate)
         let local = box.toLocal(point)
-        return abs(local.x) <= (w + tolerance * 2) / 2 && abs(local.y) <= (h + tolerance * 2) / 2
+        return abs(local.x) <= box.size.width / 2 && abs(local.y) <= box.size.height / 2
     }
 }
