@@ -111,7 +111,9 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
         subscription = editor.subscribe { [weak self] _ in
             guard let self else { return }
-            self.canvas.render(RenderFrame.from(editor: self.editor, canvasSize: self.canvasSize))
+            self.canvas.render(RenderFrame.from(editor: self.editor, canvasSize: self.canvasSize,
+                                                overrides: [:],
+                                                editingItemId: self.controller.textSession?.itemId))
         }
     }
 
@@ -148,7 +150,17 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
         controller.onInFlightTransformsChanged = { [weak self] overrides in
             guard let self else { return }
-            self.canvas.render(RenderFrame.from(editor: self.editor, canvasSize: self.canvasSize, overrides: overrides))
+            self.canvas.render(RenderFrame.from(editor: self.editor, canvasSize: self.canvasSize,
+                                                overrides: overrides,
+                                                editingItemId: self.controller.textSession?.itemId))
+        }
+
+        controller.onTextSessionChanged = { [weak self] session in
+            guard let self else { return }
+            self.canvas.setTextSession(session.map(TextSessionSnapshot.init))
+            self.canvas.render(RenderFrame.from(editor: self.editor, canvasSize: self.canvasSize,
+                                                overrides: [:],
+                                                editingItemId: session?.itemId))
         }
 
         controller.onMarqueeChanged = { [weak self] rect in

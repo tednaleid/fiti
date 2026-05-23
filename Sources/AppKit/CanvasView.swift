@@ -4,6 +4,7 @@
 
 import AppKit
 import CoreGraphics
+import CoreText
 
 struct BakeSignatureEntry: Equatable {
     let id: ItemId
@@ -46,6 +47,7 @@ public final class CanvasView: NSView, Renderer {
 
     public private(set) var selectionBox: OrientedBox?
     public private(set) var marqueeRect: Rect?
+    public private(set) var textSession: TextSessionSnapshot?
 
     public func setSelectionBox(_ box: OrientedBox?) {
         guard selectionBox != box else { return }
@@ -56,6 +58,12 @@ public final class CanvasView: NSView, Renderer {
     public func setMarquee(_ rect: Rect?) {
         guard marqueeRect != rect else { return }
         marqueeRect = rect
+        needsDisplay = true
+    }
+
+    public func setTextSession(_ session: TextSessionSnapshot?) {
+        guard textSession != session else { return }
+        textSession = session
         needsDisplay = true
     }
 
@@ -137,6 +145,9 @@ public final class CanvasView: NSView, Renderer {
         if let marq = marqueeRect {
             drawMarquee(marq, in: ctx)
         }
+        if let session = textSession {
+            drawLiveText(session, in: ctx)
+        }
     }
 
     private func drawSelectionBox(_ box: OrientedBox, in ctx: CGContext) {
@@ -190,6 +201,77 @@ public final class CanvasView: NSView, Renderer {
         ctx.setLineWidth(1)
         ctx.setLineDash(phase: 0, lengths: [4, 4])
         ctx.stroke(cgRect)
+        ctx.restoreGState()
+    }
+
+    private func drawLiveText(_ session: TextSessionSnapshot, in ctx: CGContext) {
+        // Synthesize a TextItem so we can delegate to drawText for the string.
+        let item = TextItem(
+            id: ItemId(),
+            string: session.string,
+            fontName: session.fontName,
+            fontSize: session.fontSize,
+            color: session.color,
+            transform: session.transform,
+            bounds: Size(width: 0, height: 0),
+            createdAt: 0
+        )
+        drawText(item, in: ctx)
+        drawLiveCaret(session, in: ctx)
+    }
+
+    private func drawLiveCaret(_ session: TextSessionSnapshot, in ctx: CGContext) {
+        let font = NSFont(name: session.fontName, size: CGFloat(session.fontSize))
+            ?? NSFont.systemFont(ofSize: CGFloat(session.fontSize))
+        let lineHeight = CGFloat(session.fontSize) * 1.2
+
+        // Find which line the caret is on and the column within that line.
+        let lines = session.string.components(separatedBy: "\n")
+        var remaining = session.caret
+        var caretLine = 0
+        var caretCol = 0
+        for (i, line) in lines.enumerated() {
+            if remaining <= line.count {
+                caretLine = i
+                caretCol = remaining
+                break
+            }
+            remaining -= line.count + 1
+            if i == lines.count - 1 {
+                caretLine = i
+                caretCol = line.count
+            }
+        }
+
+        // Measure the x offset of the caret within its line.
+        let linePrefix = String(lines[caretLine].prefix(caretCol))
+        let attrs: [NSAttributedString.Key: Any] = [.font: font]
+        let attributed = NSAttributedString(string: linePrefix, attributes: attrs)
+        let ctLine = CTLineCreateWithAttributedString(attributed)
+        let caretX = CTLineGetTypographicBounds(ctLine, nil, nil, nil)
+
+        // y offset: line index * lineHeight (top of line), plus ascender matches drawText baseline.
+        let caretY = CGFloat(caretLine) * lineHeight
+
+        // Apply the session's transform before drawing the caret.
+        let t = session.transform
+        ctx.saveGState()
+        if t != .identity {
+            if t.x != 0 || t.y != 0 {
+                ctx.translateBy(x: CGFloat(t.x), y: CGFloat(t.y))
+            }
+            if t.rotate != 0 {
+                ctx.rotate(by: CGFloat(t.rotate * .pi / 180.0))
+            }
+            if t.scale != 1 {
+                ctx.scaleBy(x: CGFloat(t.scale), y: CGFloat(t.scale))
+            }
+        }
+
+        // Draw a 1.5pt wide vertical caret rule spanning the full line height.
+        ctx.setFillColor(NSColor.controlAccentColor.cgColor)
+        let caretRect = CGRect(x: CGFloat(caretX), y: caretY, width: 1.5, height: lineHeight)
+        ctx.fill(caretRect)
         ctx.restoreGState()
     }
 
