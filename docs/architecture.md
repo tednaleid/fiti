@@ -179,6 +179,18 @@ sequenceDiagram
 
 **The port.** `Sources/Core/Ports/TextMeasuring.swift` declares the protocol. `Sources/AppKit/CoreTextMeasurer.swift` implements it with CoreText (`CTLine` + `CTLineGetTypographicBounds`). Tests use a deterministic monospace fake (`FakeTextMeasurer`) in `Tests/`. Because the port remains wired at the composition root, bounds can be recomputed for any item by calling `measure` again -- for example, after a font substitution or a document migration.
 
+## Geometry glossary
+
+Three terms appear throughout the selection and rendering code. They are closely related but distinct.
+
+**Bounding box** -- a rectangle that encloses a shape. The generic term; the variants below are specific kinds.
+
+**AABB (axis-aligned bounding box)** -- the smallest upright rectangle (sides parallel to the screen x and y axes) that fully encloses a shape. Computed from the min/max x and y of a shape's transformed points or box corners. Used in `SelectionMath` for marquee intersection tests (`marqueeHit`) and for computing the initial selection bounds (`selectionBounds`). Because it is always upright, a rotated item's AABB is larger than the item itself -- it is the upright rectangle that wraps the item's tilted outline.
+
+**Oriented box (`OrientedBox`)** -- a rectangle that can be rotated to hug a tilted item. Defined in `Sources/Core/Selection/OrientedBox.swift`. Used for the selection chrome (the dashed border and resize/rotate handles drawn around a selected item) and for hit-testing a rotated item. Unlike an AABB, an oriented box shares the item's rotation, so it wraps the item tightly even when the item is at an angle. The same oriented box that drives hit-testing drives the rendered chrome, keeping the two consistent.
+
+The upright-vs-tilted distinction matters in practice: hit-testing a rotated stroke against its AABB produces false positives in the corners that fall outside the actual stroke. `SelectionMath` avoids this by transforming candidate points into the item's local space before testing, which is equivalent to testing against the oriented box.
+
 ## Dev HTTP surface
 
 `DevHTTPSurface` is a port living in `Sources/DevHTTP/` (no Network deps; just a protocol). `FitiDevHTTPSurface` in `Sources/App/` adapts it onto `AppController`. `DevHTTPServer` is an `NWListener`-backed HTTP/1.1 server that parses requests on its own queue and hops to `MainActor` before invoking the surface — every surface method touches `AppController` / `Editor`, which are `@MainActor`-isolated. The whole DevHTTP path is compiled out of Release builds (`#if DEBUG`), so the shipped binary never links Network or opens a port.
