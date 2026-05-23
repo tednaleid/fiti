@@ -75,14 +75,25 @@ public func drawText(_ text: TextItem, in ctx: CGContext) {
             alpha: CGFloat(text.color.a)
         )
     ]
+    // CanvasView is isFlipped and the bake context applies its own y-flip, so the
+    // local drawing space has y increasing downward. CoreText ignores the context
+    // flip and would render glyphs mirrored vertically, so apply the corrective
+    // text matrix to draw glyphs upright.
+    ctx.textMatrix = CGAffineTransform(scaleX: 1, y: -1)
+
     let lineHeight = CGFloat(text.fontSize) * 1.2
+    let ascent = font.ascender
     let lines = text.string.components(separatedBy: "\n")
     for (index, line) in lines.enumerated() {
         let attrStr = NSAttributedString(string: line, attributes: attrs)
-        let line2 = CTLineCreateWithAttributedString(attrStr)
-        let yOffset = CGFloat(index) * lineHeight
+        let ctLine = CTLineCreateWithAttributedString(attrStr)
+        // y is downward in this space: line 0 sits at the top of the local box
+        // (0,0)-(bounds.w, lines*lineHeight) and subsequent lines descend. With the
+        // flipped text matrix the glyph rises from its baseline, so place the baseline
+        // at the line's top plus the font ascent.
+        let yOffset = CGFloat(index) * lineHeight + ascent
         ctx.textPosition = CGPoint(x: 0, y: yOffset)
-        CTLineDraw(line2, ctx)
+        CTLineDraw(ctLine, ctx)
     }
     ctx.restoreGState()
 }
