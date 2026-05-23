@@ -14,7 +14,8 @@ struct OnModeChangedTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: VirtualClock(),
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: FakeTextMeasurer()
         )
         return (controller, window)
     }

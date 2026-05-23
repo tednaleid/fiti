@@ -21,7 +21,8 @@ struct FitiDevHTTPSurfaceTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: VirtualClock(),
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
         )
         let bridge = FitiDevHTTPSurface(controller: controller,
                                         canvasSize: { Size(width: 100, height: 100) })

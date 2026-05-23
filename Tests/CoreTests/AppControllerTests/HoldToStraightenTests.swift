@@ -33,7 +33,8 @@ struct HoldToStraightenTests {
             window: window,
             detector: detector,
             clock: VirtualClock(),
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: FakeTextMeasurer()
         )
         return (controller, detector)
     }

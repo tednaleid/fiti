@@ -15,7 +15,8 @@ struct SelectionGestureTests {
             window: RecordingWindow(),
             detector: RecordingStationaryDetector(),
             clock: clock,
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: FakeTextMeasurer()
         )
         // Draw two strokes at known locations so hit-tests are deterministic.
         controller.activate()

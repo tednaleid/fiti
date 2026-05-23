@@ -17,7 +17,8 @@ struct KeyMonitorTests {
             window: RecordingWindow(),
             detector: RecordingStationaryDetector(),
             clock: clock,
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
         )
         let monitor = KeyMonitor(controller: controller)
         return (monitor, controller, editor)

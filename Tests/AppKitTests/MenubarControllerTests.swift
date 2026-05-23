@@ -17,7 +17,8 @@ struct MenubarControllerTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: VirtualClock(),
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
         )
         let menubar = MenubarController(
             controller: controller,
@@ -194,7 +195,8 @@ struct MenubarControllerDrawingSubmenuTests {
             window: RecordingWindow(),
             detector: RecordingStationaryDetector(),
             clock: clock,
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
         )
         let mb = MenubarController(controller: controller, editor: editor, onOpenPreferences: {})
         return (mb, controller, editor)

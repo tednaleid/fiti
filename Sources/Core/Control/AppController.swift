@@ -4,7 +4,7 @@
 import Foundation
 
 @MainActor
-public final class AppController {
+public final class AppController { // swiftlint:disable:this type_body_length
     public enum Mode: Equatable, Sendable {
         case inactive
         case activeIdle
@@ -161,18 +161,32 @@ public final class AppController {
     public var onCursorChanged: ((CursorSpec?) -> Void)?
     var lastEmittedCursor: CursorSpec?
 
+    let textMeasurer: TextMeasuring
+
+    public var onTextSessionChanged: ((TextEditSession?) -> Void)?
+
+    public var textSession: TextEditSession? {
+        didSet {
+            if oldValue != textSession { onTextSessionChanged?(textSession) }
+        }
+    }
+
+    public var isEditingText: Bool { textSession != nil }
+
     public init(
         editor: Editor,
         window: WindowControl,
         detector: StationaryDetector,
         clock: Clock,
-        ticker: FadeTicker
+        ticker: FadeTicker,
+        textMeasurer: TextMeasuring
     ) {
         self.editor = editor
         self.window = window
         self.detector = detector
         self.clock = clock
         self.ticker = ticker
+        self.textMeasurer = textMeasurer
         detector.onStationary = { [weak self] in self?.handleStationary() }
         ticker.onTick = { [weak self] now in self?.handleTick(now) }
     }
@@ -215,7 +229,7 @@ public final class AppController {
         case .selection:
             selectionPointerDown(point, modifiers: modifiers)
         case .text:
-            break
+            textPointerDown(point)
         }
     }
 

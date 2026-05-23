@@ -16,7 +16,8 @@ struct RunCommandTests {
             window: RecordingWindow(),
             detector: RecordingStationaryDetector(),
             clock: clock,
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: FakeTextMeasurer()
         )
         return (controller, editor, clock)
     }

@@ -17,7 +17,8 @@ struct ToolbarControllerTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: VirtualClock(),
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
         )
         let toolbar = ToolbarController(controller: controller,
                                         defaults: UserDefaults(suiteName: UUID().uuidString)!)
@@ -99,7 +100,8 @@ struct ToolbarControllerTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: VirtualClock(),
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
         )
         _ = ToolbarController(controller: controller, defaults: suite)
         #expect(controller.currentColor == RGBA(r: 0.1, g: 0.2, b: 0.3, a: 0.4))
@@ -116,7 +118,8 @@ struct ToolbarControllerTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: VirtualClock(),
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
         )
         let toolbar = ToolbarController(controller: controller, defaults: suite)
         toolbar.testOnly_setWidth(9)
@@ -165,7 +168,8 @@ struct ToolbarControllerAutoFadeTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: clock,
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
         )
         let toolbar = ToolbarController(controller: controller, defaults: defaults)
         return (toolbar, controller, clock)
@@ -231,7 +235,8 @@ struct ToolbarControllerTooltipTests {
             window: RecordingWindow(),
             detector: RecordingStationaryDetector(),
             clock: clock,
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
         )
         let toolbar = ToolbarController(controller: controller,
                                         defaults: UserDefaults(suiteName: UUID().uuidString)!)
@@ -305,7 +310,8 @@ struct ToolbarControllerActiveStateTests {
             window: RecordingWindow(),
             detector: RecordingStationaryDetector(),
             clock: clock,
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
         )
         let toolbar = ToolbarController(controller: controller,
                                         defaults: UserDefaults(suiteName: UUID().uuidString)!)

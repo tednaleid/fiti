@@ -50,7 +50,8 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
             window: window,
             detector: TaskStationaryDetector(),
             clock: clock,
-            ticker: ticker
+            ticker: ticker,
+            textMeasurer: CoreTextMeasurer()
         )
         preferences = PreferencesController(launchAtLogin: SMAppServiceLaunchAtLogin())
         menubar = MenubarController(

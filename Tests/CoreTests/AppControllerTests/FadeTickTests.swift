@@ -17,7 +17,8 @@ struct FadeTickTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: clock,
-            ticker: ticker
+            ticker: ticker,
+            textMeasurer: FakeTextMeasurer()
         )
         return (controller, clock, ticker, editor)
     }

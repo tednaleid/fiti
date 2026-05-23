@@ -18,7 +18,8 @@ struct FadeStateTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: clock,
-            ticker: ticker
+            ticker: ticker,
+            textMeasurer: FakeTextMeasurer()
         )
         let rec = OpacityRecorder()
         controller.onFadeOpacityChanged = { rec.opacities.append($0) }

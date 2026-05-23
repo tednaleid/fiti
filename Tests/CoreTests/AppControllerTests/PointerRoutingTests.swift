@@ -14,7 +14,8 @@ struct PointerRoutingTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: VirtualClock(),
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: FakeTextMeasurer()
         )
     }
 

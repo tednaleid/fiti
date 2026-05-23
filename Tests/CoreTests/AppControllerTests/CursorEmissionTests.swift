@@ -20,7 +20,8 @@ struct CursorEmissionTests {
             window: window,
             detector: RecordingStationaryDetector(),
             clock: VirtualClock(),
-            ticker: RecordingFadeTicker()
+            ticker: RecordingFadeTicker(),
+            textMeasurer: FakeTextMeasurer()
         )
         let rec = Recorder()
         controller.onCursorChanged = { rec.emissions.append($0) }

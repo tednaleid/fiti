@@ -157,6 +157,8 @@ public final class Editor {
         return true
     }
 
+    public func newItemId() -> ItemId { ids.newStrokeId() }
+
     // MARK: - Undo / redo
 
     @discardableResult

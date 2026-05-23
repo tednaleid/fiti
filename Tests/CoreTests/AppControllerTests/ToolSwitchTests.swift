@@ -9,7 +9,8 @@ struct ToolSwitchTests {
     private func controller() -> AppController {
         let c = AppController(editor: Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "i")),
                               window: RecordingWindow(), detector: RecordingStationaryDetector(),
-                              clock: VirtualClock(), ticker: RecordingFadeTicker())
+                              clock: VirtualClock(), ticker: RecordingFadeTicker(),
+                              textMeasurer: FakeTextMeasurer())
         c.activate(); return c
     }
 

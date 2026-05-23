@@ -11,7 +11,7 @@ struct SelectionBoxHoverTests {
         let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
         let c = AppController(editor: editor, window: RecordingWindow(),
                               detector: RecordingStationaryDetector(), clock: clock,
-                              ticker: RecordingFadeTicker())
+                              ticker: RecordingFadeTicker(), textMeasurer: FakeTextMeasurer())
         c.activate()
         c.pointerDown(StrokePoint(x: 10, y: 10)); c.pointerMoved(StrokePoint(x: 30, y: 20)); c.pointerUp()
         c.currentTool = .selection
