@@ -42,4 +42,23 @@ public enum CanvasItem: Equatable, Codable, Sendable {
             }
         }
     }
+
+    /// Returns a copy with `color` replaced. Used when style shortcuts retarget
+    /// the selection (see AppController.run).
+    public func withColor(_ newColor: RGBA) -> CanvasItem {
+        switch self {
+        case .stroke(var s): s.color = newColor; return .stroke(s)
+        case .text(var t): t.color = newColor; return .text(t)
+        }
+    }
+
+    /// Returns a copy with `color`'s RGB replaced but the item's own alpha kept.
+    public func withColorPreservingAlpha(r: Double, g: Double, b: Double) -> CanvasItem {
+        withColor(RGBA(r: r, g: g, b: b, a: color.a))
+    }
+
+    /// Returns a copy with `color`'s alpha replaced.
+    public func withAlpha(_ newAlpha: Double) -> CanvasItem {
+        withColor(color.with(a: newAlpha))
+    }
 }

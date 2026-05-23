@@ -35,4 +35,25 @@ struct EditorItemOpsTests {
         if case .text(let t)? = e.doc.items["t1"] { #expect(t.string == "hi") } else { Issue.record("missing") }
         #expect(e.doc.itemOrder == ["t1"])  // order preserved
     }
+
+    @Test("replaceItems swaps many in one undo step; undo restores all priors")
+    func replaceItemsUndo() {
+        let e = makeEditor()
+        e.addItem(text("t1", "a"))
+        e.addItem(text("t2", "b"))
+        e.replaceItems([text("t1", "A"), text("t2", "B")])
+        if case .text(let t)? = e.doc.items["t1"] { #expect(t.string == "A") } else { Issue.record("missing") }
+        if case .text(let t)? = e.doc.items["t2"] { #expect(t.string == "B") } else { Issue.record("missing") }
+        e.undo()  // a single step restores both
+        if case .text(let t)? = e.doc.items["t1"] { #expect(t.string == "a") } else { Issue.record("missing") }
+        if case .text(let t)? = e.doc.items["t2"] { #expect(t.string == "b") } else { Issue.record("missing") }
+    }
+
+    @Test("replaceItems skips unknown ids and returns false when none match")
+    func replaceItemsUnknown() {
+        let e = makeEditor()
+        e.addItem(text("t1", "a"))
+        #expect(e.replaceItems([text("ghost", "x")]) == false)
+        #expect(e.doc.items["ghost"] == nil)
+    }
 }

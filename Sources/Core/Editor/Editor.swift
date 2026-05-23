@@ -150,9 +150,19 @@ public final class Editor {
 
     @discardableResult
     public func replaceItem(_ item: CanvasItem) -> Bool {
-        guard let prior = doc.items[item.id] else { return false }
-        doc.items[item.id] = item
-        pushUndo(.replaceItems(entries: [prior]))
+        replaceItems([item])
+    }
+
+    /// Replaces several existing items in one undoable step. Unknown ids are
+    /// skipped; returns false when none of the ids are present.
+    @discardableResult
+    public func replaceItems(_ items: [CanvasItem]) -> Bool {
+        let priors: [CanvasItem] = items.compactMap { doc.items[$0.id] }
+        guard !priors.isEmpty else { return false }
+        for item in items where doc.items[item.id] != nil {
+            doc.items[item.id] = item
+        }
+        pushUndo(.replaceItems(entries: priors))
         emit(.local)
         return true
     }

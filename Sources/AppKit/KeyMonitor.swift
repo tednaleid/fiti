@@ -8,6 +8,8 @@ import AppKit
 public final class KeyMonitor {
     private let controller: AppController
     private var monitor: Any?
+    // The tool Space-to-select switched away from, restored on Space keyUp.
+    private var toolBeforeSpace: Tool?
     // Separate storage so the nonisolated deinit can remove the monitor without
     // crossing an actor boundary. NSEvent.removeMonitor(_:) is thread-safe.
     nonisolated(unsafe) private var monitorForDeinit: Any?
@@ -79,20 +81,26 @@ public final class KeyMonitor {
         return nil
     }
 
-    /// Handles Space press-and-hold: keyDown → selection tool (from pen), keyUp → pen.
-    /// Guards ensure Space in other tool modes is a no-op rather than a forced switch.
+    /// Handles Space press-and-hold: keyDown → selection tool, keyUp → the tool
+    /// we came from. Works from both pen and text (text only reaches here when no
+    /// edit session is open — an open session swallows Space as a literal space
+    /// in handleTextKey). Restoring the prior tool means Space-from-text returns
+    /// to text, not pen, and a held Space can't leak a space into a freshly
+    /// clicked text session.
     private func handleSpace(_ event: NSEvent) -> NSEvent? {
         if event.type == .keyDown {
             if event.isARepeat { return nil }
-            if controller.currentTool == .pen {
+            if controller.currentTool != .selection {
+                toolBeforeSpace = controller.currentTool
                 controller.currentTool = .selection
             }
             return nil
         }
         if event.type == .keyUp {
-            if controller.currentTool == .selection {
-                controller.currentTool = .pen
+            if controller.currentTool == .selection, let prior = toolBeforeSpace {
+                controller.currentTool = prior
             }
+            toolBeforeSpace = nil
             return nil
         }
         return event

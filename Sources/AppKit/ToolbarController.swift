@@ -10,6 +10,8 @@ public final class ToolbarController: NSObject {
     private let defaults: UserDefaults
     internal let panel: ToolbarPanel
 
+    private let penButton = NSButton(title: "", target: nil, action: nil)
+    private let textButton = NSButton(title: "", target: nil, action: nil)
     private let colorWell: NSColorWell
     private let widthSlider: NSSlider
     private let opacitySlider: NSSlider
@@ -48,6 +50,9 @@ public final class ToolbarController: NSObject {
         controller.onAutoFadeEnabledChanged = { [weak self] enabled in
             self?.updateAutoFadeGlyph(enabled: enabled)
         }
+        controller.onCurrentToolChanged = { [weak self] _ in
+            self?.updateToolHighlights()
+        }
     }
 
     public func updateVisibility(for mode: AppController.Mode) {
@@ -73,13 +78,16 @@ public final class ToolbarController: NSObject {
         stack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        let pen = NSButton(title: "", target: nil, action: nil)
-        pen.image = NSImage(systemSymbolName: "pencil.tip", accessibilityDescription: "Pen")
-        pen.imagePosition = .imageOnly
-        pen.bezelStyle = .regularSquare
-        pen.state = .on
-        pen.isEnabled = false
-        stack.addArrangedSubview(pen)
+        let toolRow = NSStackView()
+        toolRow.orientation = .horizontal
+        toolRow.spacing = 4
+        configureToolButton(penButton, symbol: "pencil.tip", accessibility: "Pen",
+                            tooltip: "Pen — p", action: #selector(penClicked(_:)))
+        configureToolButton(textButton, symbol: "textformat", accessibility: "Text",
+                            tooltip: "Text — t", action: #selector(textClicked(_:)))
+        toolRow.addArrangedSubview(penButton)
+        toolRow.addArrangedSubview(textButton)
+        stack.addArrangedSubview(toolRow)
 
         for rowStart in stride(from: 0, to: QuickPickPalette.colors.count, by: 2) {
             let row = NSStackView()
@@ -150,6 +158,7 @@ public final class ToolbarController: NSObject {
         ])
         panel.contentView = container
         updateSwatchHighlights()
+        updateToolHighlights()
     }
 
     /// Refresh the "active" highlight on the swatch matching `controller.currentColor`.
@@ -168,6 +177,23 @@ public final class ToolbarController: NSObject {
         QuickPickPalette.colors.firstIndex { c in
             abs(c.r - color.r) < 0.001 && abs(c.g - color.g) < 0.001 && abs(c.b - color.b) < 0.001
         }
+    }
+
+    private func configureToolButton(_ button: NSButton, symbol: String, accessibility: String,
+                                     tooltip: String, action: Selector) {
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: accessibility)
+        button.imagePosition = .imageOnly
+        button.bezelStyle = .regularSquare
+        button.target = self
+        button.action = action
+        button.toolTip = tooltip
+    }
+
+    /// Highlights whichever tool button matches `controller.currentTool`. While
+    /// Space-to-select is held, currentTool is .selection and neither lights up.
+    private func updateToolHighlights() {
+        setActiveBackground(penButton, active: controller.currentTool == .pen)
+        setActiveBackground(textButton, active: controller.currentTool == .text)
     }
 
     private func setActiveBackground(_ button: NSButton, active: Bool) {
@@ -231,6 +257,14 @@ public final class ToolbarController: NSObject {
     }
 
     // MARK: - Actions
+
+    @objc private func penClicked(_ sender: NSButton) {
+        controller.currentTool = .pen
+    }
+
+    @objc private func textClicked(_ sender: NSButton) {
+        controller.currentTool = .text
+    }
 
     @objc private func colorClicked(_ sender: NSButton) {
         let c = QuickPickPalette.colors[sender.tag]
@@ -317,6 +351,14 @@ public final class ToolbarController: NSObject {
         toggleHide(hideButton)
     }
 
+    internal func testOnly_clickPen() {
+        penClicked(penButton)
+    }
+
+    internal func testOnly_clickText() {
+        textClicked(textButton)
+    }
+
     internal func testOnly_clickAutoFade() {
         autoFadeClicked(autoFadeButton)
     }
@@ -334,6 +376,16 @@ public final class ToolbarController: NSObject {
     internal var testOnly_widthLabelText: String { widthLabel.stringValue }
     internal var testOnly_opacityLabelText: String { opacityLabel.stringValue }
     internal var testOnly_activeSwatchIndex: Int? { activeSwatchIndex }
+    internal var testOnly_penTooltip: String? { penButton.toolTip }
+    internal var testOnly_textTooltip: String? { textButton.toolTip }
+    internal var testOnly_penActiveBackground: Bool {
+        guard let cg = penButton.layer?.backgroundColor else { return false }
+        return cg.alpha > 0
+    }
+    internal var testOnly_textActiveBackground: Bool {
+        guard let cg = textButton.layer?.backgroundColor else { return false }
+        return cg.alpha > 0
+    }
     internal var testOnly_hideButtonActiveBackground: Bool {
         guard let cg = hideButton.layer?.backgroundColor else { return false }
         return cg.alpha > 0
@@ -346,30 +398,3 @@ public final class ToolbarController: NSObject {
 }
 
 internal enum TestOnlyError: Error { case outOfRange }
-
-/// Container for the toolbar's content view that claims the arrow cursor.
-/// Without this, the canvas window's lingering `NSCursor.set()` for the fiti
-/// circle cursor stays visible while the mouse is over the toolbar — the
-/// canvas tracking area doesn't fire `mouseExited` for a different window
-/// covering the same screen area, so it never gets a chance to revert.
-@MainActor
-private final class ToolbarContainerView: NSView {
-    private var trackingArea: NSTrackingArea?
-
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let existing = trackingArea { removeTrackingArea(existing) }
-        let area = NSTrackingArea(
-            rect: bounds,
-            options: [.activeAlways, .cursorUpdate, .inVisibleRect],
-            owner: self,
-            userInfo: nil
-        )
-        addTrackingArea(area)
-        trackingArea = area
-    }
-
-    override func cursorUpdate(with event: NSEvent) {
-        NSCursor.arrow.set()
-    }
-}

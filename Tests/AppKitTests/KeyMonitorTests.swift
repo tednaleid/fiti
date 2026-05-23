@@ -175,4 +175,26 @@ struct KeyMonitorTests {
         _ = monitor.handle(keyEvent(" ", isARepeat: true))
         #expect(fireCount == 1)
     }
+
+    @Test("Space from the text tool (no open session) enters selection and restores text on release")
+    func spaceFromTextToolRoundTrips() {
+        let (monitor, controller, _) = make()
+        controller.currentTool = .text
+        _ = monitor.handle(keyEvent(" "))
+        #expect(controller.currentTool == .selection)
+        _ = monitor.handle(keyUpEvent(" "))
+        #expect(controller.currentTool == .text)  // restored to text, not forced to pen
+    }
+
+    @Test("Space while a text session is open inserts a literal space and keeps the tool")
+    func spaceWhileEditingInsertsSpace() {
+        let (monitor, controller, _) = make()
+        controller.activate()
+        controller.currentTool = .text
+        controller.pointerDown(StrokePoint(x: 10, y: 10))  // opens an edit session
+        #expect(controller.isEditingText)
+        _ = monitor.handle(keyEvent(" "))
+        #expect(controller.currentTool == .text)            // not switched to selection
+        #expect(controller.textSession?.string == " ")      // space typed into the text
+    }
 }
