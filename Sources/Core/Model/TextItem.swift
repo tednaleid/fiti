@@ -10,6 +10,7 @@ public struct TextItem: Equatable, Codable, Sendable {
     public var fontSize: Double
     public var color: RGBA
     public var transform: Transform
+    // Frozen at commit by TextMeasuring (B4); see docs/architecture.md "Text geometry".
     public var bounds: Size            // local-space layout size, frozen at commit
     public let createdAt: Double
 
