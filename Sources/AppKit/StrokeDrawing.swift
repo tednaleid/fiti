@@ -13,33 +13,20 @@ public func drawStroke(_ stroke: Stroke, in ctx: CGContext, isInProgress: Bool) 
     let polygon = getStroke(points: stroke.points.perfectFreehandInputs, options: opts)
     guard polygon.count >= 3 else { return }
 
-    ctx.saveGState()
-    let t = stroke.transform
-    if t != .identity {
-        if t.x != 0 || t.y != 0 {
-            ctx.translateBy(x: CGFloat(t.x), y: CGFloat(t.y))
+    withItemTransform(stroke.transform, in: ctx) {
+        ctx.setFillColor(red: CGFloat(stroke.color.r),
+                         green: CGFloat(stroke.color.g),
+                         blue: CGFloat(stroke.color.b),
+                         alpha: CGFloat(stroke.color.a))
+        let path = CGMutablePath()
+        path.move(to: CGPoint(x: polygon[0].x, y: polygon[0].y))
+        for v in polygon.dropFirst() {
+            path.addLine(to: CGPoint(x: v.x, y: v.y))
         }
-        if t.rotate != 0 {
-            ctx.rotate(by: CGFloat(t.rotate * .pi / 180.0))
-        }
-        if t.scale != 1 {
-            ctx.scaleBy(x: CGFloat(t.scale), y: CGFloat(t.scale))
-        }
+        path.closeSubpath()
+        ctx.addPath(path)
+        ctx.fillPath()
     }
-
-    ctx.setFillColor(red: CGFloat(stroke.color.r),
-                     green: CGFloat(stroke.color.g),
-                     blue: CGFloat(stroke.color.b),
-                     alpha: CGFloat(stroke.color.a))
-    let path = CGMutablePath()
-    path.move(to: CGPoint(x: polygon[0].x, y: polygon[0].y))
-    for v in polygon.dropFirst() {
-        path.addLine(to: CGPoint(x: v.x, y: v.y))
-    }
-    path.closeSubpath()
-    ctx.addPath(path)
-    ctx.fillPath()
-    ctx.restoreGState()
 }
 
 public func drawItem(_ item: CanvasItem, in ctx: CGContext, isInProgress: Bool) {
@@ -50,29 +37,27 @@ public func drawItem(_ item: CanvasItem, in ctx: CGContext, isInProgress: Bool) 
 }
 
 public func drawText(_ text: TextItem, in ctx: CGContext) {
-    ctx.saveGState()
-    let t = text.transform
-    if t != .identity {
-        if t.x != 0 || t.y != 0 {
-            ctx.translateBy(x: CGFloat(t.x), y: CGFloat(t.y))
-        }
-        if t.rotate != 0 {
-            ctx.rotate(by: CGFloat(t.rotate * .pi / 180.0))
-        }
-        if t.scale != 1 {
-            ctx.scaleBy(x: CGFloat(t.scale), y: CGFloat(t.scale))
-        }
+    withItemTransform(text.transform, in: ctx) {
+        drawTextString(text.string, fontName: text.fontName, fontSize: text.fontSize,
+                       color: text.color, in: ctx)
     }
+}
 
-    let font = NSFont(name: text.fontName, size: CGFloat(text.fontSize))
-        ?? NSFont.systemFont(ofSize: CGFloat(text.fontSize))
+/// Draws a (possibly multi-line) string at the local origin in the current CTM.
+/// Shared by `drawText` (committed items) and `drawLiveText` (the in-progress
+/// edit session) so the glyph stacking and line height stay identical. The caller
+/// is responsible for applying the item transform around this call.
+func drawTextString(_ string: String, fontName: String, fontSize: Double,
+                    color: RGBA, in ctx: CGContext) {
+    let font = NSFont(name: fontName, size: CGFloat(fontSize))
+        ?? NSFont.systemFont(ofSize: CGFloat(fontSize))
     let attrs: [NSAttributedString.Key: Any] = [
         .font: font,
         .foregroundColor: NSColor(
-            calibratedRed: CGFloat(text.color.r),
-            green: CGFloat(text.color.g),
-            blue: CGFloat(text.color.b),
-            alpha: CGFloat(text.color.a)
+            calibratedRed: CGFloat(color.r),
+            green: CGFloat(color.g),
+            blue: CGFloat(color.b),
+            alpha: CGFloat(color.a)
         )
     ]
     // CanvasView is isFlipped and the bake context applies its own y-flip, so the
@@ -81,9 +66,9 @@ public func drawText(_ text: TextItem, in ctx: CGContext) {
     // text matrix to draw glyphs upright.
     ctx.textMatrix = CGAffineTransform(scaleX: 1, y: -1)
 
-    let lineHeight = CGFloat(text.fontSize) * 1.2
+    let lh = lineHeight(for: font)
     let ascent = font.ascender
-    let lines = text.string.components(separatedBy: "\n")
+    let lines = string.components(separatedBy: "\n")
     for (index, line) in lines.enumerated() {
         let attrStr = NSAttributedString(string: line, attributes: attrs)
         let ctLine = CTLineCreateWithAttributedString(attrStr)
@@ -91,9 +76,8 @@ public func drawText(_ text: TextItem, in ctx: CGContext) {
         // (0,0)-(bounds.w, lines*lineHeight) and subsequent lines descend. With the
         // flipped text matrix the glyph rises from its baseline, so place the baseline
         // at the line's top plus the font ascent.
-        let yOffset = CGFloat(index) * lineHeight + ascent
+        let yOffset = CGFloat(index) * lh + ascent
         ctx.textPosition = CGPoint(x: 0, y: yOffset)
         CTLineDraw(ctLine, ctx)
     }
-    ctx.restoreGState()
 }

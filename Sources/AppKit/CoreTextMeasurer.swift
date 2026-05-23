@@ -9,17 +9,17 @@ public struct CoreTextMeasurer: TextMeasuring {
 
     public func measure(string: String, fontName: String, fontSize: Double) -> Size {
         let font = NSFont(name: fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
-        let lineHeight = lineHeight(for: font)
+        let lh = Double(lineHeight(for: font))
         let lines = string.components(separatedBy: "\n")
         let maxWidth = lines.map { lineWidth(for: $0, font: font) }.max() ?? 0
-        let totalHeight = Double(lines.count) * lineHeight
+        let totalHeight = Double(lines.count) * lh
         return Size(width: max(maxWidth, 1), height: max(totalHeight, 1))
     }
 
     public func caretIndex(at localPoint: Point, string: String,
                            fontName: String, fontSize: Double) -> Int {
         let font = NSFont(name: fontName, size: fontSize) ?? NSFont.systemFont(ofSize: fontSize)
-        let lh = lineHeight(for: font)
+        let lh = Double(lineHeight(for: font))
         let lines = string.components(separatedBy: "\n")
         let lineIndex = max(0, min(Int(localPoint.y / lh), lines.count - 1))
 
@@ -35,10 +35,6 @@ public struct CoreTextMeasurer: TextMeasuring {
     }
 
     // MARK: - Helpers
-
-    private func lineHeight(for font: NSFont) -> Double {
-        Double(font.ascender - font.descender + font.leading)
-    }
 
     private func lineWidth(for string: String, font: NSFont) -> Double {
         let line = buildCTLine(for: string, font: font)

@@ -205,25 +205,17 @@ public final class CanvasView: NSView, Renderer {
     }
 
     private func drawLiveText(_ session: TextSessionSnapshot, in ctx: CGContext) {
-        // Synthesize a TextItem so we can delegate to drawText for the string.
-        let item = TextItem(
-            id: ItemId(),
-            string: session.string,
-            fontName: session.fontName,
-            fontSize: session.fontSize,
-            color: session.color,
-            transform: session.transform,
-            bounds: Size(width: 0, height: 0),
-            createdAt: 0
-        )
-        drawText(item, in: ctx)
+        withItemTransform(session.transform, in: ctx) {
+            drawTextString(session.string, fontName: session.fontName,
+                           fontSize: session.fontSize, color: session.color, in: ctx)
+        }
         drawLiveCaret(session, in: ctx)
     }
 
     private func drawLiveCaret(_ session: TextSessionSnapshot, in ctx: CGContext) {
         let font = NSFont(name: session.fontName, size: CGFloat(session.fontSize))
             ?? NSFont.systemFont(ofSize: CGFloat(session.fontSize))
-        let lineHeight = CGFloat(session.fontSize) * 1.2
+        let lh = lineHeight(for: font)
 
         // Find which line the caret is on and the column within that line.
         let lines = session.string.components(separatedBy: "\n")
@@ -250,29 +242,16 @@ public final class CanvasView: NSView, Renderer {
         let ctLine = CTLineCreateWithAttributedString(attributed)
         let caretX = CTLineGetTypographicBounds(ctLine, nil, nil, nil)
 
-        // y offset: line index * lineHeight (top of line), plus ascender matches drawText baseline.
-        let caretY = CGFloat(caretLine) * lineHeight
+        // y offset: line index * lineHeight (top of the line cell). The caret bar
+        // spans the full line height down from there, matching drawText's stacking.
+        let caretY = CGFloat(caretLine) * lh
 
-        // Apply the session's transform before drawing the caret.
-        let t = session.transform
-        ctx.saveGState()
-        if t != .identity {
-            if t.x != 0 || t.y != 0 {
-                ctx.translateBy(x: CGFloat(t.x), y: CGFloat(t.y))
-            }
-            if t.rotate != 0 {
-                ctx.rotate(by: CGFloat(t.rotate * .pi / 180.0))
-            }
-            if t.scale != 1 {
-                ctx.scaleBy(x: CGFloat(t.scale), y: CGFloat(t.scale))
-            }
+        withItemTransform(session.transform, in: ctx) {
+            // Draw a 1.5pt wide vertical caret rule spanning the full line height.
+            ctx.setFillColor(NSColor.controlAccentColor.cgColor)
+            let caretRect = CGRect(x: CGFloat(caretX), y: caretY, width: 1.5, height: lh)
+            ctx.fill(caretRect)
         }
-
-        // Draw a 1.5pt wide vertical caret rule spanning the full line height.
-        ctx.setFillColor(NSColor.controlAccentColor.cgColor)
-        let caretRect = CGRect(x: CGFloat(caretX), y: caretY, width: 1.5, height: lineHeight)
-        ctx.fill(caretRect)
-        ctx.restoreGState()
     }
 
     private func bakeCommitted(_ frame: RenderFrame, exclude: ItemId?) -> CGImage? {
