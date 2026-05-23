@@ -53,24 +53,25 @@ extension AppController {
 
     public func commitText() {
         guard let s = textSession else { return }
-        textSession = nil
-        let trimmed = s.string
-        let measured = textMeasurer.measure(string: trimmed, fontName: s.fontName, fontSize: s.fontSize)
+        let text = s.string
+        let measured = textMeasurer.measure(string: text, fontName: s.fontName, fontSize: s.fontSize)
         if let id = s.itemId {
-            if trimmed.isEmpty { _ = editor.eraseItems(ids: [id]) } else {
-                let item = TextItem(id: id, string: trimmed, fontName: s.fontName, fontSize: s.fontSize,
+            if text.isEmpty { _ = editor.eraseItems(ids: [id]) } else {
+                let item = TextItem(id: id, string: text, fontName: s.fontName, fontSize: s.fontSize,
                                     color: s.color, transform: s.transform, bounds: measured,
                                     createdAt: clock.now())
                 _ = editor.replaceItem(.text(item))
             }
-        } else if !trimmed.isEmpty {
+        } else if !text.isEmpty {
             let id = editor.newItemId()
-            let item = TextItem(id: id, string: trimmed, fontName: s.fontName, fontSize: s.fontSize,
+            let item = TextItem(id: id, string: text, fontName: s.fontName, fontSize: s.fontSize,
                                 color: s.color, transform: s.transform, bounds: measured,
                                 createdAt: clock.now())
             editor.addItem(.text(item))
         }
-        onTextSessionChanged?(nil)
+        // Clear the session last: its didSet fires onTextSessionChanged?(nil) as the
+        // sole notification, by which point the committed item is already in the doc.
+        textSession = nil
         refreshCursor()
     }
 }
