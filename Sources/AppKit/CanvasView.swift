@@ -296,9 +296,9 @@ public final class CanvasView: NSView, Renderer {
         ctx.scaleBy(x: backingScale, y: backingScale)
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
-        for item in frame.items where item.id != exclude {
-            drawItem(item, in: ctx, isInProgress: false)
-        }
+        let baked = frame.items.filter { $0.id != exclude }
+        let groups = LayerPlan.compute(items: baked, aabb: { SelectionMath.worldAABB(of: $0) })
+        compositeGroups(groups, in: ctx)
         return ctx.makeImage()
     }
 }
