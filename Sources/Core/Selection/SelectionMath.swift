@@ -186,7 +186,7 @@ public enum SelectionMath {
     }
 
     /// World-space AABB of an item's geometry.
-    private static func worldAABB(of item: CanvasItem) -> Rect? {
+    public static func worldAABB(of item: CanvasItem) -> Rect? {
         switch item {
         case .stroke(let s):
             return strokeAABB(s)
