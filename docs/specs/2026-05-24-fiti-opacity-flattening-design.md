@@ -188,3 +188,37 @@ leaves the single-digit-ms range, stop and rethink before continuing.
 - AABB overlap is conservative: boxes that touch but whose shapes do not may add
   an unneeded ordering constraint. Errs toward slightly more darkening, never
   toward wrong z-order.
+
+## Implementation notes
+
+Two refinements were added during implementation:
+
+- Per-group clipping. `GroupCompositor` clips each group's transparency layer to the padded
+  union of its items' world AABBs (padded by the stroke's world-space width so ink is never
+  shaved). CoreGraphics sizes a transparency-layer offscreen to the current clip; without the
+  clip every group paid a full-canvas offscreen and the committed bake hitched ~30 ms with
+  multiple colors. With clipping the bake is ~2 ms.
+- Below/above bake split for live z-order. The in-progress stroke's group is composited in its
+  true z-slot, not simply on top: the static bake is split into the groups below the active
+  group and the groups above it, and the live frame draws below, then the active group (cached
+  union plus the live stroke at the group alpha), then above. This makes cross-color z-order
+  while drawing match the committed result (a different-color mark above the active group stays
+  on top during the drag).
+
+## Alternatives considered: global per-color levels
+
+A simpler model would assign each (color, opacity) one fixed global level, so all red 50%
+always composites at the same level regardless of draw order.
+
+Pros: perfect same-color flatness and full determinism; trivial grouping (one layer per
+distinct color+opacity, no overlap analysis); and it eliminates the cross-hue-conflict
+limitation below entirely (all same-color marks always merge).
+
+Con (why rejected): it replaces draw-order stacking with color-order stacking. A mark drawn
+last over a different color would sink to its color's fixed level instead of appearing on top,
+breaking the "last drawn is on top" expectation that annotation relies on. There is also no
+non-arbitrary way to order colors against each other: a fixed palette order is wrong relative
+to what was drawn, and most-recent-use ordering makes every mark of a color jump z-level at
+once. We kept overlap-aware grouping, which merges same-color marks everywhere except where
+merging would reorder a real overlap, preserving draw-order z-order. The cross-hue-conflict
+darkening (Known limitations) is the residue of that choice.

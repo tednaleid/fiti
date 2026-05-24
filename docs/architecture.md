@@ -169,6 +169,20 @@ sequenceDiagram
 
 **Coordinate gotcha.** The bake `CGContext` is flipped to match `NSView.isFlipped == true` so top-origin input coords draw correctly. The blit (`CGContext.draw(image:in:)`) is **not** `isFlipped`-aware — it lays the image's bottom-left at `rect.origin`. `draw(_:)` saves the GState, applies a local `translate(0, h) + scale(1, -1)` to undo the view flip, blits, and restores. Without this the cache renders upside-down the instant a stroke commits.
 
+### Opacity flattening
+
+Committed items are grouped into flattened layers by `LayerPlan` (Core, pure): marks of the
+same (hue, alpha) merge unless a different key genuinely overlaps between them in draw order,
+which preserves cross-color stacking. `GroupCompositor` (AppKit) flattens each group by drawing
+its items opaque inside a CGContext transparency layer composited at the group's alpha, clipped
+to the group's bounding region so the offscreen is sized to the drawn area rather than the whole
+canvas. The committed bake and the snapshot share this routine. The in-progress pen stroke
+flattens live: its group's committed members are lifted out of the static bake and cached as an
+opaque-union image (rebuilt only when the lifted set changes), and the static bake is split into
+the groups below and above the active group, so the live composite (below image, then the
+group's union plus the live stroke at the group alpha, then above image) reproduces the
+committed z-order while drawing. Auto-fade applies once as a final multiplier.
+
 ## Text geometry (B4)
 
 `TextItem` carries a `bounds: Size` field (local-space layout width and height). This is a derived value -- CoreText could recompute it at any time -- but it is frozen onto the item at commit and travels with the document.

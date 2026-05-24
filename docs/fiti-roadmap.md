@@ -27,6 +27,18 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 - [x] Text tool — `t` places a caret; type to set text in the current color/size (Helvetica, `Shift+Return` for newlines, `Return` commits); click existing text to edit. Text is a first-class `CanvasItem` so it selects/moves/rotates/resizes like strokes. Layout bounds are frozen at commit via the `TextMeasuring` port (see `docs/architecture.md` "Text geometry"). `Sources/Core/Model/{CanvasItem,TextItem}.swift`, `Sources/Core/Control/AppController+TextTool.swift`, `Sources/AppKit/CoreTextMeasurer.swift`.
 - [x] Restyle the selection — with the selection tool and a live selection, the color/size/opacity shortcuts (`1`-`8`, `s` / `Shift+S`, `o` / `Shift+O`) retarget the selected items instead of the drawing defaults (text re-measured via the port), one undo step each. `Sources/Core/Control/AppController+Commands.swift`.
 - [x] App icon — Icon Composer `fiti.icon` wired via `project.yml` (`ASSETCATALOG_COMPILER_APPICON_NAME`). The menubar status item keeps its SF Symbol glyph by design — SF Symbols are fine in the menu bar but not licensed for app icons.
+- [x] Flatten overlapping same-opacity marks. Overlapping marks of the same color and
+  opacity read as one flat region instead of accumulating alpha, live while drawing and
+  identical when committed. Overlap-aware grouping keyed on (hue, alpha) in
+  `Sources/Core/Rendering/LayerPlan.swift` (pure); `Sources/AppKit/GroupCompositor.swift`
+  flattens each group in a transparency layer (items drawn opaque, composited at the group
+  alpha), clipped to the group's region so the committed bake stays ~2 ms. The in-progress
+  stroke flattens live via a cached opaque-union lift, with the static bake split below and
+  above the active group so cross-color z-order matches the committed result while drawing.
+  Always on. Known limit: a same-color stroke that crosses a different color and also overlaps
+  an earlier same-color mark on the far side of that color (in draw order) darkens at that
+  overlap. See `docs/specs/2026-05-24-fiti-opacity-flattening-design.md` for the rejected
+  global-color-level alternative and why draw-order z-order was kept.
 
 ## Open: visibility & interaction
 
@@ -41,12 +53,6 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 - [ ] `e`: eraser tool, when "Eraser as a UI tool" (below) ships. Deliberately absent from `KeyCommandRegistry` today; the registry's tests assert it resolves to `nil` so a binding can't be added silently. (`t`, `p`, and `Space` were reserved here too and have since shipped.)
 
 ## Open: stroke rendering & tools
-
-### Flatten overlapping same-opacity marks
-- [ ] Two 50%-opacity strokes that cross currently darken at the intersection (`1 − 0.5×0.5 = 0.75` coverage) because each is composited source-over with its own alpha. We want the union of same-opacity marks to read as one flat mark, so a `+` drawn at 50% looks uniformly 50% everywhere.
-- [ ] Fix is the "flatten, then composite once" trick (how highlighter layers work): render the union of a group's shapes at full opacity into an offscreen, then blit that offscreen once at the target alpha. Overlap is absorbed into the union.
-- [ ] Grouping: group committed items by exact `RGBA`, flatten each group, composite groups in z-order. Same-color marks merge; different colors still layer naturally. Known v1 edge: two *different* opacities of the same hue overlapping would need a per-pixel `max` blend — out of scope for v1, group by full RGBA.
-- [ ] Pipeline impact: this breaks the current per-item bake cache (`BakeSignatureEntry` per stroke), since a stroke's appearance now depends on its neighbors. Move to a per-color-group offscreen cache, re-baked when any group member changes (fine at annotation-scale stroke counts). Auto-fade global opacity stays a final multiplier over the composited result (and stops double-darkening under fade). Decide: in-progress live stroke probably accepts a transient seam where it crosses committed same-color marks until commit; default-on vs. a toggle (leaning default — the darkening reads as a bug).
 
 ### Perfect-freehand option sliders
 - [ ] v1 ships with `smoothing/thinning/streamline = 0.5` and `simulatePressure: true` hardcoded. Promote one or more to toolbar sliders only if real use reveals the defaults feel wrong (too laggy, too jittery, taper too aggressive). Likely candidates if anything turns out wrong: a single "smoothness" slider scaling `smoothing + streamline` together, then `thinning` if the velocity-taper feels off.

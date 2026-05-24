@@ -59,3 +59,20 @@ more than that artifact, which confirms it.
 Any flattening approach should keep `render.bake` (and any live compositing) in
 the single-digit-millisecond range, like the baseline, and must not scale cost
 with the whole canvas area per item.
+
+## v2: transparency-layer flatten (shipped)
+
+The shipped flattening: `LayerPlan` grouping + `GroupCompositor` (per-group clipped transparency
+layers), with the live cached-union below/above split. Same probe and conditions as the baseline.
+
+| Path | mean | notes |
+|------|------|-------|
+| `render.bake` (4 same-color strokes) | ~0.7 ms | clipped; at/under the source-over baseline |
+| `render.bake` (red/blue/red multi-color) | ~1.9 ms | one clipped transparency layer per color group |
+| `render.split` (grouping) | ~0.04 ms | pure LayerPlan |
+| `draw.liveGroup` (per frame) | ~0.1-0.25 ms | flat in committed-mark count (1 vs 40 identical) |
+
+The committed bake is at or below the 2.6 ms source-over baseline, and the live per-frame path
+is sub-millisecond and does not scale with mark count. Per-group clipping was the key fix: before
+it, each group's transparency layer was sized to the whole canvas, so a multi-color drawing
+hitched ~30 ms on every stroke (start and end).
