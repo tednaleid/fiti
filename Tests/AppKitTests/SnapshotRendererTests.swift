@@ -56,6 +56,28 @@ struct SnapshotRendererTests {
         #expect(offLine.a == 0)
     }
 
+    @Test("two same-color 50% strokes crossing in a + flatten so the intersection is not brighter than the arm")
+    func snapshotPlusIsFlat() throws {
+        let horiz = Stroke(id: "h", color: RGBA(r: 1, g: 0, b: 0, a: 0.5), width: 16,
+                           transform: .identity,
+                           points: [StrokePoint(x: 20, y: 50), StrokePoint(x: 80, y: 50)],
+                           pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        let vert = Stroke(id: "v", color: RGBA(r: 1, g: 0, b: 0, a: 0.5), width: 16,
+                          transform: .identity,
+                          points: [StrokePoint(x: 50, y: 20), StrokePoint(x: 50, y: 80)],
+                          pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        let frame = RenderFrame(items: [.stroke(horiz), .stroke(vert)], inProgress: nil,
+                                canvasSize: Size(width: 100, height: 100))
+        let data = try #require(SnapshotRenderer.png(from: frame, scale: 1.0))
+        let image = try #require(decode(data))
+        let arm = pixel(image, x: 25, y: 50)
+        let intersection = pixel(image, x: 50, y: 50)
+        // Both alpha values on 0-255 scale. Intersection must be within ~12% (~31/255)
+        // of the arm and must stay below 0.65 (~166/255).
+        #expect(abs(Int(intersection.a) - Int(arm.a)) < 31)
+        #expect(intersection.a < 166)
+    }
+
     @Test("strokes render in strokeOrder (last stroke on top)")
     func ordering() throws {
         let red = Stroke(id: "r", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 8,

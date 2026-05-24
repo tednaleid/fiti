@@ -26,7 +26,8 @@ public enum SnapshotRenderer {
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
 
-        for item in frame.items { drawItem(item, in: ctx, isInProgress: false) }
+        let groups = LayerPlan.compute(items: frame.items, aabb: { SelectionMath.worldAABB(of: $0) })
+        compositeGroups(groups, in: ctx)
         if let inProgress = frame.inProgress { drawStroke(inProgress, in: ctx, isInProgress: true) }
 
         guard let cgImage = ctx.makeImage() else { return nil }
