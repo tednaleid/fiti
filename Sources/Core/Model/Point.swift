@@ -3,7 +3,7 @@
 
 import Foundation
 
-public struct Point: Equatable, Hashable, Sendable {
+public struct Point: Equatable, Hashable, Codable, Sendable {
     public var x: Double
     public var y: Double
 
