@@ -9,7 +9,7 @@ import CoreText
 struct BakeSignatureEntry: Equatable {
     let id: ItemId
     let transform: Transform
-    let contentTag: Int   // strokes: stable (0); text: hash(string, fontName, fontSize, color)
+    let contentTag: Int   // strokes: hash(color, width); text: hash(string, fontName, fontSize, color)
 }
 
 public final class CanvasView: NSView, Renderer {
@@ -104,8 +104,14 @@ public final class CanvasView: NSView, Renderer {
 
     private func contentTag(for item: CanvasItem) -> Int {
         switch item {
-        case .stroke:
-            return 0
+        case .stroke(let s):
+            var hasher = Hasher()
+            hasher.combine(s.color.r)
+            hasher.combine(s.color.g)
+            hasher.combine(s.color.b)
+            hasher.combine(s.color.a)
+            hasher.combine(s.width)
+            return hasher.finalize()
         case .text(let t):
             var hasher = Hasher()
             hasher.combine(t.string)

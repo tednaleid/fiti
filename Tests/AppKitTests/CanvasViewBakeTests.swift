@@ -218,6 +218,39 @@ struct CanvasViewBakeTests {
         #expect(sig1 != sig2, "different string should produce a different bake signature")
     }
 
+    @Test("recoloring a committed stroke invalidates the bake signature")
+    func strokeRecolorInvalidates() {
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
+        func frame(_ color: RGBA) -> RenderFrame {
+            let s = Stroke(id: "a", color: color, width: 2, transform: .identity,
+                           points: [StrokePoint(x: 0, y: 0), StrokePoint(x: 10, y: 10)],
+                           pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+            return RenderFrame(items: [.stroke(s)], inProgress: nil,
+                               canvasSize: Size(width: 100, height: 100))
+        }
+        view.render(frame(RGBA(r: 1, g: 0, b: 0, a: 1)))
+        let sig1 = view.bakeSignatureForTesting
+        view.render(frame(RGBA(r: 0, g: 0, b: 1, a: 1)))
+        #expect(sig1 != view.bakeSignatureForTesting)
+    }
+
+    @Test("resizing a committed stroke's width invalidates the bake signature")
+    func strokeWidthInvalidates() {
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
+        func frame(_ width: Double) -> RenderFrame {
+            let s = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: width,
+                           transform: .identity,
+                           points: [StrokePoint(x: 0, y: 0), StrokePoint(x: 10, y: 10)],
+                           pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+            return RenderFrame(items: [.stroke(s)], inProgress: nil,
+                               canvasSize: Size(width: 100, height: 100))
+        }
+        view.render(frame(2))
+        let sig1 = view.bakeSignatureForTesting
+        view.render(frame(8))
+        #expect(sig1 != view.bakeSignatureForTesting)
+    }
+
     @Test("a live stroke renders at its transformed position")
     func liveStrokeRendersAtTransformedPosition() throws {
         // Canvas 200×200. Stroke points at y=50. With a y+80 translate the stroke
