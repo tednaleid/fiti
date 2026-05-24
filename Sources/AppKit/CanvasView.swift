@@ -14,7 +14,11 @@ struct BakeSignatureEntry: Equatable {
 
 public final class CanvasView: NSView, Renderer {
     private var lastFrame: RenderFrame?
+    /// The static bake of the groups BELOW the active group (the full bake when
+    /// not drawing). `testOnly_committedImage` returns this.
     private var committedImage: CGImage?
+    /// The static bake of the groups ABOVE the active group; nil when not drawing.
+    private var aboveImage: CGImage?
     private var committedSignature: [BakeSignatureEntry] = []
     private var activeGroupCommitted: [CanvasItem] = []
     private var activeGroupUnion: CGImage?
@@ -81,49 +85,65 @@ public final class CanvasView: NSView, Renderer {
 
     // MARK: - Renderer
 
+    private struct RenderSplit {
+        let below: [CanvasItem]
+        let above: [CanvasItem]
+        let lifted: [CanvasItem]   // active group's committed members
+    }
+
+    /// Plan over committed + the in-progress stroke; split the other groups into
+    /// those below vs above the active group (the one the in-progress stroke joins).
+    private func renderSplit(for frame: RenderFrame, inProgressId: ItemId?) -> RenderSplit {
+        let committed = frame.items.filter { $0.id != inProgressId }
+        guard let live = frame.inProgress else {
+            return RenderSplit(below: committed, above: [], lifted: [])
+        }
+        let plan = LayerPlan.compute(items: committed + [.stroke(live)],
+                                     aabb: { SelectionMath.worldAABB(of: $0) })
+        guard let activeIdx = plan.firstIndex(where: { $0.items.contains { $0.id == live.id } }) else {
+            return RenderSplit(below: committed, above: [], lifted: [])
+        }
+        let lifted = plan[activeIdx].items.filter { $0.id != live.id }
+        let below = plan[..<activeIdx].flatMap { $0.items }
+        let above = plan[(activeIdx + 1)...].flatMap { $0.items }
+        return RenderSplit(below: below, above: above, lifted: lifted)
+    }
+
     public func render(_ frame: RenderFrame) {
         let inProgressId = frame.inProgress?.id
         #if DEBUG
-        let lifted = PerfLog.shared.measure("render.liftedGroup") {
-            liftedGroup(for: frame, inProgressId: inProgressId)
-        }
+        let split = PerfLog.shared.measure("render.split") { renderSplit(for: frame, inProgressId: inProgressId) }
         #else
-        let lifted = liftedGroup(for: frame, inProgressId: inProgressId)
+        let split = renderSplit(for: frame, inProgressId: inProgressId)
         #endif
-        let baked = frame.items.filter { $0.id != inProgressId && !lifted.contains($0.id) }
-        let liftedMembers = frame.items.filter { lifted.contains($0.id) }
 
-        // Signature covers only baked items — live and lifted-group items are
-        // excluded so live drawing never invalidates the static bake.
-        let signature = baked
+        // Signature covers everything baked (below + above) in order, plus the
+        // lifted membership, so live drawing rebuilds only when the split changes.
+        let bakedItems = split.below + split.above
+        let signature = bakedItems
             .map { BakeSignatureEntry(id: $0.id, transform: $0.transform, contentTag: contentTag(for: $0)) }
         let resolvedScale = testOnly_overrideBackingScale ?? window?.backingScaleFactor ?? 1
-        // The cached union must also rebuild when the lifted membership changes
-        // (the live stroke moved into/out of a committed mark's group), even if
-        // the baked signature is unchanged.
-        let liftedChanged = liftedMembers.map(\.id) != activeGroupCommitted.map(\.id)
+        let liftedChanged = split.lifted.map(\.id) != activeGroupCommitted.map(\.id)
         if signature != committedSignature || resolvedScale != backingScale || liftedChanged {
             backingScale = resolvedScale
             #if DEBUG
-            committedImage = PerfLog.shared.measure("render.bake") { bakeCommitted(frame, baked: baked) }
+            PerfLog.shared.measure("render.bake") { rebuildBakes(frame: frame, split: split) }
             #else
-            committedImage = bakeCommitted(frame, baked: baked)
+            rebuildBakes(frame: frame, split: split)
             #endif
             committedSignature = signature
-            activeGroupCommitted = liftedMembers
-            activeGroupUnion = liftedMembers.isEmpty ? nil : bakeOpaqueUnion(frame, members: liftedMembers)
         }
         lastFrame = frame
         needsDisplay = true
     }
 
-    /// Committed item ids that share the in-progress stroke's (hue, alpha) group.
-    private func liftedGroup(for frame: RenderFrame, inProgressId: ItemId?) -> Set<ItemId> {
-        guard let live = frame.inProgress else { return [] }
-        let committed = frame.items.filter { $0.id != inProgressId }
-        let plan = LayerPlan.compute(items: committed + [.stroke(live)], aabb: { SelectionMath.worldAABB(of: $0) })
-        guard let group = plan.first(where: { $0.items.contains { $0.id == live.id } }) else { return [] }
-        return Set(group.items.map(\.id)).subtracting([live.id])
+    /// Rebuild the below/above static bakes plus the lifted opaque union. Kept
+    /// as one call so the four cache assignments stay together.
+    private func rebuildBakes(frame: RenderFrame, split: RenderSplit) {
+        committedImage = bakeCommitted(frame, baked: split.below)
+        aboveImage = split.above.isEmpty ? nil : bakeCommitted(frame, baked: split.above)
+        activeGroupCommitted = split.lifted
+        activeGroupUnion = split.lifted.isEmpty ? nil : bakeOpaqueUnion(frame, members: split.lifted)
     }
 
     private func contentTag(for item: CanvasItem) -> Int {
@@ -161,18 +181,7 @@ public final class CanvasView: NSView, Renderer {
         ctx.setAlpha(CGFloat(globalOpacity))
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
-        if let image = committedImage {
-            let rect = CGRect(x: 0, y: 0, width: frame.canvasSize.width, height: frame.canvasSize.height)
-            // CGContext.draw(image:in:) is not isFlipped-aware: it always lays the
-            // image's bottom-left at rect.origin in CG-coords. In a flipped NSView
-            // that puts the image upside down. Locally undo the view's flip so the
-            // blit places the bake's top-origin pixels at the view's top.
-            ctx.saveGState()
-            ctx.translateBy(x: 0, y: rect.height)
-            ctx.scaleBy(x: 1, y: -1)
-            ctx.draw(image, in: rect)
-            ctx.restoreGState()
-        }
+        if let image = committedImage { blitBake(image, frame, in: ctx) }
         for live in frame.liveItems {
             drawItem(live, in: ctx, isInProgress: false)
         }
@@ -183,6 +192,7 @@ public final class CanvasView: NSView, Renderer {
             drawLiveGroup(live, frame: frame, in: ctx)
             #endif
         }
+        if let above = aboveImage { blitBake(above, frame, in: ctx) }
         // Reset alpha for selection/marquee overlays — they manage their own alpha.
         ctx.setAlpha(1.0)
         if let box = selectionBox {
@@ -308,14 +318,7 @@ public final class CanvasView: NSView, Renderer {
         ctx.saveGState()
         ctx.setAlpha(CGFloat(globalOpacity * groupAlpha))
         ctx.beginTransparencyLayer(auxiliaryInfo: nil)
-        if let union = activeGroupUnion {
-            let rect = CGRect(x: 0, y: 0, width: frame.canvasSize.width, height: frame.canvasSize.height)
-            ctx.saveGState()
-            ctx.translateBy(x: 0, y: rect.height)
-            ctx.scaleBy(x: 1, y: -1)
-            ctx.draw(union, in: rect)
-            ctx.restoreGState()
-        }
+        if let union = activeGroupUnion { blitBake(union, frame, in: ctx) }
         drawItem(CanvasItem.stroke(live).withAlpha(1), in: ctx, isInProgress: true)
         ctx.endTransparencyLayer()
         ctx.restoreGState()
@@ -351,6 +354,20 @@ extension CanvasView {
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
         return ctx
+    }
+
+    /// Blit a canvas-sized bake image, locally undoing the view's flip.
+    /// CGContext.draw(image:in:) is not isFlipped-aware: it always lays the
+    /// image's bottom-left at rect.origin in CG-coords. In a flipped NSView that
+    /// puts the image upside down, so undo the flip to place the bake's
+    /// top-origin pixels at the view's top.
+    func blitBake(_ image: CGImage, _ frame: RenderFrame, in ctx: CGContext) {
+        let rect = CGRect(x: 0, y: 0, width: frame.canvasSize.width, height: frame.canvasSize.height)
+        ctx.saveGState()
+        ctx.translateBy(x: 0, y: rect.height)
+        ctx.scaleBy(x: 1, y: -1)
+        ctx.draw(image, in: rect)
+        ctx.restoreGState()
     }
 
     func bakeCommitted(_ frame: RenderFrame, baked: [CanvasItem]) -> CGImage? {
