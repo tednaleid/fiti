@@ -145,6 +145,15 @@ public final class DevHTTPServer: @unchecked Sendable {
             return self.handlePointer(req)
         }
 
+        router.add("GET", "/perf") { _, _ in
+            DevHTTPServer.handlePerf()
+        }
+
+        router.add("POST", "/perf/reset") { _, _ in
+            PerfLog.shared.reset()
+            return .ok()
+        }
+
         installToolbarRoutes()
         installTextRoutes()
         installHistoryRoutes()
@@ -245,6 +254,24 @@ public final class DevHTTPServer: @unchecked Sendable {
         }
         surface.setWidth(w)
         return .ok()
+    }
+
+    @MainActor
+    private static func handlePerf() -> HTTPResponse {
+        let snap = PerfLog.shared.snapshot()
+        var stats: [String: Any] = [:]
+        for (label, stat) in snap.stats {
+            // count is >= 1 for any stat present in the map (record() increments it).
+            let mean = stat.totalSeconds / Double(stat.count)
+            stats[label] = [
+                "count": stat.count,
+                "totalMs": stat.totalSeconds * 1000,
+                "meanMs": mean * 1000,
+                "maxMs": stat.maxSeconds * 1000,
+                "lastMs": stat.lastSeconds * 1000
+            ]
+        }
+        return .json(["stats": stats, "gauges": snap.gauges])
     }
 
     @MainActor

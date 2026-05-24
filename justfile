@@ -192,6 +192,14 @@ inspect-state:
     @curl -sf localhost:{{dev_port}}/state | jq .
 
 [group('inspect')]
+inspect-perf:
+    @curl -sf localhost:{{dev_port}}/perf | jq .
+
+[group('inspect')]
+inspect-perf-reset:
+    @curl -sfX POST localhost:{{dev_port}}/perf/reset && echo "perf reset"
+
+[group('inspect')]
 inspect-doc:
     @curl -sf localhost:{{dev_port}}/doc | jq .
 

@@ -89,7 +89,13 @@ public final class CanvasView: NSView, Renderer {
         let resolvedScale = testOnly_overrideBackingScale ?? window?.backingScaleFactor ?? 1
         if signature != committedSignature || resolvedScale != backingScale {
             backingScale = resolvedScale
+            #if DEBUG
+            committedImage = PerfLog.shared.measure("render.bake") {
+                bakeCommitted(frame, exclude: inProgressId)
+            }
+            #else
             committedImage = bakeCommitted(frame, exclude: inProgressId)
+            #endif
             committedSignature = signature
         }
         lastFrame = frame
@@ -116,6 +122,12 @@ public final class CanvasView: NSView, Renderer {
     public override func draw(_ dirtyRect: NSRect) {
         guard let ctx = NSGraphicsContext.current?.cgContext, let frame = lastFrame else { return }
         guard drawingsVisible else { return }
+        #if DEBUG
+        let drawStart = ContinuousClock.now
+        defer { PerfLog.shared.record("draw.total", duration: ContinuousClock.now - drawStart) }
+        PerfLog.shared.set(gauge: "canvas.deviceW", frame.canvasSize.width * backingScale)
+        PerfLog.shared.set(gauge: "canvas.deviceH", frame.canvasSize.height * backingScale)
+        #endif
         ctx.setAlpha(CGFloat(globalOpacity))
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
@@ -135,7 +147,11 @@ public final class CanvasView: NSView, Renderer {
             drawItem(live, in: ctx, isInProgress: false)
         }
         if let live = frame.inProgress, !live.points.isEmpty {
+            #if DEBUG
+            PerfLog.shared.measure("draw.inProgress") { drawStroke(live, in: ctx, isInProgress: true) }
+            #else
             drawStroke(live, in: ctx, isInProgress: true)
+            #endif
         }
         // Reset alpha for selection/marquee overlays — they manage their own alpha.
         ctx.setAlpha(1.0)
