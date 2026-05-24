@@ -44,6 +44,17 @@ struct GroupCompositorTests {
         #expect(center < 0.65)
     }
 
+    @Test("clipping does not shave a stroke's rendered width")
+    func clipPreservesStrokeBody() {
+        let ctx = context()
+        let red = RGBA(r: 1, g: 0, b: 0, a: 0.5)
+        // single horizontal bar; its centerline AABB is zero-height, so a naive
+        // clip to the unpadded AABB would erase the whole bar.
+        compositeGroups([FlattenLayer(items: [hBar("h", y: 30, red)])], in: ctx)
+        #expect(alpha(ctx, 30, 30) > 0.3, "bar body must survive clipping")
+        #expect(alpha(ctx, 12, 30) > 0.3, "bar near its end must survive clipping")
+    }
+
     @Test("different-color groups preserve z-order: later group on top")
     func crossColorOrder() {
         let ctx = context()
