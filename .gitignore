@@ -25,3 +25,6 @@ Package.resolved
 Packages/PerfectFreehand/Tests/PerfectFreehandTests/Fixtures/node_modules/
 Packages/PerfectFreehand/Tests/PerfectFreehandTests/Fixtures/bun.lock
 Packages/PerfectFreehand/Tests/PerfectFreehandTests/Fixtures/bun.lockb
+
+# superpowers brainstorming visual companion
+.superpowers/
