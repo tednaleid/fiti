@@ -56,10 +56,13 @@ struct CanvasViewBakeTests {
     @Test("in-progress stroke is excluded from the committed signature")
     func inProgressExcluded() {
         let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
-        let committed = Stroke(id: "a", color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1,
+        // Distinct hues so the committed stroke is not lifted into the live group
+        // (same-key lift is covered by CanvasViewFlattenTests); this asserts only
+        // that the in-progress id alone is excluded from the bake.
+        let committed = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 1,
                                transform: .identity, points: [], pointerType: .mouse,
                                pressureEnabled: false, createdAt: 0)
-        let live = Stroke(id: "b", color: RGBA(r: 0, g: 0, b: 0, a: 1), width: 1,
+        let live = Stroke(id: "b", color: RGBA(r: 0, g: 0, b: 1, a: 1), width: 1,
                           transform: .identity, points: [], pointerType: .mouse,
                           pressureEnabled: false, createdAt: 0)
         view.render(RenderFrame(items: [.stroke(committed), .stroke(live)], inProgress: live,

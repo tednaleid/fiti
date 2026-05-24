@@ -16,6 +16,8 @@ public final class CanvasView: NSView, Renderer {
     private var lastFrame: RenderFrame?
     private var committedImage: CGImage?
     private var committedSignature: [BakeSignatureEntry] = []
+    private var activeGroupCommitted: [CanvasItem] = []
+    private var activeGroupUnion: CGImage?
 
     /// Exposed for tests only — do not use in production code.
     internal var bakeSignatureForTesting: [BakeSignatureEntry] { committedSignature }
@@ -81,25 +83,47 @@ public final class CanvasView: NSView, Renderer {
 
     public func render(_ frame: RenderFrame) {
         let inProgressId = frame.inProgress?.id
-        // Signature covers only committed items — live items are excluded by
-        // construction (they're in frame.liveItems, not frame.items).
-        let signature = frame.items
-            .filter { $0.id != inProgressId }
+        #if DEBUG
+        let lifted = PerfLog.shared.measure("render.liftedGroup") {
+            liftedGroup(for: frame, inProgressId: inProgressId)
+        }
+        #else
+        let lifted = liftedGroup(for: frame, inProgressId: inProgressId)
+        #endif
+        let baked = frame.items.filter { $0.id != inProgressId && !lifted.contains($0.id) }
+        let liftedMembers = frame.items.filter { lifted.contains($0.id) }
+
+        // Signature covers only baked items — live and lifted-group items are
+        // excluded so live drawing never invalidates the static bake.
+        let signature = baked
             .map { BakeSignatureEntry(id: $0.id, transform: $0.transform, contentTag: contentTag(for: $0)) }
         let resolvedScale = testOnly_overrideBackingScale ?? window?.backingScaleFactor ?? 1
-        if signature != committedSignature || resolvedScale != backingScale {
+        // The cached union must also rebuild when the lifted membership changes
+        // (the live stroke moved into/out of a committed mark's group), even if
+        // the baked signature is unchanged.
+        let liftedChanged = liftedMembers.map(\.id) != activeGroupCommitted.map(\.id)
+        if signature != committedSignature || resolvedScale != backingScale || liftedChanged {
             backingScale = resolvedScale
             #if DEBUG
-            committedImage = PerfLog.shared.measure("render.bake") {
-                bakeCommitted(frame, exclude: inProgressId)
-            }
+            committedImage = PerfLog.shared.measure("render.bake") { bakeCommitted(frame, baked: baked) }
             #else
-            committedImage = bakeCommitted(frame, exclude: inProgressId)
+            committedImage = bakeCommitted(frame, baked: baked)
             #endif
             committedSignature = signature
+            activeGroupCommitted = liftedMembers
+            activeGroupUnion = liftedMembers.isEmpty ? nil : bakeOpaqueUnion(frame, members: liftedMembers)
         }
         lastFrame = frame
         needsDisplay = true
+    }
+
+    /// Committed item ids that share the in-progress stroke's (hue, alpha) group.
+    private func liftedGroup(for frame: RenderFrame, inProgressId: ItemId?) -> Set<ItemId> {
+        guard let live = frame.inProgress else { return [] }
+        let committed = frame.items.filter { $0.id != inProgressId }
+        let plan = LayerPlan.compute(items: committed + [.stroke(live)], aabb: { SelectionMath.worldAABB(of: $0) })
+        guard let group = plan.first(where: { $0.items.contains { $0.id == live.id } }) else { return [] }
+        return Set(group.items.map(\.id)).subtracting([live.id])
     }
 
     private func contentTag(for item: CanvasItem) -> Int {
@@ -154,9 +178,9 @@ public final class CanvasView: NSView, Renderer {
         }
         if let live = frame.inProgress, !live.points.isEmpty {
             #if DEBUG
-            PerfLog.shared.measure("draw.inProgress") { drawStroke(live, in: ctx, isInProgress: true) }
+            PerfLog.shared.measure("draw.liveGroup") { drawLiveGroup(live, frame: frame, in: ctx) }
             #else
-            drawStroke(live, in: ctx, isInProgress: true)
+            drawLiveGroup(live, frame: frame, in: ctx)
             #endif
         }
         // Reset alpha for selection/marquee overlays — they manage their own alpha.
@@ -276,7 +300,37 @@ public final class CanvasView: NSView, Renderer {
         }
     }
 
-    private func bakeCommitted(_ frame: RenderFrame, exclude: ItemId?) -> CGImage? {
+    /// Composite the active group (cached committed union + the in-progress
+    /// stroke) flattened at the group alpha, under globalOpacity. Matches the
+    /// committed bake, so live drawing equals the committed result.
+    private func drawLiveGroup(_ live: Stroke, frame: RenderFrame, in ctx: CGContext) {
+        let groupAlpha = live.color.a
+        ctx.saveGState()
+        ctx.setAlpha(CGFloat(globalOpacity * groupAlpha))
+        ctx.beginTransparencyLayer(auxiliaryInfo: nil)
+        if let union = activeGroupUnion {
+            let rect = CGRect(x: 0, y: 0, width: frame.canvasSize.width, height: frame.canvasSize.height)
+            ctx.saveGState()
+            ctx.translateBy(x: 0, y: rect.height)
+            ctx.scaleBy(x: 1, y: -1)
+            ctx.draw(union, in: rect)
+            ctx.restoreGState()
+        }
+        drawItem(CanvasItem.stroke(live).withAlpha(1), in: ctx, isInProgress: true)
+        ctx.endTransparencyLayer()
+        ctx.restoreGState()
+    }
+
+}
+
+// MARK: - Baking
+// Bake helpers live in an extension so the main class body stays within the
+// type-body-length budget; they are pure aside from reading `backingScale`.
+extension CanvasView {
+    /// Builds the canvas-sized pixel context shared by `bakeCommitted` and
+    /// `bakeOpaqueUnion`: flip-then-scale CTM so callers draw in point space,
+    /// round line cap/join. The two bakes differ only in what they composite.
+    func makeBakeContext(_ frame: RenderFrame) -> CGContext? {
         let pointWidth = Int(frame.canvasSize.width)
         let pointHeight = Int(frame.canvasSize.height)
         guard pointWidth > 0, pointHeight > 0 else { return nil }
@@ -296,9 +350,22 @@ public final class CanvasView: NSView, Renderer {
         ctx.scaleBy(x: backingScale, y: backingScale)
         ctx.setLineCap(.round)
         ctx.setLineJoin(.round)
-        let baked = frame.items.filter { $0.id != exclude }
+        return ctx
+    }
+
+    func bakeCommitted(_ frame: RenderFrame, baked: [CanvasItem]) -> CGImage? {
+        guard let ctx = makeBakeContext(frame) else { return nil }
         let groups = LayerPlan.compute(items: baked, aabb: { SelectionMath.worldAABB(of: $0) })
         compositeGroups(groups, in: ctx)
+        return ctx.makeImage()
+    }
+
+    /// The lifted group's committed members drawn opaque (alpha 1), source-over,
+    /// into a canvas-sized image. The group alpha is applied later in draw(_:),
+    /// when this union is composited with the live stroke.
+    func bakeOpaqueUnion(_ frame: RenderFrame, members: [CanvasItem]) -> CGImage? {
+        guard let ctx = makeBakeContext(frame) else { return nil }
+        for member in members { drawItem(member.withAlpha(1), in: ctx, isInProgress: false) }
         return ctx.makeImage()
     }
 }
