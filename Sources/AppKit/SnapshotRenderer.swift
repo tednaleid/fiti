@@ -1,5 +1,5 @@
-// ABOUTME: Render a RenderFrame to PNG bytes via off-screen CGContext.
-// ABOUTME: Used by GET /snapshot.png — same drawing logic as CanvasView.
+// ABOUTME: Render a RenderFrame to a CGImage / NSImage / PNG via off-screen CGContext.
+// ABOUTME: Used by GET /snapshot.png and the toolbar mark preview — same drawing as CanvasView.
 
 import AppKit
 import CoreGraphics
@@ -8,8 +8,10 @@ import ImageIO
 import UniformTypeIdentifiers
 
 public enum SnapshotRenderer {
-    public static func png(from frame: RenderFrame, scale: CGFloat = 2.0,
-                           outline: OutlineFlags = .none) -> Data? {
+    /// Renders the frame to a CGImage (scale× the logical canvas). Shared core for
+    /// the PNG and NSImage producers below; identical drawing to CanvasView.
+    public static func cgImage(from frame: RenderFrame, scale: CGFloat = 2.0,
+                               outline: OutlineFlags = .none) -> CGImage? {
         let width = Int(frame.canvasSize.width * Double(scale))
         let height = Int(frame.canvasSize.height * Double(scale))
         guard width > 0, height > 0 else { return nil }
@@ -31,8 +33,22 @@ public enum SnapshotRenderer {
         compositeGroups(groups, in: ctx, outline: outline)
         if let inProgress = frame.inProgress { drawItem(inProgress, in: ctx, isInProgress: true, outline: outline) }
 
-        guard let cgImage = ctx.makeImage() else { return nil }
+        return ctx.makeImage()
+    }
+
+    public static func png(from frame: RenderFrame, scale: CGFloat = 2.0,
+                           outline: OutlineFlags = .none) -> Data? {
+        guard let cgImage = cgImage(from: frame, scale: scale, outline: outline) else { return nil }
         return pngData(from: cgImage)
+    }
+
+    /// An NSImage sized in logical points (the cgImage is scale× pixels), so it
+    /// draws crisp at the display scale. Used by the toolbar mark preview.
+    public static func image(from frame: RenderFrame, scale: CGFloat = 2.0,
+                             outline: OutlineFlags = .none) -> NSImage? {
+        guard let cg = cgImage(from: frame, scale: scale, outline: outline) else { return nil }
+        return NSImage(cgImage: cg, size: NSSize(width: frame.canvasSize.width,
+                                                 height: frame.canvasSize.height))
     }
 
     private static func pngData(from image: CGImage) -> Data? {

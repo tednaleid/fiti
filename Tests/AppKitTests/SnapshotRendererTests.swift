@@ -1,6 +1,7 @@
 // ABOUTME: SnapshotRenderer tests — decode the PNG output and check that
 // ABOUTME: it has the right dimensions and that strokes appear where expected.
 
+import AppKit
 import CoreGraphics
 import Foundation
 import ImageIO
@@ -25,6 +26,18 @@ struct SnapshotRendererTests {
                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
         ctx.draw(image, in: CGRect(x: -x, y: -(image.height - 1 - y), width: image.width, height: image.height))
         return RGBA8(r: bytes[0], g: bytes[1], b: bytes[2], a: bytes[3])
+    }
+
+    @Test("image(from:) returns an NSImage sized in logical points")
+    func nsImageOutput() throws {
+        let stroke = Stroke(id: "a", color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 6, transform: .identity,
+                            points: [StrokePoint(x: 10, y: 25), StrokePoint(x: 90, y: 25)],
+                            pointerType: .mouse, pressureEnabled: false, createdAt: 0)
+        let frame = RenderFrame(items: [.stroke(stroke)], inProgress: nil,
+                                canvasSize: Size(width: 100, height: 50))
+        let image = try #require(SnapshotRenderer.image(from: frame, scale: 2.0))
+        #expect(image.size.width == 100)   // points, not pixels
+        #expect(image.size.height == 50)
     }
 
     @Test("empty frame produces a transparent PNG at the expected dimensions")
