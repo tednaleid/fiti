@@ -43,11 +43,11 @@ struct SelectionBoxHoverTests {
         #expect(c.currentCursor == .system(.openHand))
     }
 
-    @Test("hovering outside the box emits the arrow")
-    func hoverOutside() {
+    @Test("hovering outside the box emits the crosshair")
+    func hoverOutsideEmitsCrosshair() {
         let (c, ids) = setup()
         c.selectedItemIds = [ids[0]]
         c.pointerHover(StrokePoint(x: 1000, y: 1000), modifiers: .none)
-        #expect(c.currentCursor == .system(.arrow))
+        #expect(c.currentCursor == .system(.crosshair))
     }
 }

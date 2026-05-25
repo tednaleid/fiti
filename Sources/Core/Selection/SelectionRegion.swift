@@ -25,7 +25,7 @@ public func cursorFor(region: SelectionRegion, boxRotation: Double, dragging: Bo
     case .body:
         return dragging ? .closedHand : .openHand
     case .outside:
-        return .arrow
+        return .crosshair
     case .corner(let corner):
         let base: Double = (corner == .topLeft || corner == .bottomRight) ? 135 : 45
         return .resize(angle: bucketAngle(base + boxRotation))

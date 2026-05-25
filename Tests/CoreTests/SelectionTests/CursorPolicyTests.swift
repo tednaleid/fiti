@@ -10,7 +10,7 @@ struct CursorPolicyTests {
         #expect(cursorFor(region: .rotateHandle, boxRotation: 0, dragging: false) == .rotate)
         #expect(cursorFor(region: .body, boxRotation: 0, dragging: false) == .openHand)
         #expect(cursorFor(region: .body, boxRotation: 0, dragging: true) == .closedHand)
-        #expect(cursorFor(region: .outside, boxRotation: 0, dragging: false) == .arrow)
+        #expect(cursorFor(region: .outside, boxRotation: 0, dragging: false) == .crosshair)
     }
 
     @Test("at rotation 0, topLeft/bottomRight bucket to 135°, topRight/bottomLeft to 45°")
