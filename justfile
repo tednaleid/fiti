@@ -264,6 +264,18 @@ inspect-hide:
     @curl -sf -X POST localhost:{{dev_port}}/drawings/hide
 
 [group('inspect')]
+inspect-outline-on:
+    @curl -sf -X POST localhost:{{dev_port}}/outline \
+        -H 'Content-Type: application/json' \
+        -d '{"enabled":true}'
+
+[group('inspect')]
+inspect-outline-off:
+    @curl -sf -X POST localhost:{{dev_port}}/outline \
+        -H 'Content-Type: application/json' \
+        -d '{"enabled":false}'
+
+[group('inspect')]
 inspect-tool TOOL:
     @curl -sf -X POST localhost:{{dev_port}}/tool \
         -H 'Content-Type: application/json' \
