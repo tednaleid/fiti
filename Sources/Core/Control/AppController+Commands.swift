@@ -12,13 +12,13 @@ extension AppController {
         case .pickColor(let i):
             pickBrushColor(i)
         case .bumpSize(.up):
-            currentWidth = min(Self.maxStrokeWidth, currentWidth * 1.1)
+            currentWidth = nextPreset(after: currentWidth, in: ValuePresets.sizes)
         case .bumpSize(.down):
-            currentWidth = max(1, currentWidth / 1.1)
+            currentWidth = previousPreset(before: currentWidth, in: ValuePresets.sizes)
         case .bumpOpacity(.up):
-            currentColor = currentColor.with(a: min(1, currentColor.a + 0.1))
+            currentColor = currentColor.with(a: nextPreset(after: currentColor.a, in: ValuePresets.opacities))
         case .bumpOpacity(.down):
-            currentColor = currentColor.with(a: max(0, currentColor.a - 0.1))
+            currentColor = currentColor.with(a: previousPreset(before: currentColor.a, in: ValuePresets.opacities))
         case .toggleHide:
             drawingsVisible.toggle()
         case .toggleAutoFade:

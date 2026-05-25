@@ -42,50 +42,50 @@ struct RunCommandTests {
         #expect(c.currentColor == before)
     }
 
-    @Test("bumpSize(.up) multiplies width by 1.1")
+    @Test("bumpSize(.up) steps to the next size preset")
     func bumpSizeUp() {
         let (c, _, _) = make()
-        c.currentWidth = 10
+        c.currentWidth = 10            // off-preset; next strictly greater is 14
         c.run(.bumpSize(.up))
-        #expect(abs(c.currentWidth - 11.0) < 0.0001)
+        #expect(c.currentWidth == 14)
     }
 
-    @Test("bumpSize(.down) divides width by 1.1")
+    @Test("bumpSize(.down) steps to the previous size preset")
     func bumpSizeDown() {
         let (c, _, _) = make()
-        c.currentWidth = 11
+        c.currentWidth = 11            // off-preset; previous strictly less is 9
         c.run(.bumpSize(.down))
-        #expect(abs(c.currentWidth - 10.0) < 0.0001)
+        #expect(c.currentWidth == 9)
     }
 
-    @Test("bumpSize(.up) clamps at maxStrokeWidth")
+    @Test("bumpSize(.up) clamps at the largest preset")
     func bumpSizeUpClamp() {
         let (c, _, _) = make()
-        c.currentWidth = AppController.maxStrokeWidth
+        c.currentWidth = 100
         c.run(.bumpSize(.up))
-        #expect(c.currentWidth == AppController.maxStrokeWidth)
+        #expect(c.currentWidth == 100)
     }
 
-    @Test("bumpSize(.down) clamps at 1")
+    @Test("bumpSize(.down) clamps at the smallest preset")
     func bumpSizeDownClamp() {
         let (c, _, _) = make()
-        c.currentWidth = 1
+        c.currentWidth = 2
         c.run(.bumpSize(.down))
-        #expect(c.currentWidth == 1)
+        #expect(c.currentWidth == 2)
     }
 
-    @Test("bumpOpacity(.up) adds 0.1 to alpha")
+    @Test("bumpOpacity(.up) steps to the next opacity preset")
     func bumpOpacityUp() {
         let (c, _, _) = make()
         c.currentColor = RGBA(r: 0.2, g: 0.3, b: 0.4, a: 0.5)
         c.run(.bumpOpacity(.up))
         #expect(abs(c.currentColor.a - 0.6) < 0.0001)
-        #expect(c.currentColor.r == 0.2)  // RGB unchanged
+        #expect(c.currentColor.r == 0.2)
         #expect(c.currentColor.g == 0.3)
         #expect(c.currentColor.b == 0.4)
     }
 
-    @Test("bumpOpacity(.down) subtracts 0.1 from alpha")
+    @Test("bumpOpacity(.down) steps to the previous opacity preset")
     func bumpOpacityDown() {
         let (c, _, _) = make()
         c.currentColor = RGBA(r: 0.2, g: 0.3, b: 0.4, a: 0.5)
@@ -101,12 +101,12 @@ struct RunCommandTests {
         #expect(c.currentColor.a == 1.0)
     }
 
-    @Test("bumpOpacity(.down) clamps at 0.0")
+    @Test("bumpOpacity(.down) clamps at the smallest preset (0.1)")
     func bumpOpacityDownClamp() {
         let (c, _, _) = make()
-        c.currentColor = RGBA(r: 0, g: 0, b: 0, a: 0.0)
+        c.currentColor = RGBA(r: 0, g: 0, b: 0, a: 0.1)
         c.run(.bumpOpacity(.down))
-        #expect(c.currentColor.a == 0.0)
+        #expect(c.currentColor.a == 0.1)
     }
 
     @Test("toggleHide flips drawingsVisible")
