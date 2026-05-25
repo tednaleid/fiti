@@ -7,6 +7,9 @@ extension AppController {
     /// The cursor the AppKit adapter should render right now. Pure derived state.
     public var currentCursor: CursorSpec? {
         if mode == .inactive { return nil }
+        if let region = toolbarRegion, let p = lastHoverPoint, region.contains(p) {
+            return .system(.arrow)
+        }
         if currentTool == .text { return .system(.iBeam) }
         if currentTool == .arrow { return .arrowhead(color: currentColor) }
         if currentTool == .selection {

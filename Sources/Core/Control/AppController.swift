@@ -102,6 +102,13 @@ public final class AppController { // swiftlint:disable:this type_body_length
         }
     }
 
+    /// The toolbar's frame in canvas coordinates, fed by the AppKit adapter.
+    /// When the hover point is inside it, the cursor is a plain arrow and
+    /// pointer-downs there start no mark. `nil` when unknown or inactive.
+    public var toolbarRegion: Rect? {
+        didSet { if oldValue != toolbarRegion { refreshCursor() } }
+    }
+
     // Tool + selection state.
     public var onCurrentToolChanged: ((Tool) -> Void)?
 
@@ -236,6 +243,7 @@ public final class AppController { // swiftlint:disable:this type_body_length
     public func pointerDown(_ point: StrokePoint, modifiers: PointerModifiers) {
         noteInput()
         guard mode != .inactive else { return }
+        if let region = toolbarRegion, region.contains(point) { return }
         switch currentTool {
         case .pen:
             if !selectedItemIds.isEmpty { selectedItemIds = [] }
