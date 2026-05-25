@@ -21,6 +21,11 @@ public final class CanvasView: NSView, Renderer {
     private var aboveImage: CGImage?
     private var committedSignature: [BakeSignatureEntry] = []
     private var activeGroupCommitted: [CanvasItem] = []
+
+    /// Global outline/halo render toggle. Settable so production injects the
+    /// UserDefaults adapter; defaults off so existing tests are unaffected.
+    public var outlineSettings: OutlineSettings = DefaultOutlineSettings()
+    private var bakedOutline = false
     private var activeGroupUnion: CGImage?
 
     /// Exposed for tests only — do not use in production code.
@@ -129,7 +134,8 @@ public final class CanvasView: NSView, Renderer {
             .map { BakeSignatureEntry(id: $0.id, transform: $0.transform, contentTag: contentTag(for: $0)) }
         let resolvedScale = testOnly_overrideBackingScale ?? window?.backingScaleFactor ?? 1
         let liftedChanged = split.lifted.map(\.id) != activeGroupCommitted.map(\.id)
-        if signature != committedSignature || resolvedScale != backingScale || liftedChanged {
+        if signature != committedSignature || resolvedScale != backingScale || liftedChanged
+            || outlineSettings.outlineEnabled != bakedOutline {
             backingScale = resolvedScale
             #if DEBUG
             PerfLog.shared.measure("render.bake") { rebuildBakes(frame: frame, split: split) }
@@ -137,9 +143,16 @@ public final class CanvasView: NSView, Renderer {
             rebuildBakes(frame: frame, split: split)
             #endif
             committedSignature = signature
+            bakedOutline = outlineSettings.outlineEnabled
         }
         lastFrame = frame
         needsDisplay = true
+    }
+
+    /// Re-render the last frame. Call after the outline toggle changes so the
+    /// bake rebuilds under the new mode.
+    public func refresh() {
+        if let frame = lastFrame { render(frame) }
     }
 
     /// Rebuild the below/above static bakes plus the lifted opaque union. Kept
@@ -165,7 +178,7 @@ public final class CanvasView: NSView, Renderer {
         ctx.setLineJoin(.round)
         if let image = committedImage { blitBake(image, frame, in: ctx) }
         for live in frame.liveItems {
-            drawItem(live, in: ctx, isInProgress: false)
+            drawItem(live, in: ctx, isInProgress: false, outline: outlineSettings.outlineEnabled)
         }
         if let live = frame.inProgress, isLiveDrawable(live) {
             #if DEBUG
@@ -245,7 +258,8 @@ public final class CanvasView: NSView, Renderer {
     private func drawLiveText(_ session: TextSessionSnapshot, in ctx: CGContext) {
         withItemTransform(session.transform, in: ctx) {
             drawTextString(session.string, fontName: session.fontName,
-                           fontSize: session.fontSize, color: session.color, in: ctx)
+                           fontSize: session.fontSize, color: session.color, in: ctx,
+                           outline: outlineSettings.outlineEnabled)
         }
         drawLiveCaret(session, in: ctx)
     }
@@ -301,7 +315,7 @@ public final class CanvasView: NSView, Renderer {
         ctx.setAlpha(CGFloat(globalOpacity * groupAlpha))
         ctx.beginTransparencyLayer(auxiliaryInfo: nil)
         if let union = activeGroupUnion { blitBake(union, frame, in: ctx) }
-        drawItem(live.withAlpha(1), in: ctx, isInProgress: true)
+        drawItem(live.withAlpha(1), in: ctx, isInProgress: true, outline: outlineSettings.outlineEnabled)
         ctx.endTransparencyLayer()
         ctx.restoreGState()
     }
@@ -364,7 +378,7 @@ extension CanvasView {
     func bakeCommitted(_ frame: RenderFrame, baked: [CanvasItem]) -> CGImage? {
         guard let ctx = makeBakeContext(frame) else { return nil }
         let groups = LayerPlan.compute(items: baked, aabb: { SelectionMath.worldAABB(of: $0) })
-        compositeGroups(groups, in: ctx)
+        compositeGroups(groups, in: ctx, outline: outlineSettings.outlineEnabled)
         return ctx.makeImage()
     }
 
@@ -373,7 +387,7 @@ extension CanvasView {
     /// when this union is composited with the live stroke.
     func bakeOpaqueUnion(_ frame: RenderFrame, members: [CanvasItem]) -> CGImage? {
         guard let ctx = makeBakeContext(frame) else { return nil }
-        for member in members { drawItem(member.withAlpha(1), in: ctx, isInProgress: false) }
+        for member in members { drawItem(member.withAlpha(1), in: ctx, isInProgress: false, outline: outlineSettings.outlineEnabled) }
         return ctx.makeImage()
     }
 }
