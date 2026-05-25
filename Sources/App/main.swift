@@ -27,6 +27,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     var cursorRenderer: CursorRenderer!
     private var keyMonitor: KeyMonitor!
     private var toolbarScreenObserver: NSObjectProtocol?
+    private var toolbarMoveObserver: NSObjectProtocol?
 
     init(args: Args) { self.args = args }
 
@@ -79,6 +80,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
         window.makeKeyAndOrderFront(nil)
         NSApplication.shared.activate(ignoringOtherApps: true)
+        syncToolbarRegion()
     }
 
     @MainActor
@@ -143,6 +145,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
             menubarModeHandler?(mode)
             self?.toolbar.updateVisibility(for: mode)
             self?.keyMonitor.syncRegistration(for: mode)
+            self?.syncToolbarRegion()
         }
 
         // Compose onDrawingsVisibilityChanged: toolbar (eye glyph) + canvas
@@ -196,6 +199,13 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
                 self?.followToolbarToScreen(clearStrokes: true)
             }
         }
+        toolbarMoveObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didMoveNotification,
+            object: toolbar.panel,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.syncToolbarRegion() }
+        }
     }
 
     @MainActor
@@ -204,6 +214,20 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         guard window.screen != target else { return }
         if clearStrokes { controller.clear() }
         window.setFrame(target.frame, display: true)
+        syncToolbarRegion()
+    }
+
+    @MainActor
+    private func syncToolbarRegion() {
+        guard controller.mode != .inactive else {
+            controller.toolbarRegion = nil
+            return
+        }
+        let screenFrame = toolbar.panel.frame                       // screen coords
+        let windowFrame = window.convertFromScreen(screenFrame)     // window coords
+        let viewRect = inputView.convert(windowFrame, from: nil)    // flipped view coords
+        controller.toolbarRegion = Rect(x: Double(viewRect.minX), y: Double(viewRect.minY),
+                                        width: Double(viewRect.width), height: Double(viewRect.height))
     }
 }
 
