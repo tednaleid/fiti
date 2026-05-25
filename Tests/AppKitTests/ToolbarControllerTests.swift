@@ -2,6 +2,7 @@
 // ABOUTME: activation, hides on deactivation, and (later) widgets write through
 // ABOUTME: to AppController state.
 
+// swiftlint:disable file_length
 import AppKit
 import Testing
 
@@ -158,6 +159,14 @@ struct ToolbarControllerTests {
         let (toolbar, controller, _) = make()
         controller.currentWidth = 17
         #expect(toolbar.testOnly_widthSliderValue == 17)
+    }
+
+    @Test("size picker preview tool follows controller.currentTool")
+    func sizePickerTracksTool() {
+        let (toolbar, controller, _) = make()
+        controller.activate()
+        controller.currentTool = .text
+        #expect(toolbar.testOnly_sizePickerTool == .text)
     }
 
     @Test("external write to drawingsVisible updates the hide button glyph")

@@ -14,8 +14,8 @@ public final class ToolbarController: NSObject {
     private let textButton = NSButton(title: "", target: nil, action: nil)
     private let arrowButton = NSButton(title: "", target: nil, action: nil)
     private let colorWell: NSColorWell
-    private let widthSlider: NSSlider
-    private let opacitySlider: NSSlider
+    private let sizePicker = ValuePickerControl(kind: .size, presets: ValuePresets.sizes, value: 6)
+    private let opacityPicker = ValuePickerControl(kind: .opacity, presets: ValuePresets.opacities, value: 0.8)
     private let hideButton: NSButton
     private let autoFadeButton = NSButton(title: "", target: nil, action: nil)
     private var quickPickButtons: [NSButton] = []
@@ -29,8 +29,6 @@ public final class ToolbarController: NSObject {
         self.defaults = defaults
         self.panel = ToolbarPanel()
         self.colorWell = NSColorWell()
-        self.widthSlider = NSSlider(value: controller.currentWidth, minValue: 1, maxValue: AppController.maxStrokeWidth, target: nil, action: nil)
-        self.opacitySlider = NSSlider(value: controller.currentColor.a, minValue: 0, maxValue: 1, target: nil, action: nil)
         self.hideButton = NSButton(title: "", target: nil, action: nil)
         super.init()
 
@@ -38,13 +36,31 @@ public final class ToolbarController: NSObject {
         buildContent()
         updateVisibility(for: controller.mode)
 
+        sizePicker.setValue(controller.currentWidth)
+        sizePicker.color = controller.currentColor
+        sizePicker.currentTool = controller.currentTool
+        sizePicker.toolTipText = "Size — s / S"
+        sizePicker.onPick = { [weak self] v in self?.controller.currentWidth = v }
+
+        opacityPicker.setValue(controller.currentColor.a)
+        opacityPicker.color = controller.currentColor
+        opacityPicker.toolTipText = "Opacity — o / O"
+        opacityPicker.onPick = { [weak self] v in
+            guard let self else { return }
+            let c = self.controller.currentColor
+            self.controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: v)
+        }
+
         // React to external writes (HTTP, other adapters) — keep widgets in sync and persist.
         controller.onCurrentColorChanged = { [weak self] color in
             self?.syncColorWidgets(with: color)
+            self?.sizePicker.color = color
+            self?.opacityPicker.color = color
+            self?.opacityPicker.setValue(color.a)
             self?.persistColor()
         }
         controller.onCurrentWidthChanged = { [weak self] width in
-            self?.widthSlider.doubleValue = width
+            self?.sizePicker.setValue(width)
             self?.defaults.set(width, forKey: "fiti.width")
         }
         controller.onDrawingsVisibilityChanged = { [weak self] visible in
@@ -53,8 +69,9 @@ public final class ToolbarController: NSObject {
         controller.onAutoFadeEnabledChanged = { [weak self] enabled in
             self?.updateAutoFadeGlyph(enabled: enabled)
         }
-        controller.onCurrentToolChanged = { [weak self] _ in
+        controller.onCurrentToolChanged = { [weak self] tool in
             self?.updateToolHighlights()
+            self?.sizePicker.currentTool = tool
         }
     }
 
@@ -69,7 +86,6 @@ public final class ToolbarController: NSObject {
     private func syncColorWidgets(with color: RGBA) {
         colorWell.color = NSColor(red: CGFloat(color.r), green: CGFloat(color.g),
                                   blue: CGFloat(color.b), alpha: CGFloat(color.a))
-        opacitySlider.doubleValue = color.a
         updateSwatchHighlights()
     }
 
@@ -81,37 +97,25 @@ public final class ToolbarController: NSObject {
         stack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        let toolRow = NSStackView()
-        toolRow.orientation = .horizontal
-        toolRow.spacing = 4
         configureToolButton(penButton, symbol: "pencil.tip", accessibility: "Pen",
                             tooltip: "Pen — p", action: #selector(penClicked(_:)))
         configureToolButton(textButton, symbol: "textformat", accessibility: "Text",
                             tooltip: "Text — t", action: #selector(textClicked(_:)))
         configureToolButton(arrowButton, symbol: "line.diagonal.arrow", accessibility: "Arrow",
                             tooltip: "Arrow — a", action: #selector(arrowClicked(_:)))
-        toolRow.addArrangedSubview(penButton)
-        toolRow.addArrangedSubview(textButton)
-        toolRow.addArrangedSubview(arrowButton)
-        stack.addArrangedSubview(toolRow)
+        stack.addArrangedSubview(penButton)
+        stack.addArrangedSubview(textButton)
+        stack.addArrangedSubview(arrowButton)
 
-        for rowStart in stride(from: 0, to: QuickPickPalette.colors.count, by: 2) {
-            let row = NSStackView()
-            row.orientation = .horizontal
-            row.spacing = 4
-            for offset in 0..<2 where rowStart + offset < QuickPickPalette.colors.count {
-                let i = rowStart + offset
-                let color = QuickPickPalette.colors[i]
-                let btn = NSButton(title: "", target: self, action: #selector(colorClicked(_:)))
-                btn.tag = i
-                btn.bezelStyle = .regularSquare
-                btn.image = makeSwatchImage(r: color.r, g: color.g, b: color.b)
-                btn.imagePosition = .imageOnly
-                btn.toolTip = "\(color.name) — \(i + 1)"
-                quickPickButtons.append(btn)
-                row.addArrangedSubview(btn)
-            }
-            stack.addArrangedSubview(row)
+        for (i, color) in QuickPickPalette.colors.enumerated() {
+            let btn = NSButton(title: "", target: self, action: #selector(colorClicked(_:)))
+            btn.tag = i
+            btn.bezelStyle = .regularSquare
+            btn.image = makeSwatchImage(r: color.r, g: color.g, b: color.b)
+            btn.imagePosition = .imageOnly
+            btn.toolTip = "\(color.name) — \(i + 1)"
+            quickPickButtons.append(btn)
+            stack.addArrangedSubview(btn)
         }
 
         colorWell.target = self
@@ -123,21 +127,13 @@ public final class ToolbarController: NSObject {
         colorWell.toolTip = "Custom color"
         stack.addArrangedSubview(colorWell)
 
-        widthSlider.target = self
-        widthSlider.action = #selector(widthChanged(_:))
-        widthSlider.doubleValue = controller.currentWidth
-        widthSlider.toolTip = "Size — s / S"
         styleSliderLabel(widthLabel)
         stack.addArrangedSubview(widthLabel)
-        stack.addArrangedSubview(widthSlider)
+        stack.addArrangedSubview(sizePicker)
 
-        opacitySlider.target = self
-        opacitySlider.action = #selector(opacityChanged(_:))
-        opacitySlider.doubleValue = controller.currentColor.a
-        opacitySlider.toolTip = "Opacity — o / O"
         styleSliderLabel(opacityLabel)
         stack.addArrangedSubview(opacityLabel)
-        stack.addArrangedSubview(opacitySlider)
+        stack.addArrangedSubview(opacityPicker)
 
         hideButton.target = self
         hideButton.action = #selector(toggleHide(_:))
@@ -170,7 +166,7 @@ public final class ToolbarController: NSObject {
     /// Refresh the "active" highlight on the swatch matching `controller.currentColor`.
     /// Called whenever the controller's color changes (via toolbar click, picker,
     /// keyboard shortcut, or HTTP write). Compares on RGB only — alpha comes from
-    /// the opacity slider and doesn't disqualify a swatch match.
+    /// the opacity picker and doesn't disqualify a swatch match.
     private func updateSwatchHighlights() {
         let match = matchingSwatchIndex(for: controller.currentColor)
         activeSwatchIndex = match
@@ -289,15 +285,6 @@ public final class ToolbarController: NSObject {
         controller.currentColor = RGBA(r: Double(c.redComponent), g: Double(c.greenComponent), b: Double(c.blueComponent), a: a)
     }
 
-    @objc private func widthChanged(_ sender: NSSlider) {
-        controller.currentWidth = sender.doubleValue
-    }
-
-    @objc private func opacityChanged(_ sender: NSSlider) {
-        let c = controller.currentColor
-        controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: sender.doubleValue)
-    }
-
     @objc private func toggleHide(_ sender: NSButton) {
         controller.drawingsVisible.toggle()
     }
@@ -345,13 +332,14 @@ public final class ToolbarController: NSObject {
     }
 
     internal func testOnly_setWidth(_ value: Double) {
-        widthSlider.doubleValue = value
-        widthChanged(widthSlider)
+        sizePicker.setValue(value)
+        controller.currentWidth = value
     }
 
     internal func testOnly_setOpacity(_ value: Double) {
-        opacitySlider.doubleValue = value
-        opacityChanged(opacitySlider)
+        opacityPicker.setValue(value)
+        let c = controller.currentColor
+        controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: value)
     }
 
     internal func testOnly_toggleHide() { toggleHide(hideButton) }
@@ -368,12 +356,12 @@ public final class ToolbarController: NSObject {
 
     // swiftlint:disable identifier_name
     internal var testOnly_colorWellColor: NSColor { colorWell.color }
-    internal var testOnly_widthSliderValue: Double { widthSlider.doubleValue }
+    internal var testOnly_widthSliderValue: Double { sizePicker.value }
     internal var testOnly_hideButtonGlyphName: String { currentHideGlyphName }
     internal var testOnly_autoFadeGlyphName: String { currentAutoFadeGlyphName }
     internal var testOnly_colorWellTooltip: String? { colorWell.toolTip }
-    internal var testOnly_widthSliderTooltip: String? { widthSlider.toolTip }
-    internal var testOnly_opacitySliderTooltip: String? { opacitySlider.toolTip }
+    internal var testOnly_widthSliderTooltip: String? { sizePicker.toolTipText }
+    internal var testOnly_opacitySliderTooltip: String? { opacityPicker.toolTipText }
     internal var testOnly_hideButtonTooltip: String? { hideButton.toolTip }
     internal var testOnly_autoFadeTooltip: String? { autoFadeButton.toolTip }
     internal var testOnly_widthLabelText: String { widthLabel.stringValue }
@@ -387,6 +375,7 @@ public final class ToolbarController: NSObject {
     internal var testOnly_arrowActiveBackground: Bool { hasActiveBackground(arrowButton) }
     internal var testOnly_hideButtonActiveBackground: Bool { hasActiveBackground(hideButton) }
     internal var testOnly_autoFadeActiveBackground: Bool { hasActiveBackground(autoFadeButton) }
+    internal var testOnly_sizePickerTool: Tool { sizePicker.currentTool }
     // swiftlint:enable identifier_name
 
     private func hasActiveBackground(_ button: NSButton) -> Bool {
