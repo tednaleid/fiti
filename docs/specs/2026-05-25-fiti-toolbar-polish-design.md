@@ -147,14 +147,32 @@ renders the result.
   that renders the collapsed example+number and, on click, presents an
   `NSPopover` whose content is a horizontal `NSStackView` of the presets. Two
   configurations:
-  - **Size:** collapsed = a filled dot whose diameter maps the current width
-    (clamped to the control height) + the integer width. Popover cells = dots
-    of increasing diameter.
+  - **Size (tool-aware):** the preview glyph depends on `currentTool`, so the
+    picker shows what that tool will actually draw at each preset:
+    - **pen** -> a brush dab at the stroke width — reuse the cursor's brush-dab
+      rendering (see below), so cursor and picker are literally one function.
+    - **arrow** -> a short arrow drawn at the stroke width, so line thickness
+      reads (the fixed-size arrowhead *cursor* can't convey width).
+    - **text** -> a "T" at font size (`currentWidth * 4`).
+    - **selection** -> size is not meaningful; fall back to the brush dab.
+    Collapsed control = the current tool's glyph at the current value + the
+    integer width. Popover cells = the same glyph across the presets. Big
+    presets (e.g. 100px dab, 400pt T) can't render literally in a cell, so
+    previews scale proportionally to fit the strip; the number gives the exact
+    value. The collapsed control and open popover refresh on
+    `onCurrentToolChanged`.
   - **Opacity:** collapsed = a swatch filled with the current color at its alpha
     over a checkerboard (so alpha reads) + the percent. Popover cells = swatches
-    of increasing alpha.
+    of increasing alpha. Not tool-aware for now (could mirror the size glyph at
+    varying alpha later).
   Selecting a cell invokes a callback with the chosen `Double` and dismisses.
   Reads `ValuePresets` from Core. Keeps `ToolbarController` from ballooning.
+- `Sources/AppKit/CursorRenderer.swift` (modified): factor the brush-dab image
+  drawing out of `makeBrushCursor` into a shared function (e.g. a free function
+  or small helper that returns the dab `NSImage` for a color + diameter) so both
+  the brush cursor and the pen size-preview render from one source of truth. The
+  arrowhead *cursor* stays its fixed glyph; the picker's arrow preview is its
+  own width-scaled drawing.
 - `Sources/AppKit/ToolbarController.swift` (modified):
   - Labels: `"stroke size"` -> `"size"`, `"stroke opacity"` -> `"opacity"`, and
     the slider tooltips drop "Stroke ".
@@ -207,7 +225,8 @@ Modified:
 - `Sources/AppKit/ToolbarController.swift` (labels, layout, pickers,
   persistence re-key, autosave bump)
 - `Sources/AppKit/ToolbarPanel.swift` (initial frame for the tall layout)
-- `Sources/AppKit/CursorRenderer.swift` (crosshair mapping, if missing)
+- `Sources/AppKit/CursorRenderer.swift` (crosshair mapping if missing; factor
+  the brush-dab image so the pen size-preview reuses it)
 - `Sources/App/main.swift` (toolbar frame -> `toolbarRegion`, updates)
 - Test files for all of the above (see Testing)
 
@@ -234,7 +253,8 @@ Core (`fiti-unit`):
 AppKit (`test-integration`):
 - `ValuePickerControl` shows the expected number/percent for a value and snaps
   display to the right preset cell; selecting a cell invokes the callback with
-  that preset.
+  that preset. The size picker's preview is tool-aware: it renders the pen dab,
+  the arrow, or a "T" per `currentTool`, and refreshes when the tool changes.
 - `ToolbarController` size/opacity hooks set `controller.currentWidth` /
   `currentColor.a`; labels read "size"/"opacity"; tooltips have no "Stroke ".
 - **Persistence regression:** changing `controller.currentColor` /
