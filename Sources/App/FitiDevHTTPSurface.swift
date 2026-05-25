@@ -20,10 +20,18 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
         self.onOutlineChanged = onOutlineChanged
     }
 
-    public var outlineEnabled: Bool { outlineSettings.outlineEnabled }
-    public func setOutline(_ enabled: Bool) {
-        outlineSettings.outlineEnabled = enabled
+    public var textOutline: Bool { outlineSettings.textOutline }
+    public var arrowOutline: Bool { outlineSettings.arrowOutline }
+    public var penOutline: Bool { outlineSettings.penOutline }
+    public func setOutline(tool: String, enabled: Bool) -> Bool {
+        switch tool {
+        case "text": outlineSettings.textOutline = enabled
+        case "arrow": outlineSettings.arrowOutline = enabled
+        case "pen": outlineSettings.penOutline = enabled
+        default: return false
+        }
         onOutlineChanged()
+        return true
     }
 
     public var doc: FitiDoc { controller.editor.doc }
@@ -87,7 +95,7 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
 
     public func snapshotPNG() -> Data? {
         let frame = RenderFrame.from(editor: controller.editor, canvasSize: canvasSize)
-        return SnapshotRenderer.png(from: frame, outline: outlineSettings.outlineEnabled)
+        return SnapshotRenderer.png(from: frame, outline: outlineSettings.flags)
     }
 }
 #endif

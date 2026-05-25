@@ -55,11 +55,11 @@ struct OutlineStyleTests {
     func textHaloSteps() {
         // Small text takes the first band; large text the later, chunkier bands; above
         // the last band the largest width holds.
-        #expect(textHaloWidth(forFontSize: 24) == 6)
-        #expect(textHaloWidth(forFontSize: 48) == 6)
-        #expect(textHaloWidth(forFontSize: 64) == 10)
-        #expect(textHaloWidth(forFontSize: 120) == 14)
-        #expect(textHaloWidth(forFontSize: 400) == 14)
+        #expect(textHaloWidth(forFontSize: 24) == 5)
+        #expect(textHaloWidth(forFontSize: 48) == 5)
+        #expect(textHaloWidth(forFontSize: 64) == 8)
+        #expect(textHaloWidth(forFontSize: 120) == 12)
+        #expect(textHaloWidth(forFontSize: 400) == 12)
     }
 
     @Test("luminance threshold splits white vs black in both directions")

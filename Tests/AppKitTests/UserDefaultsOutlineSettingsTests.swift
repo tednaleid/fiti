@@ -1,5 +1,5 @@
-// ABOUTME: Tests the UserDefaults-backed OutlineSettings adapter: default off
-// ABOUTME: when unset, and round-trip persistence.
+// ABOUTME: Tests the UserDefaults-backed OutlineSettings adapter: product defaults
+// ABOUTME: when unset (text/arrow on, pen off) and per-tool round-trip persistence.
 
 import AppKit
 import Testing
@@ -14,17 +14,25 @@ struct UserDefaultsOutlineSettingsTests {
         return d
     }
 
-    @Test("unset reads as off")
-    func unsetIsOff() {
-        #expect(UserDefaultsOutlineSettings(defaults: freshDefaults()).outlineEnabled == false)
+    @Test("unset reads product defaults: text/arrow on, pen off")
+    func unsetDefaults() {
+        let s = UserDefaultsOutlineSettings(defaults: freshDefaults())
+        #expect(s.textOutline == true)
+        #expect(s.arrowOutline == true)
+        #expect(s.penOutline == false)
     }
 
-    @Test("a set value round-trips and persists across adapters")
+    @Test("each tool round-trips and persists across adapters")
     func roundTrips() {
         let d = freshDefaults()
         let s = UserDefaultsOutlineSettings(defaults: d)
-        s.outlineEnabled = true
-        #expect(s.outlineEnabled == true)
-        #expect(UserDefaultsOutlineSettings(defaults: d).outlineEnabled == true)
+        s.textOutline = false
+        s.penOutline = true
+        #expect(s.textOutline == false)
+        #expect(s.penOutline == true)
+        let reloaded = UserDefaultsOutlineSettings(defaults: d)
+        #expect(reloaded.textOutline == false)
+        #expect(reloaded.arrowOutline == true)   // untouched, still its default
+        #expect(reloaded.penOutline == true)
     }
 }

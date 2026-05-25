@@ -7,7 +7,7 @@ import CoreGraphics
 /// Composite `groups` (bottom-to-top) into `ctx`. Each group's items are drawn
 /// opaque (alpha 1) inside a transparency layer, which is then composited at the
 /// group's alpha. Same-color overlaps union flat; cross-group z-order is source-over.
-func compositeGroups(_ groups: [FlattenLayer], in ctx: CGContext, outline: Bool = false) {
+func compositeGroups(_ groups: [FlattenLayer], in ctx: CGContext, outline: OutlineFlags = .none) {
     for group in groups {
         guard let groupAlpha = group.items.first?.color.a else { continue }
         ctx.saveGState()

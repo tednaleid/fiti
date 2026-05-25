@@ -251,26 +251,30 @@ struct PreferencesControllerStatusTextTests {
 @MainActor
 @Suite("PreferencesController outline")
 struct PreferencesControllerOutlineTests {
-    @Test("checkbox initializes from the store")
+    @Test("checkboxes initialize from the store")
     func initializesFromStore() {
-        let oc = DefaultOutlineSettings(outlineEnabled: true)
+        let oc = DefaultOutlineSettings(textOutline: true, arrowOutline: false, penOutline: true)
         let c = PreferencesController(launchAtLogin: RecordingLaunchAtLogin(),
                                       fadeSettings: DefaultFadeSettings(),
                                       outlineSettings: oc,
                                       onOutlineChanged: {})
-        #expect(c.testOnly_outlineCheckbox.state == .on)
+        #expect(c.testOnly_textOutlineCheckbox.state == .on)
+        #expect(c.testOnly_arrowOutlineCheckbox.state == .off)
+        #expect(c.testOnly_penOutlineCheckbox.state == .on)
     }
 
-    @Test("toggling the checkbox writes the store and fires the closure")
+    @Test("toggling the checkboxes writes the store and fires the closure")
     func writesStoreAndFires() {
-        let oc = DefaultOutlineSettings(outlineEnabled: false)
+        let oc = DefaultOutlineSettings(textOutline: false, arrowOutline: false, penOutline: false)
         var fired = 0
         let c = PreferencesController(launchAtLogin: RecordingLaunchAtLogin(),
                                       fadeSettings: DefaultFadeSettings(),
                                       outlineSettings: oc,
                                       onOutlineChanged: { fired += 1 })
-        c.testOnly_setOutline(true)
-        #expect(oc.outlineEnabled == true)
+        c.testOnly_setOutline(text: true, arrow: false, pen: true)
+        #expect(oc.textOutline == true)
+        #expect(oc.arrowOutline == false)
+        #expect(oc.penOutline == true)
         #expect(fired == 1)
     }
 }

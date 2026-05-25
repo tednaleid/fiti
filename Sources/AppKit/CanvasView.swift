@@ -25,7 +25,7 @@ public final class CanvasView: NSView, Renderer {
     /// Global outline/halo render toggle. Settable so production injects the
     /// UserDefaults adapter; defaults off so existing tests are unaffected.
     public var outlineSettings: OutlineSettings = DefaultOutlineSettings()
-    private var bakedOutline = false
+    private var bakedOutline = OutlineFlags.none
     private var activeGroupUnion: CGImage?
 
     /// Exposed for tests only — do not use in production code.
@@ -135,7 +135,7 @@ public final class CanvasView: NSView, Renderer {
         let resolvedScale = testOnly_overrideBackingScale ?? window?.backingScaleFactor ?? 1
         let liftedChanged = split.lifted.map(\.id) != activeGroupCommitted.map(\.id)
         if signature != committedSignature || resolvedScale != backingScale || liftedChanged
-            || outlineSettings.outlineEnabled != bakedOutline {
+            || outlineSettings.flags != bakedOutline {
             backingScale = resolvedScale
             #if DEBUG
             PerfLog.shared.measure("render.bake") { rebuildBakes(frame: frame, split: split) }
@@ -143,7 +143,7 @@ public final class CanvasView: NSView, Renderer {
             rebuildBakes(frame: frame, split: split)
             #endif
             committedSignature = signature
-            bakedOutline = outlineSettings.outlineEnabled
+            bakedOutline = outlineSettings.flags
         }
         lastFrame = frame
         needsDisplay = true
@@ -178,7 +178,7 @@ public final class CanvasView: NSView, Renderer {
         ctx.setLineJoin(.round)
         if let image = committedImage { blitBake(image, frame, in: ctx) }
         for live in frame.liveItems {
-            drawItem(live, in: ctx, isInProgress: false, outline: outlineSettings.outlineEnabled)
+            drawItem(live, in: ctx, isInProgress: false, outline: outlineSettings.flags)
         }
         if let live = frame.inProgress, isLiveDrawable(live) {
             #if DEBUG
@@ -259,7 +259,7 @@ public final class CanvasView: NSView, Renderer {
         withItemTransform(session.transform, in: ctx) {
             drawTextString(session.string, fontName: session.fontName,
                            fontSize: session.fontSize, color: session.color, in: ctx,
-                           outline: outlineSettings.outlineEnabled)
+                           outline: outlineSettings.textOutline)
         }
         drawLiveCaret(session, in: ctx)
     }
@@ -315,7 +315,7 @@ public final class CanvasView: NSView, Renderer {
         ctx.setAlpha(CGFloat(globalOpacity * groupAlpha))
         ctx.beginTransparencyLayer(auxiliaryInfo: nil)
         if let union = activeGroupUnion { blitBake(union, frame, in: ctx) }
-        drawItem(live.withAlpha(1), in: ctx, isInProgress: true, outline: outlineSettings.outlineEnabled)
+        drawItem(live.withAlpha(1), in: ctx, isInProgress: true, outline: outlineSettings.flags)
         ctx.endTransparencyLayer()
         ctx.restoreGState()
     }
@@ -378,7 +378,7 @@ extension CanvasView {
     func bakeCommitted(_ frame: RenderFrame, baked: [CanvasItem]) -> CGImage? {
         guard let ctx = makeBakeContext(frame) else { return nil }
         let groups = LayerPlan.compute(items: baked, aabb: { SelectionMath.worldAABB(of: $0) })
-        compositeGroups(groups, in: ctx, outline: outlineSettings.outlineEnabled)
+        compositeGroups(groups, in: ctx, outline: outlineSettings.flags)
         return ctx.makeImage()
     }
 
@@ -387,7 +387,7 @@ extension CanvasView {
     /// when this union is composited with the live stroke.
     func bakeOpaqueUnion(_ frame: RenderFrame, members: [CanvasItem]) -> CGImage? {
         guard let ctx = makeBakeContext(frame) else { return nil }
-        for member in members { drawItem(member.withAlpha(1), in: ctx, isInProgress: false, outline: outlineSettings.outlineEnabled) }
+        for member in members { drawItem(member.withAlpha(1), in: ctx, isInProgress: false, outline: outlineSettings.flags) }
         return ctx.makeImage()
     }
 }

@@ -1,5 +1,5 @@
-// ABOUTME: Tests for POST /outline route and outlineEnabled field in GET /state.
-// ABOUTME: Uses FakeSurface and ephemeral-port DevHTTPServer; real URLSession.
+// ABOUTME: Tests for POST /outline {tool, enabled} route and the outline.{text,arrow,pen}
+// ABOUTME: object in GET /state. Uses FakeSurface and ephemeral-port DevHTTPServer.
 
 import Foundation
 import Testing
@@ -32,59 +32,52 @@ struct OutlineRouteTests {
         return (http.statusCode, json)
     }
 
-    @Test("POST /outline {enabled: true} sets outlineEnabled on surface")
+    @Test("POST /outline sets the named tool on the surface")
     func outlineEnable() async throws {
         let surface = FakeSurface()
+        surface.penOutline = false
         let server = try DevHTTPServer(surface: surface, port: 0); try server.start(); defer { server.stop() }
-        let status = try await postStatus(server, "/outline", body: #"{"enabled":true}"#)
+        let status = try await postStatus(server, "/outline", body: #"{"tool":"pen","enabled":true}"#)
         #expect(status == 200)
-        #expect(surface.outlineEnabled == true)
+        #expect(surface.penOutline == true)
+        #expect(surface.textOutline == true)   // other tools untouched
     }
 
-    @Test("POST /outline {enabled: false} clears outlineEnabled on surface")
+    @Test("POST /outline can clear a tool")
     func outlineDisable() async throws {
         let surface = FakeSurface()
-        surface.outlineEnabled = true
         let server = try DevHTTPServer(surface: surface, port: 0); try server.start(); defer { server.stop() }
-        let status = try await postStatus(server, "/outline", body: #"{"enabled":false}"#)
+        let status = try await postStatus(server, "/outline", body: #"{"tool":"text","enabled":false}"#)
         #expect(status == 200)
-        #expect(surface.outlineEnabled == false)
+        #expect(surface.textOutline == false)
     }
 
-    @Test("POST /outline with missing body returns 400")
+    @Test("POST /outline with missing fields returns 400")
     func outlineMissingBody() async throws {
         let surface = FakeSurface()
         let server = try DevHTTPServer(surface: surface, port: 0); try server.start(); defer { server.stop() }
         #expect(try await postStatus(server, "/outline", body: "{}") == 400)
     }
 
-    @Test("POST /outline toggles the surface and /state reports it")
-    func outlineRoute() async throws {
+    @Test("POST /outline with an unknown tool returns 400")
+    func outlineUnknownTool() async throws {
         let surface = FakeSurface()
         let server = try DevHTTPServer(surface: surface, port: 0); try server.start(); defer { server.stop() }
-        let status = try await postStatus(server, "/outline", body: #"{"enabled":true}"#)
-        #expect(status == 200)
-        #expect(surface.outlineEnabled == true)
-        let (stateStatus, json) = try await get(server, "/state")
-        #expect(stateStatus == 200)
-        #expect(json["outlineEnabled"] as? Bool == true)
+        #expect(try await postStatus(server, "/outline", body: #"{"tool":"laser","enabled":true}"#) == 400)
     }
 
-    @Test("GET /state includes outlineEnabled field")
-    func stateIncludesOutlineEnabled() async throws {
+    @Test("GET /state reports the per-tool outline flags")
+    func stateIncludesOutline() async throws {
         let surface = FakeSurface()
-        surface.outlineEnabled = true
+        surface.textOutline = true
+        surface.arrowOutline = false
+        surface.penOutline = true
         let server = try DevHTTPServer(surface: surface, port: 0); try server.start(); defer { server.stop() }
         let (status, json) = try await get(server, "/state")
         #expect(status == 200)
-        #expect(json["outlineEnabled"] as? Bool == true)
-    }
-
-    @Test("GET /state outlineEnabled defaults to false")
-    func stateOutlineEnabledDefault() async throws {
-        let surface = FakeSurface()
-        let server = try DevHTTPServer(surface: surface, port: 0); try server.start(); defer { server.stop() }
-        let (_, json) = try await get(server, "/state")
-        #expect(json["outlineEnabled"] as? Bool == false)
+        let outline = try #require(json["outline"] as? [String: Any])
+        #expect(outline["text"] as? Bool == true)
+        #expect(outline["arrow"] as? Bool == false)
+        #expect(outline["pen"] as? Bool == true)
     }
 }

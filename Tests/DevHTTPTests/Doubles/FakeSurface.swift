@@ -17,7 +17,9 @@ public final class FakeSurface: DevHTTPSurface {
     public var currentTool: Tool = .pen
     public var isEditingText: Bool = false
     public var editingText: String?
-    public var outlineEnabled: Bool = false
+    public var textOutline: Bool = true
+    public var arrowOutline: Bool = true
+    public var penOutline: Bool = false
 
     public var activateCalls = 0
     public var deactivateCalls = 0
@@ -46,7 +48,15 @@ public final class FakeSurface: DevHTTPSurface {
     public func setColor(_ color: RGBA) { currentColor = color }
     public func setWidth(_ width: Double) { currentWidth = width }
     public func setDrawingsVisible(_ visible: Bool) { drawingsVisible = visible }
-    public func setOutline(_ enabled: Bool) { outlineEnabled = enabled }
+    public func setOutline(tool: String, enabled: Bool) -> Bool {
+        switch tool {
+        case "text": textOutline = enabled
+        case "arrow": arrowOutline = enabled
+        case "pen": penOutline = enabled
+        default: return false
+        }
+        return true
+    }
 
     public func setTool(_ tool: Tool) {
         currentTool = tool

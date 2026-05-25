@@ -288,7 +288,8 @@ public final class DevHTTPServer: @unchecked Sendable {
                       "b": surface.currentColor.b, "a": surface.currentColor.a],
             "width": surface.currentWidth,
             "drawingsVisible": surface.drawingsVisible,
-            "outlineEnabled": surface.outlineEnabled,
+            "outline": ["text": surface.textOutline, "arrow": surface.arrowOutline,
+                        "pen": surface.penOutline],
             "currentTool": String(describing: surface.currentTool),
             "isEditingText": surface.isEditingText,
             "editingText": surface.editingText as Any

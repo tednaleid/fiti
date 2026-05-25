@@ -263,17 +263,12 @@ inspect-show:
 inspect-hide:
     @curl -sf -X POST localhost:{{dev_port}}/drawings/hide
 
+# Toggle a tool's outline: TOOL is text|arrow|pen, STATE is on|off
 [group('inspect')]
-inspect-outline-on:
+inspect-outline TOOL STATE:
     @curl -sf -X POST localhost:{{dev_port}}/outline \
         -H 'Content-Type: application/json' \
-        -d '{"enabled":true}'
-
-[group('inspect')]
-inspect-outline-off:
-    @curl -sf -X POST localhost:{{dev_port}}/outline \
-        -H 'Content-Type: application/json' \
-        -d '{"enabled":false}'
+        -d '{"tool":"{{TOOL}}","enabled":{{ if STATE == "on" { "true" } else { "false" } }}}'
 
 [group('inspect')]
 inspect-tool TOOL:

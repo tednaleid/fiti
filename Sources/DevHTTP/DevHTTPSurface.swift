@@ -19,7 +19,9 @@ public protocol DevHTTPSurface: AnyObject {
     var currentTool: Tool { get }
     var isEditingText: Bool { get }
     var editingText: String? { get }
-    var outlineEnabled: Bool { get }
+    var textOutline: Bool { get }
+    var arrowOutline: Bool { get }
+    var penOutline: Bool { get }
 
     func activate()
     func deactivate()
@@ -41,6 +43,7 @@ public protocol DevHTTPSurface: AnyObject {
     func setColor(_ color: RGBA)
     func setWidth(_ width: Double)
     func setDrawingsVisible(_ visible: Bool)
-    func setOutline(_ enabled: Bool)
+    /// Set one tool's outline ("text" | "arrow" | "pen"). Returns false if unknown.
+    func setOutline(tool: String, enabled: Bool) -> Bool
 }
 #endif

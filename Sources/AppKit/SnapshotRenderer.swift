@@ -9,7 +9,7 @@ import UniformTypeIdentifiers
 
 public enum SnapshotRenderer {
     public static func png(from frame: RenderFrame, scale: CGFloat = 2.0,
-                           outline: Bool = false) -> Data? {
+                           outline: OutlineFlags = .none) -> Data? {
         let width = Int(frame.canvasSize.width * Double(scale))
         let height = Int(frame.canvasSize.height * Double(scale))
         guard width > 0, height > 0 else { return nil }

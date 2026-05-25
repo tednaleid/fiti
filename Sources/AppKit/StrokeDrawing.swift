@@ -7,12 +7,10 @@ import CoreText
 import Foundation
 import PerfectFreehand
 
-/// Stroke `path` with the resolved contrast halo behind the fill, if outline is on.
-/// Shared by drawStroke and drawArrow (both use the stroke/arrow width factor).
-func strokeHaloIfNeeded(_ path: CGPath, color: RGBA, sizeBasis: Double,
-                        outline: Bool, in ctx: CGContext) {
-    guard let halo = resolveOutline(enabled: outline, color: color, sizeBasis: sizeBasis,
-                                    widthFactor: OutlineTuning.strokeWidthFactor) else { return }
+/// Stroke `path` with the resolved contrast halo behind the fill. The caller
+/// resolves the halo (so drawStroke and drawArrow can apply their own width policy)
+/// and only calls this when one is present.
+func strokeHalo(_ path: CGPath, _ halo: ResolvedOutline, in ctx: CGContext) {
     ctx.setStrokeColor(red: CGFloat(halo.haloColor.r), green: CGFloat(halo.haloColor.g),
                        blue: CGFloat(halo.haloColor.b), alpha: CGFloat(halo.haloColor.a))
     ctx.setLineWidth(CGFloat(halo.haloWidth))
@@ -22,11 +20,13 @@ func strokeHaloIfNeeded(_ path: CGPath, color: RGBA, sizeBasis: Double,
     ctx.strokePath()
 }
 
-public func drawItem(_ item: CanvasItem, in ctx: CGContext, isInProgress: Bool, outline: Bool = false) {
+public func drawItem(_ item: CanvasItem, in ctx: CGContext, isInProgress: Bool,
+                     outline: OutlineFlags = .none) {
+    let on = outline.enabled(for: item)
     switch item {
-    case .stroke(let s): drawStroke(s, in: ctx, isInProgress: isInProgress, outline: outline)
-    case .text(let t): drawText(t, in: ctx, outline: outline)
-    case .arrow(let a): drawArrow(a, in: ctx, isInProgress: isInProgress, outline: outline)
+    case .stroke(let s): drawStroke(s, in: ctx, isInProgress: isInProgress, outline: on)
+    case .text(let t): drawText(t, in: ctx, outline: on)
+    case .arrow(let a): drawArrow(a, in: ctx, isInProgress: isInProgress, outline: on)
     }
 }
 
@@ -43,7 +43,10 @@ public func drawStroke(_ stroke: Stroke, in ctx: CGContext, isInProgress: Bool, 
             path.addLine(to: CGPoint(x: v.x, y: v.y))
         }
         path.closeSubpath()
-        strokeHaloIfNeeded(path, color: stroke.color, sizeBasis: stroke.width, outline: outline, in: ctx)
+        if let halo = resolveOutline(enabled: outline, color: stroke.color, sizeBasis: stroke.width,
+                                     widthFactor: OutlineTuning.strokeWidthFactor) {
+            strokeHalo(path, halo, in: ctx)
+        }
         ctx.setFillColor(red: CGFloat(stroke.color.r), green: CGFloat(stroke.color.g),
                          blue: CGFloat(stroke.color.b), alpha: CGFloat(stroke.color.a))
         ctx.addPath(path)

@@ -16,7 +16,9 @@ public final class PreferencesController: NSObject {
     private let fadeField: NSTextField
     private let fadeStepper: NSStepper
     private let statusField: NSTextField
-    private let outlineCheckbox = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let textOutlineCheckbox = NSButton(checkboxWithTitle: "Text", target: nil, action: nil)
+    private let arrowOutlineCheckbox = NSButton(checkboxWithTitle: "Arrows", target: nil, action: nil)
+    private let penOutlineCheckbox = NSButton(checkboxWithTitle: "Pen", target: nil, action: nil)
 
     private static let approvalHint = "Approve fiti in System Settings \u{2192} General \u{2192} Login Items."
 
@@ -64,10 +66,15 @@ public final class PreferencesController: NSObject {
 
         stack.addArrangedSubview(row(label: "Seconds before fade:", control: buildFadeControl()))
 
-        outlineCheckbox.state = outlineSettings.outlineEnabled ? .on : .off
-        outlineCheckbox.target = self
-        outlineCheckbox.action = #selector(outlineToggled(_:))
-        stack.addArrangedSubview(row(label: "Outline:", control: outlineCheckbox))
+        for box in [textOutlineCheckbox, arrowOutlineCheckbox, penOutlineCheckbox] {
+            box.target = self
+            box.action = #selector(outlineToggled(_:))
+        }
+        syncOutlineCheckboxes()
+        let outlineRow = NSStackView(views: [textOutlineCheckbox, arrowOutlineCheckbox, penOutlineCheckbox])
+        outlineRow.orientation = .horizontal
+        outlineRow.spacing = 12
+        stack.addArrangedSubview(row(label: "Outline:", control: outlineRow))
 
         stack.addArrangedSubview(statusField)
 
@@ -162,8 +169,16 @@ public final class PreferencesController: NSObject {
         }
     }
 
+    private func syncOutlineCheckboxes() {
+        textOutlineCheckbox.state = outlineSettings.textOutline ? .on : .off
+        arrowOutlineCheckbox.state = outlineSettings.arrowOutline ? .on : .off
+        penOutlineCheckbox.state = outlineSettings.penOutline ? .on : .off
+    }
+
     @objc private func outlineToggled(_ sender: NSButton) {
-        outlineSettings.outlineEnabled = (sender.state == .on)
+        outlineSettings.textOutline = (textOutlineCheckbox.state == .on)
+        outlineSettings.arrowOutline = (arrowOutlineCheckbox.state == .on)
+        outlineSettings.penOutline = (penOutlineCheckbox.state == .on)
         onOutlineChanged()
     }
 
@@ -197,9 +212,11 @@ public final class PreferencesController: NSObject {
         fadeStepperChanged(fadeStepper)
     }
 
-    internal func testOnly_setOutline(_ on: Bool) {
-        outlineCheckbox.state = on ? .on : .off
-        outlineToggled(outlineCheckbox)
+    internal func testOnly_setOutline(text: Bool, arrow: Bool, pen: Bool) {
+        textOutlineCheckbox.state = text ? .on : .off
+        arrowOutlineCheckbox.state = arrow ? .on : .off
+        penOutlineCheckbox.state = pen ? .on : .off
+        outlineToggled(textOutlineCheckbox)
     }
 
     // swiftlint:disable identifier_name
@@ -209,6 +226,8 @@ public final class PreferencesController: NSObject {
     internal var testOnly_statusField: NSTextField { statusField }
     internal var testOnly_fadeField: NSTextField { fadeField }
     internal var testOnly_fadeStepper: NSStepper { fadeStepper }
-    internal var testOnly_outlineCheckbox: NSButton { outlineCheckbox }
+    internal var testOnly_textOutlineCheckbox: NSButton { textOutlineCheckbox }
+    internal var testOnly_arrowOutlineCheckbox: NSButton { arrowOutlineCheckbox }
+    internal var testOnly_penOutlineCheckbox: NSButton { penOutlineCheckbox }
     // swiftlint:enable identifier_name
 }

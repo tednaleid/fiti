@@ -38,19 +38,19 @@ struct CanvasViewOutlineTests {
     @Test("outline on adds white halo pixels to the bake")
     func haloInBake() throws {
         let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 200, height: 160))
-        view.outlineSettings = DefaultOutlineSettings(outlineEnabled: true)
+        view.outlineSettings = DefaultOutlineSettings(penOutline: true)
         view.render(frame())
         #expect(try whiteCountInBake(view) > 20)
     }
 
     @Test("flipping the toggle re-bakes (halo appears, then is gone)")
     func toggleRebakes() throws {
-        let settings = DefaultOutlineSettings(outlineEnabled: false)
+        let settings = DefaultOutlineSettings(penOutline: false)
         let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 200, height: 160))
         view.outlineSettings = settings
         view.render(frame())
         #expect(try whiteCountInBake(view) == 0)
-        settings.outlineEnabled = true
+        settings.penOutline = true
         view.refresh()
         #expect(try whiteCountInBake(view) > 20)
     }

@@ -15,8 +15,9 @@ struct SnapshotRendererOutlineTests {
                             pointerType: .mouse, pressureEnabled: false, createdAt: 0)
         let frame = RenderFrame(items: [.stroke(stroke)], inProgress: nil,
                                 canvasSize: Size(width: 200, height: 100))
-        let plain = SnapshotRenderer.png(from: frame, outline: false)
-        let haloed = SnapshotRenderer.png(from: frame, outline: true)
+        let plain = SnapshotRenderer.png(from: frame, outline: .none)
+        let haloed = SnapshotRenderer.png(from: frame,
+                                          outline: OutlineFlags(text: false, arrow: false, pen: true))
         #expect(plain != nil && haloed != nil)
         #expect(plain != haloed)
     }

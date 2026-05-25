@@ -1,21 +1,25 @@
-// ABOUTME: Tests the in-memory DefaultOutlineSettings used by tests and default
-// ABOUTME: wiring: it defaults off and round-trips a written value.
+// ABOUTME: Tests the in-memory DefaultOutlineSettings and the OutlineFlags it derives:
+// ABOUTME: product defaults (text/arrow on, pen off) and per-tool round-trips.
 
 import Testing
 
 @Suite("OutlineSettings")
 @MainActor
 struct OutlineSettingsTests {
-    @Test("defaults to off")
-    func defaultsOff() {
-        #expect(DefaultOutlineSettings().outlineEnabled == false)
+    @Test("defaults: text and arrows on, pen off")
+    func defaults() {
+        let s = DefaultOutlineSettings()
+        #expect(s.textOutline == true)
+        #expect(s.arrowOutline == true)
+        #expect(s.penOutline == false)
     }
 
-    @Test("holds an injected value and round-trips a write")
+    @Test("each tool round-trips a write")
     func roundTrips() {
-        let s = DefaultOutlineSettings(outlineEnabled: true)
-        #expect(s.outlineEnabled == true)
-        s.outlineEnabled = false
-        #expect(s.outlineEnabled == false)
+        let s = DefaultOutlineSettings(textOutline: false, arrowOutline: false, penOutline: true)
+        #expect(s.flags == OutlineFlags(text: false, arrow: false, pen: true))
+        s.textOutline = true
+        s.penOutline = false
+        #expect(s.flags == OutlineFlags(text: true, arrow: false, pen: false))
     }
 }

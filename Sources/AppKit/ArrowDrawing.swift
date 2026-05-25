@@ -16,7 +16,11 @@ public func drawArrow(_ arrow: ArrowItem, in ctx: CGContext, isInProgress: Bool,
             path.addLine(to: CGPoint(x: p.x, y: p.y))
         }
         path.closeSubpath()
-        strokeHaloIfNeeded(path, color: arrow.color, sizeBasis: arrow.width, outline: outline, in: ctx)
+        if let halo = resolveOutline(enabled: outline, color: arrow.color, sizeBasis: arrow.width,
+                                     widthFactor: OutlineTuning.arrowWidthFactor,
+                                     minWidth: OutlineTuning.arrowMinHaloWidth) {
+            strokeHalo(path, halo, in: ctx)
+        }
         ctx.setFillColor(red: CGFloat(arrow.color.r), green: CGFloat(arrow.color.g),
                          blue: CGFloat(arrow.color.b), alpha: CGFloat(arrow.color.a))
         ctx.setStrokeColor(red: CGFloat(arrow.color.r), green: CGFloat(arrow.color.g),
