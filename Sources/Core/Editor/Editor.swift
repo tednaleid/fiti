@@ -10,7 +10,7 @@ public enum ChangeKind: Sendable {
 public typealias Cancellable = () -> Void
 
 @MainActor
-public final class Editor { // swiftlint:disable:this type_body_length
+public final class Editor {
     public private(set) var doc: FitiDoc = .empty
     public private(set) var undoStack: [InverseOp] = []
     public private(set) var redoStack: [InverseOp] = []
@@ -18,8 +18,8 @@ public final class Editor { // swiftlint:disable:this type_body_length
     public var canRedo: Bool { !redoStack.isEmpty }
     public private(set) var currentStrokeId: ItemId?
 
-    private let clock: Clock
-    private let ids: IdGenerator
+    let clock: Clock
+    let ids: IdGenerator
     private var listeners: [UUID: (ChangeKind) -> Void] = [:]
 
     public init(clock: Clock, ids: IdGenerator) {
@@ -83,37 +83,7 @@ public final class Editor { // swiftlint:disable:this type_body_length
 
     // MARK: - Arrow (transient, held out of the doc until commit)
 
-    public private(set) var currentArrow: ArrowItem?
-
-    @discardableResult
-    public func beginArrow(color: RGBA, width: Double, tail: Point) -> ItemId {
-        let id = ids.newItemId()
-        currentArrow = ArrowItem(id: id, color: color, width: width, transform: .identity,
-                                 tail: tail, head: tail, createdAt: clock.now())
-        emit(.local)
-        return id
-    }
-
-    public func updateArrowHead(to head: Point) {
-        guard var a = currentArrow else { return }
-        a.head = head
-        currentArrow = a
-        emit(.local)
-    }
-
-    @discardableResult
-    public func commitArrow() -> ItemId? {
-        guard let a = currentArrow else { return nil }
-        currentArrow = nil
-        addItem(.arrow(a))  // appends to itemOrder, pushes deleteItem undo, and emits(.local)
-        return a.id
-    }
-
-    public func cancelArrow() {
-        guard currentArrow != nil else { return }
-        currentArrow = nil
-        emit(.local)
-    }
+    public internal(set) var currentArrow: ArrowItem?
 
     @discardableResult
     public func eraseStroke(_ id: ItemId) -> Bool {
@@ -311,7 +281,7 @@ public final class Editor { // swiftlint:disable:this type_body_length
         return { [weak self] in self?.listeners.removeValue(forKey: token) }
     }
 
-    private func emit(_ kind: ChangeKind) {
+    func emit(_ kind: ChangeKind) {
         for listener in Array(listeners.values) { listener(kind) }
     }
 }
