@@ -1,4 +1,5 @@
-// ABOUTME: Tests the in-memory DefaultOutlineSettings: defaults off, round-trips.
+// ABOUTME: Tests the in-memory DefaultOutlineSettings used by tests and default
+// ABOUTME: wiring: it defaults off and round-trips a written value.
 
 import Testing
 
