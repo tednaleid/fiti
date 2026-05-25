@@ -128,6 +128,21 @@ struct ToolbarControllerTests {
         #expect(suite.double(forKey: "fiti.color.a") == 0.6)
     }
 
+    @Test("non-widget color/width changes persist (keyboard/menubar/HTTP path)")
+    func nonWidgetChangesPersist() {
+        let suite = UserDefaults(suiteName: UUID().uuidString)!
+        let (_, controller, _) = make()
+        let toolbar = ToolbarController(controller: controller, defaults: suite)
+        // Simulate keyboard/HTTP change: set controller state directly,
+        // NOT through a toolbar widget.
+        controller.currentColor = RGBA(r: 0.1, g: 0.2, b: 0.3, a: 0.4)
+        controller.currentWidth = 9
+        #expect(suite.double(forKey: "fiti.color.r") == 0.1)
+        #expect(suite.double(forKey: "fiti.color.a") == 0.4)
+        #expect(suite.double(forKey: "fiti.width") == 9)
+        _ = toolbar
+    }
+
     @Test("external write to currentColor updates the color well")
     func externalColorWriteUpdatesWidget() {
         let (toolbar, controller, _) = make()

@@ -38,12 +38,14 @@ public final class ToolbarController: NSObject {
         buildContent()
         updateVisibility(for: controller.mode)
 
-        // React to external writes (HTTP, other adapters) — keep widgets in sync.
+        // React to external writes (HTTP, other adapters) — keep widgets in sync and persist.
         controller.onCurrentColorChanged = { [weak self] color in
             self?.syncColorWidgets(with: color)
+            self?.persistColor()
         }
         controller.onCurrentWidthChanged = { [weak self] width in
             self?.widthSlider.doubleValue = width
+            self?.defaults.set(width, forKey: "fiti.width")
         }
         controller.onDrawingsVisibilityChanged = { [weak self] visible in
             self?.updateHideButtonGlyph(visible: visible)
@@ -279,25 +281,21 @@ public final class ToolbarController: NSObject {
         let c = QuickPickPalette.colors[sender.tag]
         let a = controller.currentColor.a
         controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: a)
-        persistColor()
     }
 
     @objc private func customColorChanged(_ sender: NSColorWell) {
         let c = sender.color
         let a = controller.currentColor.a
         controller.currentColor = RGBA(r: Double(c.redComponent), g: Double(c.greenComponent), b: Double(c.blueComponent), a: a)
-        persistColor()
     }
 
     @objc private func widthChanged(_ sender: NSSlider) {
         controller.currentWidth = sender.doubleValue
-        defaults.set(controller.currentWidth, forKey: "fiti.width")
     }
 
     @objc private func opacityChanged(_ sender: NSSlider) {
         let c = controller.currentColor
         controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: sender.doubleValue)
-        persistColor()
     }
 
     @objc private func toggleHide(_ sender: NSButton) {
