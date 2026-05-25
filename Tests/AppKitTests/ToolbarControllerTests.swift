@@ -168,14 +168,14 @@ struct ToolbarControllerTests {
         #expect(toolbar.testOnly_sizePickerOutlineOn == false)
     }
 
-    @Test("external write to currentColor updates the color well")
+    @Test("external write to currentColor updates the live mark preview")
     func externalColorWriteUpdatesWidget() {
         let (toolbar, controller, _) = make()
         controller.currentColor = RGBA(r: 0.0, g: 1.0, b: 0.0, a: 1.0)
-        let c = toolbar.testOnly_colorWellColor
-        #expect(abs(c.redComponent - 0.0) < 0.01)
-        #expect(abs(c.greenComponent - 1.0) < 0.01)
-        #expect(abs(c.blueComponent - 0.0) < 0.01)
+        let c = toolbar.testOnly_markColor
+        #expect(abs(c.r - 0.0) < 0.01)
+        #expect(abs(c.g - 1.0) < 0.01)
+        #expect(abs(c.b - 0.0) < 0.01)
     }
 
     @Test("external write to currentWidth updates the width slider")
@@ -318,10 +318,10 @@ struct ToolbarControllerTooltipTests {
         }
     }
 
-    @Test("color well has 'Custom color' tooltip")
-    func colorWellTooltip() {
+    @Test("custom color button has 'Custom color' tooltip")
+    func customColorTooltip() {
         let (toolbar, _) = make()
-        #expect(toolbar.testOnly_colorWellTooltip == "Custom color")
+        #expect(toolbar.testOnly_customColorTooltip == "Custom color")
     }
 
     @Test("width control has 'Size — s / S' tooltip")

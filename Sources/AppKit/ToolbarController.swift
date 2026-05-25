@@ -3,6 +3,11 @@
 
 import AppKit
 
+// swiftlint:disable file_length
+// ^ The toolbar controller is the single hub for all toolbar chrome + wiring.
+// A follow-up could split the test hooks / icon builders into extensions;
+// artificial fragmentation just to hit the line count isn't worth it now.
+
 @MainActor
 // swiftlint:disable:next type_body_length
 public final class ToolbarController: NSObject {
@@ -14,7 +19,7 @@ public final class ToolbarController: NSObject {
     private let penButton = NSButton(title: "", target: nil, action: nil)
     private let textButton = NSButton(title: "", target: nil, action: nil)
     private let arrowButton = NSButton(title: "", target: nil, action: nil)
-    private let colorWell: NSColorWell
+    private let customColorButton = NSButton(title: "", target: nil, action: nil)
     private let markControl = MarkControl()
     private let hideButton: NSButton
     private let autoFadeButton = NSButton(title: "", target: nil, action: nil)
@@ -28,7 +33,6 @@ public final class ToolbarController: NSObject {
         self.defaults = defaults
         self.outlineSettings = outlineSettings
         self.panel = ToolbarPanel()
-        self.colorWell = NSColorWell()
         self.hideButton = NSButton(title: "", target: nil, action: nil)
         super.init()
 
@@ -93,8 +97,6 @@ public final class ToolbarController: NSObject {
     }
 
     private func syncColorWidgets(with color: RGBA) {
-        colorWell.color = NSColor(red: CGFloat(color.r), green: CGFloat(color.g),
-                                  blue: CGFloat(color.b), alpha: CGFloat(color.a))
         updateSwatchHighlights()
     }
 
@@ -127,18 +129,17 @@ public final class ToolbarController: NSObject {
             stack.addArrangedSubview(btn)
         }
 
-        colorWell.target = self
-        colorWell.action = #selector(customColorChanged(_:))
-        colorWell.color = NSColor(red: CGFloat(controller.currentColor.r),
-                                  green: CGFloat(controller.currentColor.g),
-                                  blue: CGFloat(controller.currentColor.b),
-                                  alpha: CGFloat(controller.currentColor.a))
-        colorWell.toolTip = "Custom color"
+        // Custom-color picker: a color-wheel button (clearly "pick any color"),
+        // grouped with the swatches. Opens the macOS color panel on click.
+        customColorButton.image = makeColorWheelImage(diameter: 22)
+        customColorButton.imagePosition = .imageOnly
+        customColorButton.bezelStyle = .regularSquare
+        customColorButton.target = self
+        customColorButton.action = #selector(openColorPanel)
+        customColorButton.toolTip = "Custom color"
+        stack.addArrangedSubview(customColorButton)
 
-        // The combined size/opacity + live mark control, then the custom color
-        // well below it (Ted: the "lozenge"-looking well sits under opacity).
         stack.addArrangedSubview(markControl)
-        stack.addArrangedSubview(colorWell)
 
         hideButton.target = self
         hideButton.action = #selector(toggleHide(_:))
@@ -279,10 +280,44 @@ public final class ToolbarController: NSObject {
         controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: a)
     }
 
-    @objc private func customColorChanged(_ sender: NSColorWell) {
-        let c = sender.color
+    @objc private func openColorPanel() {
+        let panel = NSColorPanel.shared
+        let cur = controller.currentColor
+        panel.color = NSColor(srgbRed: CGFloat(cur.r), green: CGFloat(cur.g),
+                              blue: CGFloat(cur.b), alpha: 1)
+        panel.setTarget(self)
+        panel.setAction(#selector(colorPanelChanged(_:)))
+        panel.isContinuous = true
+        panel.orderFront(nil)
+    }
+
+    @objc private func colorPanelChanged(_ sender: NSColorPanel) {
+        // Convert to sRGB so component access is well-defined; keep the user's
+        // current alpha (opacity is the opacity control's job, not the wheel's).
+        guard let c = sender.color.usingColorSpace(.sRGB) else { return }
         let a = controller.currentColor.a
-        controller.currentColor = RGBA(r: Double(c.redComponent), g: Double(c.greenComponent), b: Double(c.blueComponent), a: a)
+        controller.currentColor = RGBA(r: Double(c.redComponent), g: Double(c.greenComponent),
+                                       b: Double(c.blueComponent), a: a)
+    }
+
+    /// A 12-wedge rainbow wheel image for the custom-color button.
+    private func makeColorWheelImage(diameter: CGFloat) -> NSImage {
+        let img = NSImage(size: NSSize(width: diameter, height: diameter))
+        img.lockFocus()
+        let center = NSPoint(x: diameter / 2, y: diameter / 2)
+        let wedges = 12
+        for i in 0..<wedges {
+            let path = NSBezierPath()
+            path.move(to: center)
+            path.appendArc(withCenter: center, radius: diameter / 2,
+                           startAngle: CGFloat(i) / CGFloat(wedges) * 360,
+                           endAngle: CGFloat(i + 1) / CGFloat(wedges) * 360)
+            path.close()
+            NSColor(hue: CGFloat(i) / CGFloat(wedges), saturation: 0.85, brightness: 0.95, alpha: 1).setFill()
+            path.fill()
+        }
+        img.unlockFocus()
+        return img
     }
 
     @objc private func toggleHide(_ sender: NSButton) {
@@ -357,11 +392,11 @@ public final class ToolbarController: NSObject {
     func testOnly_tapOpacityUp() { markControl.testOnly_tapOpacityUp() }
 
     // swiftlint:disable identifier_name
-    internal var testOnly_colorWellColor: NSColor { colorWell.color }
+    internal var testOnly_markColor: RGBA { markControl.testOnly_color }
     internal var testOnly_widthSliderValue: Double { markControl.width }
     internal var testOnly_hideButtonGlyphName: String { currentHideGlyphName }
     internal var testOnly_autoFadeGlyphName: String { currentAutoFadeGlyphName }
-    internal var testOnly_colorWellTooltip: String? { colorWell.toolTip }
+    internal var testOnly_customColorTooltip: String? { customColorButton.toolTip }
     internal var testOnly_widthSliderTooltip: String? { markControl.testOnly_sizeTooltip }
     internal var testOnly_opacitySliderTooltip: String? { markControl.testOnly_opacityTooltip }
     internal var testOnly_hideButtonTooltip: String? { hideButton.toolTip }

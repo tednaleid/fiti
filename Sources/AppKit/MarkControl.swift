@@ -116,11 +116,17 @@ final class MarkControl: NSView {
                                     createdAt: 0))
         case .text:
             let fs = width * 4
-            return .text(TextItem(id: "preview", string: "Aa", fontName: "Helvetica", fontSize: fs,
+            // Center a single "A" using its measured glyph box; large sizes clip
+            // symmetrically (negative offsets) so the A stays centered.
+            let font = NSFont(name: "Helvetica", size: CGFloat(fs)) ?? .systemFont(ofSize: CGFloat(fs))
+            let glyph = ("A" as NSString).size(withAttributes: [.font: font])
+            return .text(TextItem(id: "preview", string: "A", fontName: "Helvetica", fontSize: fs,
                                   color: color,
-                                  transform: Transform(x: max(2, (w - fs) / 2), y: max(2, (h - fs) / 2),
+                                  transform: Transform(x: (w - Double(glyph.width)) / 2,
+                                                       y: (h - Double(glyph.height)) / 2,
                                                        scale: 1, rotate: 0),
-                                  bounds: Size(width: fs, height: fs), createdAt: 0))
+                                  bounds: Size(width: Double(glyph.width), height: Double(glyph.height)),
+                                  createdAt: 0))
         case .pen, .selection:
             // Vertical freehand wave of fixed length, centered.
             let pts = [(cx, midY - half), (cx - 6, midY - half * 0.25),
@@ -143,6 +149,7 @@ final class MarkControl: NSView {
     var testOnly_opacityMinusEnabled: Bool { opacityMinus.isEnabled }
     var testOnly_opacityPlusEnabled: Bool { opacityPlus.isEnabled }
     var testOnly_previewTool: Tool { previewTool }
+    var testOnly_color: RGBA { color }
     var testOnly_hasPreviewImage: Bool { preview.image != nil }
     var testOnly_sizeLabelText: String { sizeLabel.stringValue }
     var testOnly_opacityLabelText: String { opacityLabel.stringValue }
