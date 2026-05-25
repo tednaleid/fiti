@@ -6,6 +6,14 @@ import AppKit
 /// Draws the filled brush dab (inner color disc + outside contrast ring) used by
 /// both the brush cursor and the size picker's pen preview. `diameter` is the
 /// brush spec; the visible fill is half that (matching what gets drawn).
+///
+/// Inner ≈ visible stroke diameter. perfect-freehand's `size=N` produces
+/// strokes ~N/2 wide at typical (slow-stroke, low-pressure) rendering
+/// under our FitiStrokeOptions (thinning=0.5, simulatePressure=true),
+/// so we halve the spec to match what users actually see drawn. Outline
+/// lives OUTSIDE the inner diameter so it can't tint the user's color
+/// choice. Even-odd fill on the ring keeps the inner pixels transparent
+/// until we draw the fill, preserving alpha.
 @MainActor
 func fitiBrushDabImage(color: RGBA, diameter: Double, outlineWidth: CGFloat) -> NSImage {
     let fillDiameter = max(1.0, CGFloat(diameter) / 2)
