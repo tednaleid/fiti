@@ -1,6 +1,6 @@
 // ABOUTME: NSView that renders a RenderFrame via Core Graphics.
 // ABOUTME: Two-canvas split: committed items baked to a CGImage; in-flight (dragged)
-// ABOUTME: and in-progress strokes drawn live so selection drags skip re-baking.
+// ABOUTME: and the in-progress item (stroke or arrow) drawn live so selection drags skip re-baking.
 
 import AppKit
 import CoreGraphics
@@ -91,8 +91,8 @@ public final class CanvasView: NSView, Renderer {
         let lifted: [CanvasItem]   // active group's committed members
     }
 
-    /// Plan over committed + the in-progress stroke; split the other groups into
-    /// those below vs above the active group (the one the in-progress stroke joins).
+    /// Plan over committed + the in-progress item; split the other groups into
+    /// those below vs above the active group (the one the in-progress item joins).
     private func renderSplit(for frame: RenderFrame, inProgressId: ItemId?) -> RenderSplit {
         let committed = frame.items.filter { $0.id != inProgressId }
         guard let live = frame.inProgress else {
@@ -288,7 +288,7 @@ public final class CanvasView: NSView, Renderer {
     }
 
     /// Composite the active group (cached committed union + the in-progress
-    /// stroke) flattened at the group alpha, under globalOpacity. Matches the
+    /// item) flattened at the group alpha, under globalOpacity. Matches the
     /// committed bake, so live drawing equals the committed result.
     private func drawLiveGroup(_ live: CanvasItem, frame: RenderFrame, in ctx: CGContext) {
         let groupAlpha = live.color.a
