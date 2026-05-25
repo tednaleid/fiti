@@ -6,6 +6,7 @@ import Foundation
 extension AppController {
     func arrowPointerDown(_ point: StrokePoint) {
         guard mode == .activeIdle else { return }
+        revealDrawingsForNewMark()
         _ = editor.beginArrow(color: currentColor, width: currentWidth,
                               tail: Point(x: point.x, y: point.y))
         setMode(.activeDrawing)

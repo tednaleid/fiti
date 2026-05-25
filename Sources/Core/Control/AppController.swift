@@ -296,6 +296,7 @@ public final class AppController { // swiftlint:disable:this type_body_length
 
     private func penPointerDown(_ point: StrokePoint) {
         guard mode == .activeIdle else { return }
+        revealDrawingsForNewMark()
         _ = editor.startStroke(color: currentColor, width: currentWidth, pointerType: .mouse)
         editor.appendPoint(point)
         mode = .activeDrawing
@@ -362,6 +363,13 @@ public final class AppController { // swiftlint:disable:this type_body_length
     // activeDrawing transition without widening `mode`'s private(set) setter.
     func setMode(_ newMode: Mode) {
         mode = newMode
+    }
+
+    /// Starting a new mark means the user wants to see drawings, so a pen/arrow/
+    /// text mark started while hidden flips drawings back on. Selection and hover
+    /// never call this, so `h` stays a deliberate peek-away toggle.
+    func revealDrawingsForNewMark() {
+        if !drawingsVisible { drawingsVisible = true }
     }
 
 }

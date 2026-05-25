@@ -14,6 +14,7 @@ extension AppController {
     }
 
     func textPointerDown(_ point: StrokePoint) {
+        revealDrawingsForNewMark()
         if isEditingText { commitText() }
         let p = Point(x: point.x, y: point.y)
         if let hitId = SelectionMath.hitTestItem(at: p, items: editor.doc.items,
