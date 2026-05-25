@@ -53,9 +53,9 @@ public final class AppController { // swiftlint:disable:this type_body_length
     let detector: StationaryDetector
     let clock: Clock
     let ticker: FadeTicker
+    let fadeSettings: FadeSettings
     private let stationaryDeadZone: Double = 2.0
     let minArrowLengthFactor: Double = 2.0
-    static let fadeWindowSeconds: Double = 10.0
     static let fadeRampSeconds: Double = 2.0
     private var lastTimerResetPoint: StrokePoint?
 
@@ -180,7 +180,8 @@ public final class AppController { // swiftlint:disable:this type_body_length
         detector: StationaryDetector,
         clock: Clock,
         ticker: FadeTicker,
-        textMeasurer: TextMeasuring
+        textMeasurer: TextMeasuring,
+        fadeSettings: FadeSettings = DefaultFadeSettings()
     ) {
         self.editor = editor
         self.window = window
@@ -188,6 +189,7 @@ public final class AppController { // swiftlint:disable:this type_body_length
         self.clock = clock
         self.ticker = ticker
         self.textMeasurer = textMeasurer
+        self.fadeSettings = fadeSettings
         detector.onStationary = { [weak self] in self?.handleStationary() }
         ticker.onTick = { [weak self] now in self?.handleTick(now) }
     }

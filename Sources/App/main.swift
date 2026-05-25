@@ -45,15 +45,18 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         window.contentView = container
 
         let ticker = TimerFadeTicker(clock: clock)
+        let fadeSettings = UserDefaultsFadeSettings()
         controller = AppController(
             editor: editor,
             window: window,
             detector: TaskStationaryDetector(),
             clock: clock,
             ticker: ticker,
-            textMeasurer: CoreTextMeasurer()
+            textMeasurer: CoreTextMeasurer(),
+            fadeSettings: fadeSettings
         )
-        preferences = PreferencesController(launchAtLogin: SMAppServiceLaunchAtLogin())
+        preferences = PreferencesController(launchAtLogin: SMAppServiceLaunchAtLogin(),
+                                            fadeSettings: fadeSettings)
         menubar = MenubarController(
             controller: controller,
             editor: editor,

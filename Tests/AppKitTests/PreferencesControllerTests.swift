@@ -38,14 +38,14 @@ struct PreferencesControllerHotkeyTests {
     @Test("controller has a recorder bound to .toggleActivation")
     func recorderBinding() {
         let lal = RecordingLaunchAtLogin()
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         #expect(controller.testOnly_recorder.shortcutName == .toggleActivation)
     }
 
     @Test("show() makes the window visible")
     func showOrdersFront() {
         let lal = RecordingLaunchAtLogin()
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         controller.show()
         #expect(controller.testOnly_window.isVisible == true)
     }
@@ -53,7 +53,7 @@ struct PreferencesControllerHotkeyTests {
     @Test("show() is idempotent — calling twice leaves window visible")
     func showIdempotent() {
         let lal = RecordingLaunchAtLogin()
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         controller.show()
         controller.show()
         #expect(controller.testOnly_window.isVisible == true)
@@ -66,7 +66,7 @@ struct PreferencesControllerSwitchTests {
     @Test("switch starts off when launchAtLogin.status is disabled")
     func switchOffWhenDisabled() {
         let lal = RecordingLaunchAtLogin()
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         #expect(controller.testOnly_switch.state == .off)
     }
 
@@ -74,7 +74,7 @@ struct PreferencesControllerSwitchTests {
     func switchOnWhenEnabled() throws {
         let lal = RecordingLaunchAtLogin()
         try lal.setEnabled(true)
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         #expect(controller.testOnly_switch.state == .on)
     }
 
@@ -83,14 +83,14 @@ struct PreferencesControllerSwitchTests {
         let lal = RecordingLaunchAtLogin()
         lal.simulateApprovalRequired = true
         try lal.setEnabled(true)
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         #expect(controller.testOnly_switch.state == .on)
     }
 
     @Test("flipping switch on calls setEnabled(true)")
     func flipOnCallsSetEnabled() {
         let lal = RecordingLaunchAtLogin()
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         controller.testOnly_toggleSwitch(to: .on)
         #expect(lal.status == .enabled)
     }
@@ -99,7 +99,7 @@ struct PreferencesControllerSwitchTests {
     func flipOffCallsSetEnabled() throws {
         let lal = RecordingLaunchAtLogin()
         try lal.setEnabled(true)
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         controller.testOnly_toggleSwitch(to: .off)
         #expect(lal.status == .disabled)
     }
@@ -108,7 +108,7 @@ struct PreferencesControllerSwitchTests {
     func switchRevertsOnError() {
         let lal = RecordingLaunchAtLogin()
         lal.errorToThrow = RecordingLaunchAtLoginError.synthetic
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         controller.testOnly_toggleSwitch(to: .on)
         #expect(controller.testOnly_switch.state == .off)
         #expect(lal.status == .disabled)
@@ -118,11 +118,44 @@ struct PreferencesControllerSwitchTests {
     func switchRevertsToOnWhenOffAttemptThrows() throws {
         let lal = RecordingLaunchAtLogin()
         try lal.setEnabled(true)
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         lal.errorToThrow = RecordingLaunchAtLoginError.synthetic
         controller.testOnly_toggleSwitch(to: .off)
         #expect(controller.testOnly_switch.state == .on)
         #expect(lal.status == .enabled)
+    }
+}
+
+@Suite("PreferencesController fade duration")
+@MainActor
+struct PreferencesControllerFadeTests {
+    @Test("controls initialize from the store's current value")
+    func initializesFromStore() {
+        let lal = RecordingLaunchAtLogin()
+        let fade = DefaultFadeSettings(secondsBeforeFade: 8)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: fade)
+        #expect(controller.testOnly_fadeField.integerValue == 8)
+        #expect(controller.testOnly_fadeStepper.doubleValue == 8)
+    }
+
+    @Test("editing the field writes through to the store and syncs the stepper")
+    func fieldWritesStore() {
+        let lal = RecordingLaunchAtLogin()
+        let fade = DefaultFadeSettings()
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: fade)
+        controller.testOnly_setFadeField(to: 7)
+        #expect(fade.secondsBeforeFade == 7)
+        #expect(controller.testOnly_fadeStepper.doubleValue == 7)
+    }
+
+    @Test("stepping writes through to the store and syncs the field")
+    func stepperWritesStore() {
+        let lal = RecordingLaunchAtLogin()
+        let fade = DefaultFadeSettings()
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: fade)
+        controller.testOnly_stepFade(to: 12)
+        #expect(fade.secondsBeforeFade == 12)
+        #expect(controller.testOnly_fadeField.integerValue == 12)
     }
 }
 
@@ -132,7 +165,7 @@ struct PreferencesControllerStatusTextTests {
     @Test("status field is hidden when launch-at-login is disabled")
     func hiddenWhenDisabled() {
         let lal = RecordingLaunchAtLogin()
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         #expect(controller.testOnly_statusField.isHidden == true)
     }
 
@@ -140,7 +173,7 @@ struct PreferencesControllerStatusTextTests {
     func hiddenWhenEnabled() throws {
         let lal = RecordingLaunchAtLogin()
         try lal.setEnabled(true)
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         #expect(controller.testOnly_statusField.isHidden == true)
     }
 
@@ -149,7 +182,7 @@ struct PreferencesControllerStatusTextTests {
         let lal = RecordingLaunchAtLogin()
         lal.simulateApprovalRequired = true
         try lal.setEnabled(true)
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         #expect(controller.testOnly_statusField.isHidden == false)
         #expect(controller.testOnly_statusField.stringValue.contains("Login Items"))
     }
@@ -161,7 +194,7 @@ struct PreferencesControllerStatusTextTests {
         }
         let lal = RecordingLaunchAtLogin()
         lal.errorToThrow = NamedError()
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         controller.testOnly_toggleSwitch(to: .on)
         #expect(controller.testOnly_statusField.isHidden == false)
         #expect(controller.testOnly_statusField.stringValue == "Login Items registration failed")
@@ -171,7 +204,7 @@ struct PreferencesControllerStatusTextTests {
     func clearsOnSuccess() {
         let lal = RecordingLaunchAtLogin()
         lal.errorToThrow = RecordingLaunchAtLoginError.synthetic
-        let controller = PreferencesController(launchAtLogin: lal)
+        let controller = PreferencesController(launchAtLogin: lal, fadeSettings: DefaultFadeSettings())
         controller.testOnly_toggleSwitch(to: .on) // fails, field shows error
         lal.errorToThrow = nil
         controller.testOnly_toggleSwitch(to: .on) // succeeds

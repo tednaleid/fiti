@@ -7,7 +7,7 @@ public final class PreferencesWindow: NSWindow {
     public static let autosaveName: NSWindow.FrameAutosaveName = "fiti.preferences"
 
     public init() {
-        let initialRect = NSRect(x: 0, y: 0, width: 360, height: 140)
+        let initialRect = NSRect(x: 0, y: 0, width: 360, height: 180)
         super.init(contentRect: initialRect,
                    styleMask: [.titled, .closable],
                    backing: .buffered,

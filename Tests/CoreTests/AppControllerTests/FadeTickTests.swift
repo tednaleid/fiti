@@ -6,8 +6,11 @@ import Testing
 @Suite("AppController fade tick state machine")
 @MainActor
 struct FadeTickTests {
+    // The state-machine tests below were written against a 10s window; inject it so
+    // their age-7 / 8.5 / 10 expectations stay meaningful independent of the product
+    // default (exercised separately in the default/configurable tests).
     // swiftlint:disable:next large_tuple
-    private func make() -> (AppController, VirtualClock, RecordingFadeTicker, Editor) {
+    private func make(secondsBeforeFade: Double = 10) -> (AppController, VirtualClock, RecordingFadeTicker, Editor) {
         let clock = VirtualClock()
         let ticker = RecordingFadeTicker()
         let window = RecordingWindow()
@@ -18,7 +21,8 @@ struct FadeTickTests {
             detector: RecordingStationaryDetector(),
             clock: clock,
             ticker: ticker,
-            textMeasurer: FakeTextMeasurer()
+            textMeasurer: FakeTextMeasurer(),
+            fadeSettings: DefaultFadeSettings(secondsBeforeFade: secondsBeforeFade)
         )
         return (controller, clock, ticker, editor)
     }
@@ -163,5 +167,44 @@ struct FadeTickTests {
         ticker.tick(at: clock.now())
         #expect(c.fadeOpacity == 1.0)            // age = 5s, still solid
         #expect(editor.doc.items.isEmpty == false)
+    }
+
+    @Test("default window is 5s: solid before 3, ramping at 4, cleared at 5")
+    func defaultWindowIsFive() {
+        // Build without injecting fadeSettings so the product default (5s) applies.
+        let clock = VirtualClock()
+        let ticker = RecordingFadeTicker()
+        let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
+        let c = AppController(editor: editor, window: RecordingWindow(),
+                              detector: RecordingStationaryDetector(), clock: clock,
+                              ticker: ticker, textMeasurer: FakeTextMeasurer())
+        c.activate(); c.pointerDown(StrokePoint(x: 0, y: 0)); c.pointerUp()
+        c.autoFadeEnabled = true                 // re-arms lastInputAt to 0
+
+        clock.advance(by: 2.9)                   // before rampStart (3.0)
+        ticker.tick(at: clock.now())
+        #expect(c.fadeOpacity == 1.0)
+
+        clock.advance(by: 1.1)                   // age 4.0 -> halfway through the 2s ramp
+        ticker.tick(at: clock.now())
+        #expect(abs(c.fadeOpacity - 0.5) < 0.0001)
+
+        clock.advance(by: 1.0)                   // age 5.0 -> cleared
+        ticker.tick(at: clock.now())
+        #expect(editor.doc.items.isEmpty == true)
+        #expect(c.fadeOpacity == 1.0)
+    }
+
+    @Test("a shorter configured window clears earlier")
+    func configuredWindowHonored() {
+        let (c, clock, ticker, editor) = make(secondsBeforeFade: 4)
+        drawOneStroke(c)
+        c.autoFadeEnabled = true
+        clock.advance(by: 3.9)                   // still within the window
+        ticker.tick(at: clock.now())
+        #expect(editor.doc.items.isEmpty == false)
+        clock.advance(by: 0.2)                    // age 4.1 -> past the 4s window
+        ticker.tick(at: clock.now())
+        #expect(editor.doc.items.isEmpty == true)
     }
 }
