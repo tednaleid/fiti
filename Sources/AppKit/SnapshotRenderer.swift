@@ -8,7 +8,8 @@ import ImageIO
 import UniformTypeIdentifiers
 
 public enum SnapshotRenderer {
-    public static func png(from frame: RenderFrame, scale: CGFloat = 2.0) -> Data? {
+    public static func png(from frame: RenderFrame, scale: CGFloat = 2.0,
+                           outline: Bool = false) -> Data? {
         let width = Int(frame.canvasSize.width * Double(scale))
         let height = Int(frame.canvasSize.height * Double(scale))
         guard width > 0, height > 0 else { return nil }
@@ -27,8 +28,8 @@ public enum SnapshotRenderer {
         ctx.setLineJoin(.round)
 
         let groups = LayerPlan.compute(items: frame.items, aabb: { SelectionMath.worldAABB(of: $0) })
-        compositeGroups(groups, in: ctx)
-        if let inProgress = frame.inProgress { drawItem(inProgress, in: ctx, isInProgress: true) }
+        compositeGroups(groups, in: ctx, outline: outline)
+        if let inProgress = frame.inProgress { drawItem(inProgress, in: ctx, isInProgress: true, outline: outline) }
 
         guard let cgImage = ctx.makeImage() else { return nil }
         return pngData(from: cgImage)
