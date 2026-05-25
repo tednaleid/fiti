@@ -56,7 +56,9 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
             fadeSettings: fadeSettings
         )
         preferences = PreferencesController(launchAtLogin: SMAppServiceLaunchAtLogin(),
-                                            fadeSettings: fadeSettings)
+                                            fadeSettings: fadeSettings,
+                                            outlineSettings: UserDefaultsOutlineSettings(),
+                                            onOutlineChanged: {})  // TODO(Task 9): shared instance + canvas.refresh()
         menubar = MenubarController(
             controller: controller,
             editor: editor,

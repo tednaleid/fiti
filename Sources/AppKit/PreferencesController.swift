@@ -8,18 +8,25 @@ import KeyboardShortcuts
 public final class PreferencesController: NSObject {
     private let launchAtLogin: LaunchAtLogin
     private let fadeSettings: FadeSettings
+    private let outlineSettings: OutlineSettings
+    private let onOutlineChanged: () -> Void
     private let window: PreferencesWindow
     private let recorder: KeyboardShortcuts.RecorderCocoa
     private let launchSwitch: NSSwitch
     private let fadeField: NSTextField
     private let fadeStepper: NSStepper
     private let statusField: NSTextField
+    private let outlineCheckbox = NSButton(checkboxWithTitle: "", target: nil, action: nil)
 
     private static let approvalHint = "Approve fiti in System Settings \u{2192} General \u{2192} Login Items."
 
-    public init(launchAtLogin: LaunchAtLogin, fadeSettings: FadeSettings) {
+    public init(launchAtLogin: LaunchAtLogin, fadeSettings: FadeSettings,
+                outlineSettings: OutlineSettings,
+                onOutlineChanged: @escaping () -> Void) {
         self.launchAtLogin = launchAtLogin
         self.fadeSettings = fadeSettings
+        self.outlineSettings = outlineSettings
+        self.onOutlineChanged = onOutlineChanged
         self.window = PreferencesWindow()
         self.recorder = KeyboardShortcuts.RecorderCocoa(for: .toggleActivation)
         self.launchSwitch = NSSwitch()
@@ -56,6 +63,11 @@ public final class PreferencesController: NSObject {
         stack.addArrangedSubview(row(label: "Launch at login:", control: launchSwitch))
 
         stack.addArrangedSubview(row(label: "Seconds before fade:", control: buildFadeControl()))
+
+        outlineCheckbox.state = outlineSettings.outlineEnabled ? .on : .off
+        outlineCheckbox.target = self
+        outlineCheckbox.action = #selector(outlineToggled(_:))
+        stack.addArrangedSubview(row(label: "Outline:", control: outlineCheckbox))
 
         stack.addArrangedSubview(statusField)
 
@@ -150,6 +162,11 @@ public final class PreferencesController: NSObject {
         }
     }
 
+    @objc private func outlineToggled(_ sender: NSButton) {
+        outlineSettings.outlineEnabled = (sender.state == .on)
+        onOutlineChanged()
+    }
+
     @objc private func launchSwitchToggled(_ sender: NSSwitch) {
         let wantsEnabled = sender.state == .on
         do {
@@ -180,6 +197,11 @@ public final class PreferencesController: NSObject {
         fadeStepperChanged(fadeStepper)
     }
 
+    internal func testOnly_setOutline(_ on: Bool) {
+        outlineCheckbox.state = on ? .on : .off
+        outlineToggled(outlineCheckbox)
+    }
+
     // swiftlint:disable identifier_name
     internal var testOnly_recorder: KeyboardShortcuts.RecorderCocoa { recorder }
     internal var testOnly_window: PreferencesWindow { window }
@@ -187,5 +209,6 @@ public final class PreferencesController: NSObject {
     internal var testOnly_statusField: NSTextField { statusField }
     internal var testOnly_fadeField: NSTextField { fadeField }
     internal var testOnly_fadeStepper: NSStepper { fadeStepper }
+    internal var testOnly_outlineCheckbox: NSButton { outlineCheckbox }
     // swiftlint:enable identifier_name
 }
