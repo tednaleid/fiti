@@ -25,7 +25,9 @@ struct FitiDevHTTPSurfaceTests {
             textMeasurer: CoreTextMeasurer()
         )
         let bridge = FitiDevHTTPSurface(controller: controller,
-                                        canvasSize: { Size(width: 100, height: 100) })
+                                        canvasSize: { Size(width: 100, height: 100) },
+                                        outlineSettings: DefaultOutlineSettings(),
+                                        onOutlineChanged: {})
         return Rig(bridge: bridge, controller: controller, window: window)
     }
 

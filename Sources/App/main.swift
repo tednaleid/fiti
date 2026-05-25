@@ -19,6 +19,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     var devServer: DevHTTPServer?
     #endif
     var subscription: Cancellable?
+    var outlineSettings: UserDefaultsOutlineSettings!
     var menubar: MenubarController!
     var preferences: PreferencesController!
     var toolbar: ToolbarController!
@@ -46,6 +47,9 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
         let ticker = TimerFadeTicker(clock: clock)
         let fadeSettings = UserDefaultsFadeSettings()
+        let outlineSettings = UserDefaultsOutlineSettings()
+        canvas.outlineSettings = outlineSettings
+        self.outlineSettings = outlineSettings
         controller = AppController(
             editor: editor,
             window: window,
@@ -57,8 +61,8 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         )
         preferences = PreferencesController(launchAtLogin: SMAppServiceLaunchAtLogin(),
                                             fadeSettings: fadeSettings,
-                                            outlineSettings: UserDefaultsOutlineSettings(),
-                                            onOutlineChanged: {})  // TODO(Task 9): shared instance + canvas.refresh()
+                                            outlineSettings: outlineSettings,
+                                            onOutlineChanged: { [weak self] in self?.canvas.refresh() })
         menubar = MenubarController(
             controller: controller,
             editor: editor,
@@ -82,7 +86,9 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         guard args.dev else { return }
         #if DEBUG
         let surface = FitiDevHTTPSurface(controller: controller,
-                                         canvasSize: { [weak self] in self?.canvasSize ?? Size(width: 0, height: 0) })
+                                         canvasSize: { [weak self] in self?.canvasSize ?? Size(width: 0, height: 0) },
+                                         outlineSettings: self.outlineSettings,
+                                         onOutlineChanged: { [weak self] in self?.canvas.refresh() })
         do {
             let server = try DevHTTPServer(surface: surface, port: args.port)
             try server.start()

@@ -8,10 +8,22 @@ import Foundation
 public final class FitiDevHTTPSurface: DevHTTPSurface {
     private let controller: AppController
     private let canvasSizeProvider: () -> Size
+    private let outlineSettings: OutlineSettings
+    private let onOutlineChanged: () -> Void
 
-    public init(controller: AppController, canvasSize: @escaping () -> Size) {
+    public init(controller: AppController, canvasSize: @escaping () -> Size,
+                outlineSettings: OutlineSettings,
+                onOutlineChanged: @escaping () -> Void) {
         self.controller = controller
         self.canvasSizeProvider = canvasSize
+        self.outlineSettings = outlineSettings
+        self.onOutlineChanged = onOutlineChanged
+    }
+
+    public var outlineEnabled: Bool { outlineSettings.outlineEnabled }
+    public func setOutline(_ enabled: Bool) {
+        outlineSettings.outlineEnabled = enabled
+        onOutlineChanged()
     }
 
     public var doc: FitiDoc { controller.editor.doc }
@@ -75,7 +87,7 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
 
     public func snapshotPNG() -> Data? {
         let frame = RenderFrame.from(editor: controller.editor, canvasSize: canvasSize)
-        return SnapshotRenderer.png(from: frame)
+        return SnapshotRenderer.png(from: frame, outline: outlineSettings.outlineEnabled)
     }
 }
 #endif
