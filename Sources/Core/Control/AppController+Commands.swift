@@ -12,7 +12,7 @@ extension AppController {
         case .pickColor(let i):
             pickBrushColor(i)
         case .bumpSize(.up):
-            currentWidth = min(40, currentWidth * 1.1)
+            currentWidth = min(Self.maxStrokeWidth, currentWidth * 1.1)
         case .bumpSize(.down):
             currentWidth = max(1, currentWidth / 1.1)
         case .bumpOpacity(.up):
@@ -64,12 +64,12 @@ extension AppController {
         _ = editor.replaceItems(updated)
     }
 
-    /// Scales an item's "size": stroke width (clamped 1...40) or, for text, the
+    /// Scales an item's "size": stroke width (clamped 1...maxStrokeWidth) or, for text, the
     /// font size with its frozen bounds re-measured via the TextMeasuring port.
     private func resized(_ item: CanvasItem, direction: KeyCommand.Direction) -> CanvasItem {
         switch item {
         case .stroke(var s):
-            s.width = direction == .up ? min(40, s.width * 1.1) : max(1, s.width / 1.1)
+            s.width = direction == .up ? min(Self.maxStrokeWidth, s.width * 1.1) : max(1, s.width / 1.1)
             return .stroke(s)
         case .text(var t):
             t.fontSize = direction == .up ? t.fontSize * 1.1 : max(4, t.fontSize / 1.1)
@@ -77,7 +77,7 @@ extension AppController {
                                             fontSize: t.fontSize)
             return .text(t)
         case .arrow(var a):
-            a.width = direction == .up ? min(40, a.width * 1.1) : max(1, a.width / 1.1)
+            a.width = direction == .up ? min(Self.maxStrokeWidth, a.width * 1.1) : max(1, a.width / 1.1)
             return .arrow(a)
         }
     }

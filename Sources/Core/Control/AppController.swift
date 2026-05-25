@@ -57,6 +57,9 @@ public final class AppController { // swiftlint:disable:this type_body_length
     private let stationaryDeadZone: Double = 2.0
     let minArrowLengthFactor: Double = 2.0
     static let fadeRampSeconds: Double = 2.0
+    /// Upper bound on stroke/arrow width in points, shared by the size-bump
+    /// command, selection resize, and the toolbar slider.
+    public static let maxStrokeWidth: Double = 100
     private var lastTimerResetPoint: StrokePoint?
 
     public private(set) var isRubberBanding: Bool = false

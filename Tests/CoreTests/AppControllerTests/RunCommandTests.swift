@@ -58,12 +58,12 @@ struct RunCommandTests {
         #expect(abs(c.currentWidth - 10.0) < 0.0001)
     }
 
-    @Test("bumpSize(.up) clamps at 40")
+    @Test("bumpSize(.up) clamps at maxStrokeWidth")
     func bumpSizeUpClamp() {
         let (c, _, _) = make()
-        c.currentWidth = 40
+        c.currentWidth = AppController.maxStrokeWidth
         c.run(.bumpSize(.up))
-        #expect(c.currentWidth == 40)
+        #expect(c.currentWidth == AppController.maxStrokeWidth)
     }
 
     @Test("bumpSize(.down) clamps at 1")
