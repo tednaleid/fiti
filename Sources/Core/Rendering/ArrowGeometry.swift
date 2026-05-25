@@ -22,7 +22,6 @@ public enum ArrowGeometry {
 
         let headLen = min(headLengthFactor * width, len)
         let barb = barbSpanFactor * width
-        let notch = sweepFraction * headLen
         let tailH = tailHalfFactor * width
         let baseH = baseHalfFactor * width
 
@@ -30,7 +29,9 @@ public enum ArrowGeometry {
         func offset(_ p: Point, _ d: Double) -> Point { Point(x: p.x + nx * d, y: p.y + ny * d) }
 
         let base = along(head, headLen)      // backmost of the head, on axis
-        let notchPt = along(head, notch)     // inner back vertex, forward of base
+        // inner back vertex: sits `sweepFraction` of the head length forward of the base,
+        // giving the head a shallow concave back (solid swept head, not an open chevron).
+        let notchPt = along(head, headLen - sweepFraction * headLen)
 
         return [
             offset(tail, tailH),     // 0 tail left

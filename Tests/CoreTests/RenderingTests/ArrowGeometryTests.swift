@@ -17,6 +17,15 @@ struct ArrowGeometryTests {
         #expect(abs(pts[6].y + 2.75) < 1e-9)
     }
 
+    @Test("notch sits near the base for a solid head")
+    func notchNearBase() {
+        let pts = ArrowGeometry.outline(tail: Point(x: 0, y: 0), head: Point(x: 100, y: 0), width: 10)
+        // join (notch) vertices pts[1]/pts[5] sit just forward of the barb base (x=55),
+        // NOT near the tip (x=100) -- a shallow concave back, i.e. a solid head.
+        #expect(abs(pts[1].x - 66.25) < 1e-9 && abs(pts[1].y - 5) < 1e-9)
+        #expect(abs(pts[5].x - 66.25) < 1e-9 && abs(pts[5].y + 5) < 1e-9)
+    }
+
     @Test("head scales with width")
     func headScalesWithWidth() {
         let small = ArrowGeometry.outline(tail: Point(x: 0, y: 0), head: Point(x: 200, y: 0), width: 10)
