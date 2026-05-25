@@ -72,6 +72,42 @@ struct OutlineRenderingTests {
         #expect(off == 0)
     }
 
+    // Average green/red over the red-dominant interior pixels. Scale-invariant, so it
+    // is comparable across opacities: pure mark stays low; halo bleed-through raises it.
+    private func interiorGreenOverRed(_ ctx: CGContext) -> Double {
+        let bpr = ctx.bytesPerRow
+        let p = ctx.data!.bindMemory(to: UInt8.self, capacity: bpr * ctx.height)
+        var n = 0
+        var sum = 0.0
+        for y in 0..<ctx.height { for x in 0..<ctx.width {
+            let i = y * bpr + x * 4
+            if Int(p[i + 3]) < 40 { continue }
+            let r = Double(p[i]), g = Double(p[i + 1]), b = Double(p[i + 2])
+            guard r > g, r > b, r > 40 else { continue }
+            n += 1
+            sum += g / r
+        } }
+        return sum / Double(max(n, 1))
+    }
+
+    @Test("translucent outlined text keeps a clean interior (no halo bleed)")
+    func textOutlineTranslucentNoBleed() {
+        func render(_ alpha: Double) -> CGContext {
+            let t = TextItem(id: "a", string: "H", fontName: "Helvetica-Bold", fontSize: 60,
+                             color: RGBA(r: 0.88, g: 0.19, b: 0.19, a: alpha), transform: .identity,
+                             bounds: Size(width: 60, height: 70), createdAt: 0)
+            let ctx = makeContext(120, 100)
+            drawText(t, in: ctx, outline: true)   // the live path: direct draw, no compositeGroups
+            return ctx
+        }
+        // As the mark goes translucent, the halo must not bleed into the interior: the
+        // interior's green/red character stays the same as the opaque mark's. Without
+        // isolation the translucent fill can't cover the halo and this ratio jumps.
+        let opaque = interiorGreenOverRed(render(1.0))
+        let translucent = interiorGreenOverRed(render(0.5))
+        #expect(abs(translucent - opaque) < 0.05)
+    }
+
     @Test("text keeps a full mark-color interior with the halo behind it")
     func textHalo() {
         func render(_ outline: Bool) -> CGContext {

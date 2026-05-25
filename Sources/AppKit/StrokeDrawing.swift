@@ -66,11 +66,18 @@ func drawTextString(_ string: String, fontName: String, fontSize: Double,
                     color: RGBA, in ctx: CGContext, outline: Bool = false) {
     let font = NSFont(name: fontName, size: CGFloat(fontSize))
         ?? NSFont.systemFont(ofSize: CGFloat(fontSize))
+    // The two-pass halo-behind technique relies on the opaque fill covering the inner
+    // half of the halo stroke. A translucent fill cannot, so the halo bleeds into the
+    // glyph interior. When the mark is translucent and outlined, draw both passes
+    // opaque inside a transparency layer and composite that layer at the mark's alpha
+    // (mirrors compositeGroups / drawLiveGroup, so live text equals committed text).
+    let isolateForOutline = outline && color.a < 1
+    let drawColor = isolateForOutline ? color.with(a: 1) : color
     let fillColor = NSColor(
-        calibratedRed: CGFloat(color.r),
-        green: CGFloat(color.g),
-        blue: CGFloat(color.b),
-        alpha: CGFloat(color.a)
+        calibratedRed: CGFloat(drawColor.r),
+        green: CGFloat(drawColor.g),
+        blue: CGFloat(drawColor.b),
+        alpha: CGFloat(drawColor.a)
     )
     // CanvasView is isFlipped and the bake context applies its own y-flip, so the
     // local drawing space has y increasing downward. CoreText ignores the context
@@ -96,12 +103,17 @@ func drawTextString(_ string: String, fontName: String, fontSize: Double,
         }
     }
 
+    if isolateForOutline {
+        ctx.saveGState()
+        ctx.setAlpha(CGFloat(color.a))
+        ctx.beginTransparencyLayer(auxiliaryInfo: nil)
+    }
     // Halo behind the fill: first stroke the glyph contours thickly in the contrast
     // color (positive strokeWidth = stroke only, no fill), then fill the glyphs in the
     // mark color on top. The fill covers the inner half of the halo stroke, so the
     // interior stays the full mark color and only the outer halo shows. (A single-pass
     // negative strokeWidth would paint the stroke over the fill, eating thin glyph stems.)
-    if let halo = resolveOutline(enabled: outline, color: color, sizeBasis: fontSize,
+    if let halo = resolveOutline(enabled: outline, color: drawColor, sizeBasis: fontSize,
                                  widthFactor: OutlineTuning.textWidthFactor) {
         let haloColor = NSColor(calibratedRed: CGFloat(halo.haloColor.r),
                                 green: CGFloat(halo.haloColor.g),
@@ -115,4 +127,8 @@ func drawTextString(_ string: String, fontName: String, fontSize: Double,
         ])
     }
     drawLines([.font: font, .foregroundColor: fillColor])
+    if isolateForOutline {
+        ctx.endTransparencyLayer()
+        ctx.restoreGState()
+    }
 }
