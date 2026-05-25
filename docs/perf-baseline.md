@@ -76,3 +76,11 @@ The committed bake is at or below the 2.6 ms source-over baseline, and the live 
 is sub-millisecond and does not scale with mark count. Per-group clipping was the key fix: before
 it, each group's transparency layer was sized to the whole canvas, so a multi-color drawing
 hitched ~30 ms on every stroke (start and end).
+
+## Arrow tool (no new measurement)
+
+The in-progress arrow rides the same per-frame live path as the in-progress pen stroke
+(`RenderFrame.inProgress`, generalized to `CanvasItem?`), so it is no more expensive than the
+`draw.inProgress` numbers above. If anything it is cheaper: filling the merged shaft+head polygon
+from `ArrowGeometry.outline` is less work than building a perfect-freehand outline. No new
+measurement was needed.

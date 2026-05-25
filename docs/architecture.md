@@ -183,6 +183,35 @@ the groups below and above the active group, so the live composite (below image,
 group's union plus the live stroke at the group alpha, then above image) reproduces the
 committed z-order while drawing. Auto-fade applies once as a final multiplier.
 
+## Arrow tool
+
+The arrow is a `CanvasItem.arrow(ArrowItem)` case (`Sources/Core/Model/ArrowItem.swift`), not a
+`Stroke` with a flag. Being a `CanvasItem` is what earns it selection, move/rotate/resize, the
+color/size/opacity restyle shortcuts, undo, and erase with no per-tool code — the same dividend the
+text tool collected when the `CanvasItem` sum type was introduced.
+
+**Shared pure geometry.** `ArrowGeometry.outline` (`Sources/Core/Rendering/ArrowGeometry.swift`,
+pure Core) builds one merged shaft+head polygon from the tail, head, and width. A single source of
+truth drives both halves of the app: `SelectionMath` uses it for the world AABB and a
+point-in-polygon hit-test, and the AppKit renderer `drawArrow` (`Sources/AppKit/ArrowDrawing.swift`)
+fills the same polygon as one path with rounded joins. Filling a single merged path (rather than a
+shaft plus a separate head) keeps the shaft/head seam from double-darkening under alpha. The head is
+a single filled swept shape at the lift point on a subtly tapered shaft; head size scales with the
+stroke-width slider. No angle snapping, single-headed only.
+
+**In-progress transient + generalized frame.** While the user drags, the arrow is an `Editor`
+transient (`Sources/Core/Editor/Editor+Arrow.swift`: `beginArrow` / `updateArrowHead` /
+`commitArrow` / `cancelArrow`) held out of the document until the lift commits it as one undoable op.
+To carry it through the live engine, `RenderFrame.inProgress` was generalized from `Stroke?` to
+`CanvasItem?`, so the in-progress arrow flows through the same cached-union below/above split and
+live flatten the pen stroke uses.
+
+**Flattening and WYSIWYG.** Arrows participate in the existing (hue, alpha) opacity flattening via
+`GroupCompositor` exactly like strokes — overlapping same-color arrows and strokes read flat. Because
+`drawArrow` ignores the in-progress flag, the live in-progress arrow is pixel-identical to its
+committed form, verified by `Tests/AppKitTests/ArrowFlattenTests.swift`. The inherited limits of the
+flattening design (cross-hue-conflict darkening, AABB conservatism) apply to arrows unchanged.
+
 ## Text geometry (B4)
 
 `TextItem` carries a `bounds: Size` field (local-space layout width and height). This is a derived value -- CoreText could recompute it at any time -- but it is frozen onto the item at commit and travels with the document.

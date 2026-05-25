@@ -39,6 +39,22 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
   an earlier same-color mark on the far side of that color (in draw order) darkens at that
   overlap. See `docs/specs/2026-05-24-fiti-opacity-flattening-design.md` for the rejected
   global-color-level alternative and why draw-order z-order was kept.
+- [x] Arrow tool — activate with `a` or the toolbar button (beside pen and text); press at the tail,
+  drag, the head rubber-bands to the cursor, release to commit (one undoable op). Single filled head
+  at the lift point on a subtly tapered shaft, with rounded corners; head size scales with the
+  stroke-width slider. No angle snapping; single-headed only. `ArrowItem` is a `CanvasItem.arrow` case
+  (`Sources/Core/Model/ArrowItem.swift`) so it gets selection, move/rotate/resize, the
+  color/size/opacity restyle shortcuts, undo, and erase with no per-tool code. Pure
+  `ArrowGeometry.outline` (`Sources/Core/Rendering/ArrowGeometry.swift`) builds one merged shaft+head
+  polygon shared by `SelectionMath` (world AABB + point-in-polygon hit-test) and the AppKit renderer
+  `drawArrow` (`Sources/AppKit/ArrowDrawing.swift`), which fills it as a single path so the
+  shaft/head seam never double-darkens. The in-progress arrow is an `Editor` transient
+  (`Sources/Core/Editor/Editor+Arrow.swift`) held out of the document until commit;
+  `RenderFrame.inProgress` was generalized from `Stroke?` to `CanvasItem?` so the live engine draws it
+  through the same cached-union below/above split the pen uses. Arrows flatten through `GroupCompositor`
+  like strokes, and the in-progress arrow is pixel-identical to its committed form (WYSIWYG), verified
+  by `Tests/AppKitTests/ArrowFlattenTests.swift`. Cursor is the crosshair while the tool is active; dev
+  HTTP `/tool` accepts `"arrow"`.
 
 ## Open: visibility & interaction
 
@@ -57,14 +73,13 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 ### Perfect-freehand option sliders
 - [ ] v1 ships with `smoothing/thinning/streamline = 0.5` and `simulatePressure: true` hardcoded. Promote one or more to toolbar sliders only if real use reveals the defaults feel wrong (too laggy, too jittery, taper too aggressive). Likely candidates if anything turns out wrong: a single "smoothness" slider scaling `smoothing + streamline` together, then `thinning` if the velocity-taper feels off.
 
-### Shape tools (rect, ellipse, arrow)
-- [ ] Each new shape becomes a `CanvasItem` case (e.g. `.arrow(ArrowItem)`, `.rect(RectItem)`), **not** a `Stroke` with a `kind` discriminator — the `CanvasItem` sum type added with the text tool was built for exactly this. A new case gets selection, move/rotate/resize, and the color/size/opacity shortcuts essentially for free; render path switches on the case; hit-test/bounds grow a per-case branch in `SelectionMath`.
+### Shape tools (rect, ellipse)
+- [ ] Each new shape becomes a `CanvasItem` case (e.g. `.rect(RectItem)`), **not** a `Stroke` with a `kind` discriminator — the `CanvasItem` sum type added with the text tool was built for exactly this, and the arrow tool (shipped) is the worked example. A new case gets selection, move/rotate/resize, and the color/size/opacity shortcuts essentially for free; render path switches on the case; hit-test/bounds grow a per-case branch in `SelectionMath`.
 
-#### Arrow tool
-- [ ] Activate with `a`; drag tail → head to place a clean arrow. Arrowhead is computed from the shaft direction (two barbs at ±~30°, length proportional to width). Bounds are exact and cheap from the endpoints — no measuring port needed (unlike text).
-- [ ] Recommended over gesture-detection. The shaft can reuse the hold-to-straighten/reorient gesture so it feels like the pen, straight-by-default.
-- [ ] Deferred alternative — *detect* a hand-drawn arrowhead on the end of a line and convert it to a real arrow (Notability-style). Punted because "did the user draw an arrowhead?" is fuzzy shape recognition with a high false-positive cost; build the `ArrowItem` primitive first, layer detection on later if wanted.
-- [ ] Open design questions: single vs. double-headed; filled triangle vs. open "V" head; does the head scale with width; curved arrows (lean no for v1, straight only).
+#### Arrow extensions (deferred)
+The `ArrowItem` primitive shipped (see Shipped above). These layer on top of it:
+- [ ] *Detect* a hand-drawn arrowhead on the end of a line and convert it to a real arrow (Notability-style). Punted because "did the user draw an arrowhead?" is fuzzy shape recognition with a high false-positive cost; the `ArrowItem` primitive now exists, so detection can layer on later if wanted.
+- [ ] Double-headed arrows, an open "V" head as an alternative to the shipped filled head, angle snapping, and curved arrows. All deferred for v1, which is single-headed, filled, straight, and snapping-free.
 
 ### Eraser as a UI tool
 - [ ] A `.eraser` tool whose pointer finds the topmost item under it and erases it. The hit-test helper now exists (`SelectionMath.hitTestItem`, shared with the selection tool) and `Editor.eraseItems` is in place — the data path already works via HTTP, so this is mostly a tool-routing + cursor surface. Activate with `e` (see reserved slot above).
@@ -82,6 +97,7 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 ## Code-level cleanup (not features)
 
 - [ ] `Sources/DevHTTP/DevHTTPServer.swift:12` — `@unchecked Sendable` is a Swift-6 concession. Proper fix: make `DevHTTPServer` an actor, or replace the `start()` busy-wait with a semaphore signaled from the NWListener state handler. Resolves the `boundPort` data race in the same step.
+- [ ] `Sources/AppKit/ToolbarController.swift` is at the ~400-line file limit. The next addition will need a split — e.g. extracting the tool-row building (pen / text / arrow buttons) into its own type.
 
 ## Out of scope (deliberately not on this list)
 
