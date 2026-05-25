@@ -26,4 +26,8 @@ public struct Rect: Equatable, Hashable, Sendable {
     public func contains(_ p: StrokePoint) -> Bool {
         p.x >= x && p.x <= maxX && p.y >= y && p.y <= maxY
     }
+
+    public func contains(_ p: Point) -> Bool {
+        p.x >= x && p.x <= maxX && p.y >= y && p.y <= maxY
+    }
 }
