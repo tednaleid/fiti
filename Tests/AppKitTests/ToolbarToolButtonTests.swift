@@ -1,4 +1,4 @@
-// ABOUTME: Tests for the toolbar's pen/text tool buttons — selecting a tool and
+// ABOUTME: Tests for the toolbar's pen/text/arrow tool buttons — selecting a tool and
 // ABOUTME: keeping the active-state highlight in sync with controller.currentTool.
 
 import AppKit
