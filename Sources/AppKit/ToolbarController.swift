@@ -134,9 +134,11 @@ public final class ToolbarController: NSObject {
                                   blue: CGFloat(controller.currentColor.b),
                                   alpha: CGFloat(controller.currentColor.a))
         colorWell.toolTip = "Custom color"
-        stack.addArrangedSubview(colorWell)
 
+        // The combined size/opacity + live mark control, then the custom color
+        // well below it (Ted: the "lozenge"-looking well sits under opacity).
         stack.addArrangedSubview(markControl)
+        stack.addArrangedSubview(colorWell)
 
         hideButton.target = self
         hideButton.action = #selector(toggleHide(_:))

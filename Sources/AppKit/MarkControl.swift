@@ -18,7 +18,10 @@ final class MarkControl: NSView {
     }
     private var previewTool: Tool = .pen
 
-    private let previewCanvas = Size(width: 60, height: 64)
+    private let previewCanvas = Size(width: 60, height: 140)
+    /// Fixed pen/arrow length, centered in the (taller) preview so the mark's
+    /// ends show with margin; thickness/size still varies with `width`.
+    private let markLength: Double = 66
     private let preview = NSImageView()
     private let sizeLabel = NSTextField(labelWithString: "size")
     private let opacityLabel = NSTextField(labelWithString: "opacity")
@@ -105,18 +108,23 @@ final class MarkControl: NSView {
 
     private func previewItem() -> CanvasItem {
         let w = previewCanvas.width, h = previewCanvas.height
+        let cx = w / 2, midY = h / 2, half = markLength / 2
         switch previewTool {
         case .arrow:
             return .arrow(ArrowItem(id: "preview", color: color, width: width, transform: .identity,
-                                    tail: Point(x: w / 2, y: h - 9), head: Point(x: w / 2, y: 9), createdAt: 0))
+                                    tail: Point(x: cx, y: midY + half), head: Point(x: cx, y: midY - half),
+                                    createdAt: 0))
         case .text:
-            return .text(TextItem(id: "preview", string: "Aa", fontName: "Helvetica", fontSize: width * 4,
-                                  color: color, transform: Transform(x: 6, y: 6, scale: 1, rotate: 0),
-                                  bounds: Size(width: width * 4, height: width * 4), createdAt: 0))
+            let fs = width * 4
+            return .text(TextItem(id: "preview", string: "Aa", fontName: "Helvetica", fontSize: fs,
+                                  color: color,
+                                  transform: Transform(x: max(2, (w - fs) / 2), y: max(2, (h - fs) / 2),
+                                                       scale: 1, rotate: 0),
+                                  bounds: Size(width: fs, height: fs), createdAt: 0))
         case .pen, .selection:
-            // Short vertical freehand wave, centered.
-            let cx = w / 2
-            let pts = [(cx, 12.0), (cx - 6, h * 0.4), (cx + 5, h * 0.64), (cx - 2, h - 12)]
+            // Vertical freehand wave of fixed length, centered.
+            let pts = [(cx, midY - half), (cx - 6, midY - half * 0.25),
+                       (cx + 5, midY + half * 0.35), (cx - 2, midY + half)]
                 .map { StrokePoint(x: $0.0, y: $0.1) }
             return .stroke(Stroke(id: "preview", color: color, width: width, transform: .identity,
                                   points: pts, pointerType: .mouse, pressureEnabled: false, createdAt: 0))
