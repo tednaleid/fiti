@@ -4,7 +4,7 @@
 import AppKit
 
 @MainActor
-final class ValuePickerControl: NSView {
+final class ValuePickerControl: NSView, NSPopoverDelegate {
     enum Kind { case size, opacity }
 
     private let kind: Kind
@@ -88,6 +88,7 @@ final class ValuePickerControl: NSView {
     private var activePopover: NSPopover?
 
     private func presentPopover() {
+        guard activePopover == nil else { return }
         let strip = NSStackView()
         strip.orientation = .horizontal
         strip.spacing = 4
@@ -106,8 +107,13 @@ final class ValuePickerControl: NSView {
         pop.contentViewController = vc
         pop.behavior = .transient
         pop.contentSize = strip.fittingSize
+        pop.delegate = self
         activePopover = pop
         pop.show(relativeTo: bounds, of: self, preferredEdge: .maxY)
+    }
+
+    func popoverDidClose(_ notification: Notification) {
+        activePopover = nil
     }
 
     private func cellImage(for preset: Double) -> NSImage {
