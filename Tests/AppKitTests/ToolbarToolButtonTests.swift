@@ -28,6 +28,25 @@ struct ToolbarToolButtonTests {
         let (toolbar, _) = make()
         #expect(toolbar.testOnly_penActiveBackground == true)
         #expect(toolbar.testOnly_textActiveBackground == false)
+        #expect(toolbar.testOnly_arrowActiveBackground == false)
+    }
+
+    @Test("clicking the arrow button selects the arrow tool and moves the highlight")
+    func clickArrowSelectsArrowTool() {
+        let (toolbar, controller) = make()
+        toolbar.testOnly_clickArrow()
+        #expect(controller.currentTool == .arrow)
+        #expect(toolbar.testOnly_arrowActiveBackground == true)
+        #expect(toolbar.testOnly_penActiveBackground == false)
+        #expect(toolbar.testOnly_textActiveBackground == false)
+    }
+
+    @Test("external arrow tool change updates the tool-button highlight")
+    func externalArrowToolChangeUpdatesHighlight() {
+        let (toolbar, controller) = make()
+        controller.currentTool = .arrow  // e.g. via the `a` keyboard shortcut
+        #expect(toolbar.testOnly_arrowActiveBackground == true)
+        #expect(toolbar.testOnly_penActiveBackground == false)
     }
 
     @Test("clicking the text button selects the text tool and moves the highlight")
@@ -62,5 +81,6 @@ struct ToolbarToolButtonTests {
         let (toolbar, _) = make()
         #expect(toolbar.testOnly_penTooltip == "Pen — p")
         #expect(toolbar.testOnly_textTooltip == "Text — t")
+        #expect(toolbar.testOnly_arrowTooltip == "Arrow — a")
     }
 }

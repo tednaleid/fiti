@@ -31,6 +31,7 @@ public final class CursorRenderer {
         case .openHand: return .openHand
         case .closedHand: return .closedHand
         case .iBeam: return .iBeam
+        case .crosshair: return .crosshair
         case .rotate: return Self.rotateCursor
         case .resize(let angle): return Self.resizeCursor(angle: angle)
         }

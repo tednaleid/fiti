@@ -21,13 +21,14 @@ extension DevHTTPServer {
     func handleSetTool(_ req: HTTPRequest) -> HTTPResponse {
         guard let json = try? JSONSerialization.jsonObject(with: req.body) as? [String: Any],
               let toolName = json["tool"] as? String else {
-            return .badRequest("expected {tool: \"pen\"|\"selection\"|\"text\"} body")
+            return .badRequest("expected {tool: \"pen\"|\"selection\"|\"text\"|\"arrow\"} body")
         }
         let tool: Tool
         switch toolName {
         case "pen": tool = .pen
         case "selection": tool = .selection
         case "text": tool = .text
+        case "arrow": tool = .arrow
         default: return .badRequest("unknown tool \(toolName)")
         }
         surface.setTool(tool)

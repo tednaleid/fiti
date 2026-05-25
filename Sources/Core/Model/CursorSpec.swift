@@ -5,7 +5,7 @@
 import Foundation
 
 public enum SystemCursor: Equatable, Sendable {
-    case arrow, openHand, closedHand, iBeam
+    case arrow, openHand, closedHand, iBeam, crosshair
     case resize(angle: Double)   // screen-space angle in {0,45,90,135}; adapter picks the platform cursor
     case rotate
 }

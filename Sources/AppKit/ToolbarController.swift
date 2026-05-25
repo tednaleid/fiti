@@ -12,6 +12,7 @@ public final class ToolbarController: NSObject {
 
     private let penButton = NSButton(title: "", target: nil, action: nil)
     private let textButton = NSButton(title: "", target: nil, action: nil)
+    private let arrowButton = NSButton(title: "", target: nil, action: nil)
     private let colorWell: NSColorWell
     private let widthSlider: NSSlider
     private let opacitySlider: NSSlider
@@ -85,8 +86,11 @@ public final class ToolbarController: NSObject {
                             tooltip: "Pen — p", action: #selector(penClicked(_:)))
         configureToolButton(textButton, symbol: "textformat", accessibility: "Text",
                             tooltip: "Text — t", action: #selector(textClicked(_:)))
+        configureToolButton(arrowButton, symbol: "line.diagonal.arrow", accessibility: "Arrow",
+                            tooltip: "Arrow — a", action: #selector(arrowClicked(_:)))
         toolRow.addArrangedSubview(penButton)
         toolRow.addArrangedSubview(textButton)
+        toolRow.addArrangedSubview(arrowButton)
         stack.addArrangedSubview(toolRow)
 
         for rowStart in stride(from: 0, to: QuickPickPalette.colors.count, by: 2) {
@@ -194,6 +198,7 @@ public final class ToolbarController: NSObject {
     private func updateToolHighlights() {
         setActiveBackground(penButton, active: controller.currentTool == .pen)
         setActiveBackground(textButton, active: controller.currentTool == .text)
+        setActiveBackground(arrowButton, active: controller.currentTool == .arrow)
     }
 
     private func setActiveBackground(_ button: NSButton, active: Bool) {
@@ -264,6 +269,10 @@ public final class ToolbarController: NSObject {
 
     @objc private func textClicked(_ sender: NSButton) {
         controller.currentTool = .text
+    }
+
+    @objc private func arrowClicked(_ sender: NSButton) {
+        controller.currentTool = .arrow
     }
 
     @objc private func colorClicked(_ sender: NSButton) {
@@ -347,17 +356,13 @@ public final class ToolbarController: NSObject {
         opacityChanged(opacitySlider)
     }
 
-    internal func testOnly_toggleHide() {
-        toggleHide(hideButton)
-    }
+    internal func testOnly_toggleHide() { toggleHide(hideButton) }
 
-    internal func testOnly_clickPen() {
-        penClicked(penButton)
-    }
+    internal func testOnly_clickPen() { penClicked(penButton) }
 
-    internal func testOnly_clickText() {
-        textClicked(textButton)
-    }
+    internal func testOnly_clickText() { textClicked(textButton) }
+
+    internal func testOnly_clickArrow() { arrowClicked(arrowButton) }
 
     internal func testOnly_clickAutoFade() {
         autoFadeClicked(autoFadeButton)
@@ -378,23 +383,18 @@ public final class ToolbarController: NSObject {
     internal var testOnly_activeSwatchIndex: Int? { activeSwatchIndex }
     internal var testOnly_penTooltip: String? { penButton.toolTip }
     internal var testOnly_textTooltip: String? { textButton.toolTip }
-    internal var testOnly_penActiveBackground: Bool {
-        guard let cg = penButton.layer?.backgroundColor else { return false }
-        return cg.alpha > 0
-    }
-    internal var testOnly_textActiveBackground: Bool {
-        guard let cg = textButton.layer?.backgroundColor else { return false }
-        return cg.alpha > 0
-    }
-    internal var testOnly_hideButtonActiveBackground: Bool {
-        guard let cg = hideButton.layer?.backgroundColor else { return false }
-        return cg.alpha > 0
-    }
-    internal var testOnly_autoFadeActiveBackground: Bool {
-        guard let cg = autoFadeButton.layer?.backgroundColor else { return false }
-        return cg.alpha > 0
-    }
+    internal var testOnly_arrowTooltip: String? { arrowButton.toolTip }
+    internal var testOnly_penActiveBackground: Bool { hasActiveBackground(penButton) }
+    internal var testOnly_textActiveBackground: Bool { hasActiveBackground(textButton) }
+    internal var testOnly_arrowActiveBackground: Bool { hasActiveBackground(arrowButton) }
+    internal var testOnly_hideButtonActiveBackground: Bool { hasActiveBackground(hideButton) }
+    internal var testOnly_autoFadeActiveBackground: Bool { hasActiveBackground(autoFadeButton) }
     // swiftlint:enable identifier_name
+
+    private func hasActiveBackground(_ button: NSButton) -> Bool {
+        guard let cg = button.layer?.backgroundColor else { return false }
+        return cg.alpha > 0
+    }
 }
 
 internal enum TestOnlyError: Error { case outOfRange }

@@ -12,7 +12,7 @@ struct CursorRendererTests {
         let view = CanvasInputView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
         let renderer = CursorRenderer(view: view)
         let cursors: [SystemCursor] = [
-            .arrow, .openHand, .closedHand, .rotate, .iBeam,
+            .arrow, .openHand, .closedHand, .rotate, .iBeam, .crosshair,
             .resize(angle: 0), .resize(angle: 45), .resize(angle: 90), .resize(angle: 135)
         ]
         for sc in cursors {
