@@ -81,6 +81,12 @@ The `ArrowItem` primitive shipped (see Shipped above). These layer on top of it:
 - [ ] *Detect* a hand-drawn arrowhead on the end of a line and convert it to a real arrow (Notability-style). Punted because "did the user draw an arrowhead?" is fuzzy shape recognition with a high false-positive cost; the `ArrowItem` primitive now exists, so detection can layer on later if wanted.
 - [ ] Double-headed arrows, an open "V" head as an alternative to the shipped filled head, angle snapping, and curved arrows. All deferred for v1, which is single-headed, filled, straight, and snapping-free.
 
+### Mark effects (outline / gradient / shadow)
+A catalog of cheap, native CoreGraphics/CoreText effects applied to marks (pen, arrow, text), enumerated 2026-05-25. Each is an extra fill/stroke pass (or one native blur) -- no offscreen buffers, no CoreImage.
+- [ ] Outline / halo -- being prototyped on branch `outline-halo` (global toggle, auto-contrast halo by luminance, on pen/arrow/text). Policy is a pure Core `resolveOutline`; AppKit renders. See `docs/specs/2026-05-25-fiti-outline-halo-design.md`. Likely eventual scope: per-tool + per-mark.
+- [ ] Gradient fill -- fill a mark with a gradient instead of flat color (clip to the path + `drawLinearGradient`). Deferred; a future set of work that Ted flagged as interesting.
+- [ ] Other catalog effects considered and parked: drop shadow and soft glow (native `setShadow`, involves a blur so bake-only), hard offset shadow, sticker border (fat uniform die-cut border), highlighter underlay (translucent band behind). Not reachable: a "multiply highlighter over the content underneath" -- fiti draws in a transparent overlay window, so a mark only blends with other marks, not the desktop behind it.
+
 ### Eraser as a UI tool
 - [ ] A `.eraser` tool whose pointer finds the topmost item under it and erases it. The hit-test helper now exists (`SelectionMath.hitTestItem`, shared with the selection tool) and `Editor.eraseItems` is in place — the data path already works via HTTP, so this is mostly a tool-routing + cursor surface. Activate with `e` (see reserved slot above).
 
