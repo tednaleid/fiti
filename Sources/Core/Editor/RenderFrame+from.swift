@@ -28,10 +28,13 @@ public extension RenderFrame {
                 committed.append(item)
             }
         }
-        let inProgress: Stroke? = editor.currentStrokeId.flatMap { id -> Stroke? in
-            if case .stroke(let s)? = editor.doc.items[id] { return s }
+        let inProgress: CanvasItem? = {
+            if let id = editor.currentStrokeId, case .stroke(let s)? = editor.doc.items[id] {
+                return .stroke(s)
+            }
+            if let a = editor.currentArrow { return .arrow(a) }
             return nil
-        }
+        }()
         return RenderFrame(items: committed, liveItems: live,
                            inProgress: inProgress, canvasSize: canvasSize)
     }

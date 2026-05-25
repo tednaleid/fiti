@@ -9,7 +9,7 @@ import CoreText
 struct BakeSignatureEntry: Equatable {
     let id: ItemId
     let transform: Transform
-    let contentTag: Int   // strokes: hash(color, width); text: hash(string, fontName, fontSize, color)
+    let contentTag: Int   // strokes: hash(color, width); text: hash(string, fontName, fontSize, color); arrows: hash(color, width, tail, head)
 }
 
 public final class CanvasView: NSView, Renderer {
@@ -98,7 +98,7 @@ public final class CanvasView: NSView, Renderer {
         guard let live = frame.inProgress else {
             return RenderSplit(below: committed, above: [], lifted: [])
         }
-        let plan = LayerPlan.compute(items: committed + [.stroke(live)],
+        let plan = LayerPlan.compute(items: committed + [live],
                                      aabb: { SelectionMath.worldAABB(of: $0) })
         guard let activeIdx = plan.firstIndex(where: { $0.items.contains { $0.id == live.id } }) else {
             return RenderSplit(below: committed, above: [], lifted: [])
@@ -162,7 +162,7 @@ public final class CanvasView: NSView, Renderer {
         for live in frame.liveItems {
             drawItem(live, in: ctx, isInProgress: false)
         }
-        if let live = frame.inProgress, !live.points.isEmpty {
+        if let live = frame.inProgress, isLiveDrawable(live) {
             #if DEBUG
             PerfLog.shared.measure("draw.liveGroup") { drawLiveGroup(live, frame: frame, in: ctx) }
             #else
@@ -290,50 +290,26 @@ public final class CanvasView: NSView, Renderer {
     /// Composite the active group (cached committed union + the in-progress
     /// stroke) flattened at the group alpha, under globalOpacity. Matches the
     /// committed bake, so live drawing equals the committed result.
-    private func drawLiveGroup(_ live: Stroke, frame: RenderFrame, in ctx: CGContext) {
+    private func drawLiveGroup(_ live: CanvasItem, frame: RenderFrame, in ctx: CGContext) {
         let groupAlpha = live.color.a
         ctx.saveGState()
         ctx.setAlpha(CGFloat(globalOpacity * groupAlpha))
         ctx.beginTransparencyLayer(auxiliaryInfo: nil)
         if let union = activeGroupUnion { blitBake(union, frame, in: ctx) }
-        drawItem(CanvasItem.stroke(live).withAlpha(1), in: ctx, isInProgress: true)
+        drawItem(live.withAlpha(1), in: ctx, isInProgress: true)
         ctx.endTransparencyLayer()
         ctx.restoreGState()
     }
 
-}
-
-/// Hashes the appearance-affecting fields of an item so the bake signature
-/// invalidates when style (not just transform) changes. Pure; no `self`.
-private func contentTag(for item: CanvasItem) -> Int {
-    switch item {
-    case .stroke(let s):
-        var hasher = Hasher()
-        hasher.combine(s.color.r)
-        hasher.combine(s.color.g)
-        hasher.combine(s.color.b)
-        hasher.combine(s.color.a)
-        hasher.combine(s.width)
-        return hasher.finalize()
-    case .text(let t):
-        var hasher = Hasher()
-        hasher.combine(t.string)
-        hasher.combine(t.fontName)
-        hasher.combine(t.fontSize)
-        hasher.combine(t.color.r)
-        hasher.combine(t.color.g)
-        hasher.combine(t.color.b)
-        hasher.combine(t.color.a)
-        return hasher.finalize()
-    case .arrow(let a):
-        var hasher = Hasher()
-        hasher.combine(a.color.r); hasher.combine(a.color.g)
-        hasher.combine(a.color.b); hasher.combine(a.color.a)
-        hasher.combine(a.width)
-        hasher.combine(a.tail.x); hasher.combine(a.tail.y)
-        hasher.combine(a.head.x); hasher.combine(a.head.y)
-        return hasher.finalize()
+    /// True when an in-progress item has visible geometry worth live-drawing.
+    private func isLiveDrawable(_ item: CanvasItem) -> Bool {
+        switch item {
+        case .stroke(let s): return !s.points.isEmpty
+        case .arrow(let a): return a.tail != a.head
+        case .text: return false
+        }
     }
+
 }
 
 // MARK: - Baking

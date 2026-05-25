@@ -44,7 +44,7 @@ struct CanvasViewFlattenTests {
         let live = Stroke(id: "v", color: red, width: 16, transform: .identity,
                           points: [StrokePoint(x: 50, y: 10), StrokePoint(x: 50, y: 90)],
                           pointerType: .mouse, pressureEnabled: false, createdAt: 1)
-        view.render(RenderFrame(items: [.stroke(committed)], inProgress: live,
+        view.render(RenderFrame(items: [.stroke(committed)], inProgress: .stroke(live),
                                 canvasSize: Size(width: 100, height: 100)))
         let rep = try #require(view.bitmapImageRepForCachingDisplay(in: view.bounds))
         view.cacheDisplay(in: view.bounds, to: rep)
@@ -66,7 +66,7 @@ struct CanvasViewFlattenTests {
                        pointerType: .mouse, pressureEnabled: false, createdAt: 1)
         let liveView = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
         liveView.testOnly_overrideBackingScale = 1
-        liveView.render(RenderFrame(items: [.stroke(h)], inProgress: v,
+        liveView.render(RenderFrame(items: [.stroke(h)], inProgress: .stroke(v),
                                     canvasSize: Size(width: 100, height: 100)))
         let liveRep = try #require(liveView.bitmapImageRepForCachingDisplay(in: liveView.bounds))
         liveView.cacheDisplay(in: liveView.bounds, to: liveRep)
@@ -99,7 +99,7 @@ struct CanvasViewFlattenTests {
         let b  = hbar("b", y: 50, blue)
         let r2 = vbar("r2", x: 70, 10, 40, red)   // away from blue (y=50)
 
-        func crossingBlueComponent(committed: [CanvasItem], inProgress: Stroke?) throws -> CGFloat {
+        func crossingBlueComponent(committed: [CanvasItem], inProgress: CanvasItem?) throws -> CGFloat {
             let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
             view.testOnly_overrideBackingScale = 1
             view.render(RenderFrame(items: committed, inProgress: inProgress,
@@ -109,7 +109,7 @@ struct CanvasViewFlattenTests {
             return try #require(rep.colorAt(x: 30, y: 50)).blueComponent
         }
         // live: r1 + blue committed, r2 in progress (r2 joins the red group below blue)
-        let liveBlue = try crossingBlueComponent(committed: [.stroke(r1), .stroke(b)], inProgress: r2)
+        let liveBlue = try crossingBlueComponent(committed: [.stroke(r1), .stroke(b)], inProgress: .stroke(r2))
         // committed: all three
         let comBlue = try crossingBlueComponent(committed: [.stroke(r1), .stroke(b), .stroke(r2)], inProgress: nil)
         #expect(comBlue > 0.5, "committed: blue is on top at the crossing")

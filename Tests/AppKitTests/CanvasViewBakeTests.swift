@@ -65,7 +65,7 @@ struct CanvasViewBakeTests {
         let live = Stroke(id: "b", color: RGBA(r: 0, g: 0, b: 1, a: 1), width: 1,
                           transform: .identity, points: [], pointerType: .mouse,
                           pressureEnabled: false, createdAt: 0)
-        view.render(RenderFrame(items: [.stroke(committed), .stroke(live)], inProgress: live,
+        view.render(RenderFrame(items: [.stroke(committed), .stroke(live)], inProgress: .stroke(live),
                                 canvasSize: Size(width: 100, height: 100)))
         #expect(view.bakeSignatureForTesting.map(\.id) == ["a"])
     }
