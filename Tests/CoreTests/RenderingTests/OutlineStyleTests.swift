@@ -39,6 +39,29 @@ struct OutlineStyleTests {
         #expect(o?.haloWidth == 20)
     }
 
+    @Test("halo width never falls below minWidth")
+    func widthFloor() {
+        // 16 * 0.09 = 1.44 is below the 2.0 floor, so the floor wins (readable on small text).
+        let small = resolveOutline(enabled: true, color: RGBA(r: 0.1, g: 0.1, b: 0.1, a: 1),
+                                   sizeBasis: 16, widthFactor: 0.09, minWidth: 2)
+        #expect(small?.haloWidth == 2)
+        // 40 * 0.5 = 20 is above the floor, so the proportional width is kept.
+        let big = resolveOutline(enabled: true, color: RGBA(r: 0.1, g: 0.1, b: 0.1, a: 1),
+                                 sizeBasis: 40, widthFactor: 0.5, minWidth: 2)
+        #expect(big?.haloWidth == 20)
+    }
+
+    @Test("text halo width steps up by font-size band")
+    func textHaloSteps() {
+        // Small text takes the first band; large text the later, chunkier bands; above
+        // the last band the largest width holds.
+        #expect(textHaloWidth(forFontSize: 24) == 6)
+        #expect(textHaloWidth(forFontSize: 48) == 6)
+        #expect(textHaloWidth(forFontSize: 64) == 10)
+        #expect(textHaloWidth(forFontSize: 120) == 14)
+        #expect(textHaloWidth(forFontSize: 400) == 14)
+    }
+
     @Test("luminance threshold splits white vs black in both directions")
     func thresholdBoundary() {
         let justDark = resolveOutline(enabled: true, color: RGBA(r: 0.49, g: 0.49, b: 0.49, a: 1),

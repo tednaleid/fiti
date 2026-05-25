@@ -113,8 +113,8 @@ func drawTextString(_ string: String, fontName: String, fontSize: Double,
     // mark color on top. The fill covers the inner half of the halo stroke, so the
     // interior stays the full mark color and only the outer halo shows. (A single-pass
     // negative strokeWidth would paint the stroke over the fill, eating thin glyph stems.)
-    if let halo = resolveOutline(enabled: outline, color: drawColor, sizeBasis: fontSize,
-                                 widthFactor: OutlineTuning.textWidthFactor) {
+    if let halo = resolveOutline(enabled: outline, color: drawColor,
+                                 width: textHaloWidth(forFontSize: fontSize)) {
         let haloColor = NSColor(calibratedRed: CGFloat(halo.haloColor.r),
                                 green: CGFloat(halo.haloColor.g),
                                 blue: CGFloat(halo.haloColor.b),
