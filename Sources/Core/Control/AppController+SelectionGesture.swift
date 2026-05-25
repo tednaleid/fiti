@@ -8,7 +8,7 @@ extension AppController {
     public var currentCursor: CursorSpec? {
         if mode == .inactive { return nil }
         if currentTool == .text { return .system(.iBeam) }
-        if currentTool == .arrow { return .system(.crosshair) }
+        if currentTool == .arrow { return .arrowhead(color: currentColor) }
         if currentTool == .selection {
             let region = SelectionMath.region(
                 at: lastHoverPoint ?? Point(x: .infinity, y: .infinity),

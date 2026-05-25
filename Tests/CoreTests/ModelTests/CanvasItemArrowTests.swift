@@ -25,8 +25,10 @@ struct CanvasItemArrowTests {
     func worldAABBCoversHead() {
         let box = SelectionMath.worldAABB(of: .arrow(arrowItem()))
         #expect(box != nil)
-        #expect(abs(box!.y + 26) < 1e-6)
-        #expect(abs(box!.height - 52) < 1e-6)
+        // The barbs are the widest part of the head; the AABB spans +/- the barb half-span.
+        let barb = ArrowGeometry.barbSpanFactor * 10
+        #expect(abs(box!.y + barb) < 1e-6)
+        #expect(abs(box!.height - 2 * barb) < 1e-6)
     }
 
     @Test("hit-test inside and outside")

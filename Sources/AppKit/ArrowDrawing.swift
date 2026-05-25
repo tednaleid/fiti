@@ -23,7 +23,7 @@ public func drawArrow(_ arrow: ArrowItem, in ctx: CGContext, isInProgress: Bool)
         // Round the outer corners: stroke the same path in the same color with round
         // joins. Cosmetic, small; a local fraction of the width (do NOT reach into
         // Core's internal ArrowGeometry constants, which are not visible cross-module).
-        let cornerRoundWidth = arrow.width * 0.3
+        let cornerRoundWidth = arrow.width * 0.17
         ctx.setLineWidth(cornerRoundWidth)
         ctx.setLineJoin(.round)
         ctx.setLineCap(.round)

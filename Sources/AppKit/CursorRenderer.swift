@@ -20,6 +20,8 @@ public final class CursorRenderer {
         switch spec {
         case .brush(let color, let diameter):
             return makeBrushCursor(color: color, diameter: diameter)
+        case .arrowhead(let color):
+            return makeArrowheadCursor(color: color)
         case .system(let system):
             return nsCursor(for: system)
         }
@@ -103,5 +105,34 @@ public final class CursorRenderer {
         }
 
         return NSCursor(image: image, hotSpot: NSPoint(x: outerDiameter / 2, y: outerDiameter / 2))
+    }
+
+    /// A solid arrowhead filled with the current color and a 1pt adaptive outline,
+    /// mirroring the brush cursor so the active color is visible while the arrow tool
+    /// is selected. Drawn flipped (origin top-left) to match NSCursor's hot-spot space;
+    /// the hot spot is the tip, where a press starts the arrow's tail.
+    private func makeArrowheadCursor(color: RGBA) -> NSCursor {
+        let size = NSSize(width: 20, height: 20)
+        let outlineWidth = self.outlineWidth
+        let outline = CursorSpec.outlineColor(for: color)
+        let tip = NSPoint(x: 2, y: 2)
+        let image = NSImage(size: size, flipped: true) { _ in
+            let p = NSBezierPath()
+            p.move(to: tip)                          // tip (hot spot), pointing up-left
+            p.line(to: NSPoint(x: 2, y: 15.5))       // left edge down
+            p.line(to: NSPoint(x: 5.8, y: 11.8))     // notch in
+            p.line(to: NSPoint(x: 9, y: 18))         // out to tail barb
+            p.line(to: NSPoint(x: 11.5, y: 16.8))
+            p.line(to: NSPoint(x: 8.2, y: 10.8))
+            p.line(to: NSPoint(x: 13, y: 10.3))      // right shoulder
+            p.close()
+            NSColor(srgbRed: color.r, green: color.g, blue: color.b, alpha: color.a).setFill()
+            p.fill()
+            NSColor(srgbRed: outline.r, green: outline.g, blue: outline.b, alpha: outline.a).setStroke()
+            p.lineWidth = outlineWidth
+            p.stroke()
+            return true
+        }
+        return NSCursor(image: image, hotSpot: tip)
     }
 }

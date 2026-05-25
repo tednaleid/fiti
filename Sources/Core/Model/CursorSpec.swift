@@ -12,6 +12,7 @@ public enum SystemCursor: Equatable, Sendable {
 
 public enum CursorSpec: Equatable, Sendable {
     case brush(color: RGBA, diameter: Double)
+    case arrowhead(color: RGBA)
     case system(SystemCursor)
 
     /// Outline color contrasting with a brush fill (BT.601 luminance on RGB).
