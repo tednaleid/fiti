@@ -102,6 +102,14 @@ renders the result.
   ```
   Presets are ascending. Stepping is defined on `>`/`<` so any value (on or off
   a preset) advances deterministically; the ends clamp.
+
+  The single "size" value is the stroke/arrow width in points; the text tool
+  derives font size as `currentWidth * 4` (`AppController+TextTool.swift`). So
+  the width presets `[2, 4, 6, 9, 14, 20, 30, 45, 70, 100]` map to font sizes
+  `[8, 16, 24, 36, 56, 80, 120, 180, 280, 400]` — the smallest is an 8pt font,
+  not a 2pt one, and 6px width (font 24) is the current default. The collapsed
+  control's example dot reflects stroke width; whether the text tool should
+  preview at font scale is a live-tuning question, not a model change.
 - `Sources/Core/Control/AppController+Commands.swift` (modified): rewire
   `bumpSize` and `bumpOpacity` for the **tool-default** path to use
   `nextPreset`/`previousPreset` over `ValuePresets.sizes` / `.opacities`
