@@ -39,7 +39,7 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
   an earlier same-color mark on the far side of that color (in draw order) darkens at that
   overlap. See `docs/specs/2026-05-24-fiti-opacity-flattening-design.md` for the rejected
   global-color-level alternative and why draw-order z-order was kept.
-- [x] Arrow tool — activate with `a` or the toolbar button (beside pen and text); press at the tail,
+- [x] Arrow tool -- activate with `a` or the toolbar button (beside pen and text); press at the tail,
   drag, the head rubber-bands to the cursor, release to commit (one undoable op). Single filled head
   at the lift point on a subtly tapered shaft, with rounded corners; head size scales with the
   stroke-width slider. No angle snapping; single-headed only. `ArrowItem` is a `CanvasItem.arrow` case
@@ -74,7 +74,7 @@ A running list of things that move fiti from "POC + hardened" to "an app I actua
 - [ ] v1 ships with `smoothing/thinning/streamline = 0.5` and `simulatePressure: true` hardcoded. Promote one or more to toolbar sliders only if real use reveals the defaults feel wrong (too laggy, too jittery, taper too aggressive). Likely candidates if anything turns out wrong: a single "smoothness" slider scaling `smoothing + streamline` together, then `thinning` if the velocity-taper feels off.
 
 ### Shape tools (rect, ellipse)
-- [ ] Each new shape becomes a `CanvasItem` case (e.g. `.rect(RectItem)`), **not** a `Stroke` with a `kind` discriminator — the `CanvasItem` sum type added with the text tool was built for exactly this, and the arrow tool (shipped) is the worked example. A new case gets selection, move/rotate/resize, and the color/size/opacity shortcuts essentially for free; render path switches on the case; hit-test/bounds grow a per-case branch in `SelectionMath`.
+- [ ] Each new shape becomes a `CanvasItem` case (e.g. `.rect(RectItem)`), **not** a `Stroke` with a `kind` discriminator -- the `CanvasItem` sum type added with the text tool was built for exactly this, and the arrow tool (shipped) is the worked example. A new case gets selection, move/rotate/resize, and the color/size/opacity shortcuts essentially for free; render path switches on the case; hit-test/bounds grow a per-case branch in `SelectionMath`.
 
 #### Arrow extensions (deferred)
 The `ArrowItem` primitive shipped (see Shipped above). These layer on top of it:
@@ -97,7 +97,7 @@ The `ArrowItem` primitive shipped (see Shipped above). These layer on top of it:
 ## Code-level cleanup (not features)
 
 - [ ] `Sources/DevHTTP/DevHTTPServer.swift:12` — `@unchecked Sendable` is a Swift-6 concession. Proper fix: make `DevHTTPServer` an actor, or replace the `start()` busy-wait with a semaphore signaled from the NWListener state handler. Resolves the `boundPort` data race in the same step.
-- [ ] `Sources/AppKit/ToolbarController.swift` is at the ~400-line file limit. The next addition will need a split — e.g. extracting the tool-row building (pen / text / arrow buttons) into its own type.
+- [ ] `Sources/AppKit/ToolbarController.swift` is at the ~400-line file limit. The next addition will need a split -- e.g. extracting the tool-row building (pen / text / arrow buttons) into its own type.
 
 ## Out of scope (deliberately not on this list)
 

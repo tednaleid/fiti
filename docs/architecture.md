@@ -187,7 +187,7 @@ committed z-order while drawing. Auto-fade applies once as a final multiplier.
 
 The arrow is a `CanvasItem.arrow(ArrowItem)` case (`Sources/Core/Model/ArrowItem.swift`), not a
 `Stroke` with a flag. Being a `CanvasItem` is what earns it selection, move/rotate/resize, the
-color/size/opacity restyle shortcuts, undo, and erase with no per-tool code — the same dividend the
+color/size/opacity restyle shortcuts, undo, and erase with no per-tool code -- the same dividend the
 text tool collected when the `CanvasItem` sum type was introduced.
 
 **Shared pure geometry.** `ArrowGeometry.outline` (`Sources/Core/Rendering/ArrowGeometry.swift`,
@@ -207,7 +207,7 @@ To carry it through the live engine, `RenderFrame.inProgress` was generalized fr
 live flatten the pen stroke uses.
 
 **Flattening and WYSIWYG.** Arrows participate in the existing (hue, alpha) opacity flattening via
-`GroupCompositor` exactly like strokes — overlapping same-color arrows and strokes read flat. Because
+`GroupCompositor` exactly like strokes -- overlapping same-color arrows and strokes read flat. Because
 `drawArrow` ignores the in-progress flag, the live in-progress arrow is pixel-identical to its
 committed form, verified by `Tests/AppKitTests/ArrowFlattenTests.swift`. The inherited limits of the
 flattening design (cross-hue-conflict darkening, AABB conservatism) apply to arrows unchanged.
