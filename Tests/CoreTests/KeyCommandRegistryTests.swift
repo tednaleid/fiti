@@ -60,7 +60,7 @@ struct KeyCommandRegistryTests {
 
     @Test("registry has exactly the documented number of bindings")
     func bindingCount() {
-        // 8 colors + 4 size/opacity (s/S/o/O) + 2 toggles (h/f) + 1 clear (delete) + 2 tool (t/p) = 17
-        #expect(KeyCommandRegistry.bindings.count == 17)
+        // 8 colors + 4 size/opacity (s/S/o/O) + 2 toggles (h/f) + 1 clear (delete) + 3 tool (t/p/a) = 18
+        #expect(KeyCommandRegistry.bindings.count == 18)
     }
 }

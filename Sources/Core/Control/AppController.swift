@@ -54,6 +54,7 @@ public final class AppController { // swiftlint:disable:this type_body_length
     let clock: Clock
     let ticker: FadeTicker
     private let stationaryDeadZone: Double = 2.0
+    let minArrowLengthFactor: Double = 2.0
     static let fadeWindowSeconds: Double = 10.0
     static let fadeRampSeconds: Double = 2.0
     private var lastTimerResetPoint: StrokePoint?
@@ -230,6 +231,9 @@ public final class AppController { // swiftlint:disable:this type_body_length
             selectionPointerDown(point, modifiers: modifiers)
         case .text:
             textPointerDown(point)
+        case .arrow:
+            if !selectedItemIds.isEmpty { selectedItemIds = [] }
+            arrowPointerDown(point)
         }
     }
 
@@ -244,6 +248,7 @@ public final class AppController { // swiftlint:disable:this type_body_length
         case .pen: penPointerMoved(point)
         case .selection: selectionPointerMoved(point, modifiers: modifiers)
         case .text: break
+        case .arrow: arrowPointerMoved(point)
         }
     }
 
@@ -262,6 +267,7 @@ public final class AppController { // swiftlint:disable:this type_body_length
         case .pen: penPointerUp()
         case .selection: selectionPointerUp(modifiers: modifiers)
         case .text: break
+        case .arrow: arrowPointerUp()
         }
     }
 
@@ -329,6 +335,12 @@ public final class AppController { // swiftlint:disable:this type_body_length
         detector.disarm()
         isRubberBanding = false
         lastTimerResetPoint = nil
+    }
+
+    // Lets gesture handlers in sibling extension files drive the activeIdle <->
+    // activeDrawing transition without widening `mode`'s private(set) setter.
+    func setMode(_ newMode: Mode) {
+        mode = newMode
     }
 
 }

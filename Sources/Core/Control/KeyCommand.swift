@@ -50,7 +50,8 @@ public enum KeyCommandRegistry {
         // key (fn+Delete) is U+F728 and is intentionally unbound for now.
         KeyBinding(character: "\u{7F}"): .clear,
         KeyBinding(character: "t"): .selectTool(.text),
-        KeyBinding(character: "p"): .selectTool(.pen)
+        KeyBinding(character: "p"): .selectTool(.pen),
+        KeyBinding(character: "a"): .selectTool(.arrow)
     ]
 
     public static func command(for binding: KeyBinding) -> KeyCommand? {

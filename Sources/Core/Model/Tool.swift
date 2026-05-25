@@ -7,4 +7,5 @@ public enum Tool: Equatable, Hashable, Sendable {
     case pen
     case selection
     case text
+    case arrow
 }
