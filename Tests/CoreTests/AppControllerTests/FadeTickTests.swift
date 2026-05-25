@@ -6,11 +6,11 @@ import Testing
 @Suite("AppController fade tick state machine")
 @MainActor
 struct FadeTickTests {
-    // The state-machine tests below were written against a 10s window; inject it so
-    // their age-7 / 8.5 / 10 expectations stay meaningful independent of the product
-    // default (exercised separately in the default/configurable tests).
+    // The state-machine tests below expect a ramp starting at age 8 and clearing at
+    // age 10; with the ramp (2s) now running on top of the hold, an 8s hold yields
+    // exactly that. The product default is exercised separately below.
     // swiftlint:disable:next large_tuple
-    private func make(secondsBeforeFade: Double = 10) -> (AppController, VirtualClock, RecordingFadeTicker, Editor) {
+    private func make(secondsBeforeFade: Double = 8) -> (AppController, VirtualClock, RecordingFadeTicker, Editor) {
         let clock = VirtualClock()
         let ticker = RecordingFadeTicker()
         let window = RecordingWindow()
@@ -169,9 +169,9 @@ struct FadeTickTests {
         #expect(editor.doc.items.isEmpty == false)
     }
 
-    @Test("default window is 5s: solid before 3, ramping at 4, cleared at 5")
-    func defaultWindowIsFive() {
-        // Build without injecting fadeSettings so the product default (5s) applies.
+    @Test("default hold is 5s: solid before 5, ramping at 6, cleared at 7")
+    func defaultHoldIsFive() {
+        // Build without injecting fadeSettings so the product default (5s hold) applies.
         let clock = VirtualClock()
         let ticker = RecordingFadeTicker()
         let editor = Editor(clock: clock, ids: SeededIdGenerator(prefix: "s"))
@@ -181,30 +181,44 @@ struct FadeTickTests {
         c.activate(); c.pointerDown(StrokePoint(x: 0, y: 0)); c.pointerUp()
         c.autoFadeEnabled = true                 // re-arms lastInputAt to 0
 
-        clock.advance(by: 2.9)                   // before rampStart (3.0)
+        clock.advance(by: 4.9)                   // still within the 5s hold
         ticker.tick(at: clock.now())
         #expect(c.fadeOpacity == 1.0)
 
-        clock.advance(by: 1.1)                   // age 4.0 -> halfway through the 2s ramp
+        clock.advance(by: 1.1)                   // age 6.0 -> halfway through the 2s ramp
         ticker.tick(at: clock.now())
         #expect(abs(c.fadeOpacity - 0.5) < 0.0001)
 
-        clock.advance(by: 1.0)                   // age 5.0 -> cleared
+        clock.advance(by: 1.0)                   // age 7.0 (hold 5 + ramp 2) -> cleared
         ticker.tick(at: clock.now())
         #expect(editor.doc.items.isEmpty == true)
         #expect(c.fadeOpacity == 1.0)
     }
 
-    @Test("a shorter configured window clears earlier")
-    func configuredWindowHonored() {
-        let (c, clock, ticker, editor) = make(secondsBeforeFade: 4)
+    @Test("a zero hold fades immediately over the ramp")
+    func zeroHoldFadesImmediately() {
+        let (c, clock, ticker, editor) = make(secondsBeforeFade: 0)
         drawOneStroke(c)
         c.autoFadeEnabled = true
-        clock.advance(by: 3.9)                   // still within the window
+        clock.advance(by: 1)                     // age 1 -> halfway through the 2s ramp
         ticker.tick(at: clock.now())
-        #expect(editor.doc.items.isEmpty == false)
-        clock.advance(by: 0.2)                    // age 4.1 -> past the 4s window
+        #expect(abs(c.fadeOpacity - 0.5) < 0.0001)
+        clock.advance(by: 1.1)                    // age 2.1 -> past the ramp
         ticker.tick(at: clock.now())
         #expect(editor.doc.items.isEmpty == true)
+    }
+
+    @Test("drawing mid-fade restores full opacity immediately, before release")
+    func drawingMidFadeRestoresOpacity() {
+        let (c, clock, ticker, _) = make(secondsBeforeFade: 8)
+        drawOneStroke(c)
+        c.autoFadeEnabled = true
+        clock.advance(by: 9)                     // age 9 -> mid ramp (hold 8, ramp 8..10)
+        ticker.tick(at: clock.now())
+        #expect(c.fadeOpacity < 1.0)             // confirm we are visibly faded
+        c.pointerDown(StrokePoint(x: 5, y: 5))   // start a new mark
+        #expect(c.fadeOpacity == 1.0)            // solid at once, not stuck until pointerUp
+        c.pointerMoved(StrokePoint(x: 6, y: 6))
+        #expect(c.fadeOpacity == 1.0)
     }
 }

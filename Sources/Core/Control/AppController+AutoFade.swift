@@ -31,20 +31,19 @@ extension AppController {
         }
 
         let age = now - lastInputAt!
-        let window = fadeSettings.secondsBeforeFade
-        guard window > 0 else { fadeOpacity = 1.0; return }
-        // The ramp is the tail of the window; it can never exceed the window itself
-        // (a window shorter than the ramp just fades across its whole length).
-        let ramp = min(Self.fadeRampSeconds, window)
-        let rampStart = window - ramp
+        // secondsBeforeFade is the solid hold; the fade ramp runs on top of it, so
+        // marks clear at hold + ramp. A hold of 0 fades immediately over the ramp.
+        let solid = max(0, fadeSettings.secondsBeforeFade)
+        let ramp = Self.fadeRampSeconds
+        let clearAt = solid + ramp
 
-        if age >= window {
+        if age >= clearAt {
             editor.clear()
             if !selectedItemIds.isEmpty { selectedItemIds = [] }
             lastInputAt = nil
             fadeOpacity = 1.0
-        } else if age >= rampStart {
-            fadeOpacity = 1.0 - (age - rampStart) / ramp
+        } else if age >= solid {
+            fadeOpacity = 1.0 - (age - solid) / ramp
         } else {
             fadeOpacity = 1.0
         }

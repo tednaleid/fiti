@@ -6,8 +6,8 @@ import Foundation
 @MainActor
 public final class UserDefaultsFadeSettings: FadeSettings {
     static let key = "fiti.secondsBeforeFade"
-    /// Clamp range for whole-second windows: at least the fade ramp, at most a minute.
-    static let minSeconds: Double = 2
+    /// Clamp range for the whole-second hold: 0 (fade immediately over the ramp) to a minute.
+    static let minSeconds: Double = 0
     static let maxSeconds: Double = 60
 
     private let defaults: UserDefaults

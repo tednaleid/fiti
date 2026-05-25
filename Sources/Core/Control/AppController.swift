@@ -218,12 +218,20 @@ public final class AppController { // swiftlint:disable:this type_body_length
 
     // MARK: Public pointer entry points
 
+    /// Record user input: reset the fade timer and restore full opacity. Resetting
+    /// opacity here (not just the timer) means a mark drawn mid-fade is immediately
+    /// solid instead of inheriting the faded level until the pointer is released.
+    private func noteInput() {
+        lastInputAt = clock.now()
+        fadeOpacity = 1.0
+    }
+
     public func pointerDown(_ point: StrokePoint) {
         pointerDown(point, modifiers: .none)
     }
 
     public func pointerDown(_ point: StrokePoint, modifiers: PointerModifiers) {
-        lastInputAt = clock.now()
+        noteInput()
         guard mode != .inactive else { return }
         switch currentTool {
         case .pen:
@@ -244,7 +252,7 @@ public final class AppController { // swiftlint:disable:this type_body_length
     }
 
     public func pointerMoved(_ point: StrokePoint, modifiers: PointerModifiers) {
-        lastInputAt = clock.now()
+        noteInput()
         guard mode != .inactive else { return }
         switch currentTool {
         case .pen: penPointerMoved(point)
@@ -259,7 +267,7 @@ public final class AppController { // swiftlint:disable:this type_body_length
     }
 
     public func pointerUp(modifiers: PointerModifiers) {
-        lastInputAt = clock.now()
+        noteInput()
         guard mode != .inactive else { return }
         if pendingSelectionClear {
             selectionPointerUp(modifiers: modifiers)

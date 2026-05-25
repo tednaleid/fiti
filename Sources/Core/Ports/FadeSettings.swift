@@ -3,9 +3,9 @@
 
 import Foundation
 
-/// The auto-fade timing the user can configure. `secondsBeforeFade` is the whole
-/// window from the last input until marks are cleared; the final
-/// `AppController.fadeRampSeconds` of that window is the visible opacity ramp.
+/// The auto-fade timing the user can configure. `secondsBeforeFade` is the solid
+/// hold after the last input before fading begins; the visible opacity ramp
+/// (`AppController.fadeRampSeconds`) then runs on top, so marks clear at hold + ramp.
 @MainActor
 public protocol FadeSettings: AnyObject {
     var secondsBeforeFade: Double { get set }

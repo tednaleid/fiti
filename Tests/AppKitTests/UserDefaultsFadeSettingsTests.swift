@@ -33,8 +33,10 @@ struct UserDefaultsFadeSettingsTests {
     @Test("values are clamped to the whole-second range")
     func clamps() {
         let store = UserDefaultsFadeSettings(defaults: freshDefaults())
+        store.secondsBeforeFade = -3
+        #expect(store.secondsBeforeFade == UserDefaultsFadeSettings.minSeconds)  // 0
         store.secondsBeforeFade = 0
-        #expect(store.secondsBeforeFade == UserDefaultsFadeSettings.minSeconds)
+        #expect(store.secondsBeforeFade == 0)   // 0 is allowed: fade immediately over the ramp
         store.secondsBeforeFade = 999
         #expect(store.secondsBeforeFade == UserDefaultsFadeSettings.maxSeconds)
         store.secondsBeforeFade = 5.7
