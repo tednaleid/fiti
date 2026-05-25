@@ -5,17 +5,18 @@ import AppKit
 import CoreGraphics
 import Foundation
 
-public func drawArrow(_ arrow: ArrowItem, in ctx: CGContext, isInProgress: Bool) {
-    let outline = ArrowGeometry.outline(tail: arrow.tail, head: arrow.head, width: arrow.width)
-    guard outline.count >= 3 else { return }
+public func drawArrow(_ arrow: ArrowItem, in ctx: CGContext, isInProgress: Bool, outline: Bool = false) {
+    let poly = ArrowGeometry.outline(tail: arrow.tail, head: arrow.head, width: arrow.width)
+    guard poly.count >= 3 else { return }
 
     withItemTransform(arrow.transform, in: ctx) {
         let path = CGMutablePath()
-        path.move(to: CGPoint(x: outline[0].x, y: outline[0].y))
-        for p in outline.dropFirst() {
+        path.move(to: CGPoint(x: poly[0].x, y: poly[0].y))
+        for p in poly.dropFirst() {
             path.addLine(to: CGPoint(x: p.x, y: p.y))
         }
         path.closeSubpath()
+        strokeHaloIfNeeded(path, color: arrow.color, sizeBasis: arrow.width, outline: outline, in: ctx)
         ctx.setFillColor(red: CGFloat(arrow.color.r), green: CGFloat(arrow.color.g),
                          blue: CGFloat(arrow.color.b), alpha: CGFloat(arrow.color.a))
         ctx.setStrokeColor(red: CGFloat(arrow.color.r), green: CGFloat(arrow.color.g),

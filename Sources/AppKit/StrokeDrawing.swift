@@ -7,40 +7,54 @@ import CoreText
 import Foundation
 import PerfectFreehand
 
-public func drawStroke(_ stroke: Stroke, in ctx: CGContext, isInProgress: Bool) {
+/// Stroke `path` with the resolved contrast halo behind the fill, if outline is on.
+/// Shared by drawStroke and drawArrow (both use the stroke/arrow width factor).
+func strokeHaloIfNeeded(_ path: CGPath, color: RGBA, sizeBasis: Double,
+                        outline: Bool, in ctx: CGContext) {
+    guard let halo = resolveOutline(enabled: outline, color: color, sizeBasis: sizeBasis,
+                                    widthFactor: OutlineTuning.strokeWidthFactor) else { return }
+    ctx.setStrokeColor(red: CGFloat(halo.haloColor.r), green: CGFloat(halo.haloColor.g),
+                       blue: CGFloat(halo.haloColor.b), alpha: CGFloat(halo.haloColor.a))
+    ctx.setLineWidth(CGFloat(halo.haloWidth))
+    ctx.setLineJoin(.round)
+    ctx.setLineCap(.round)
+    ctx.addPath(path)
+    ctx.strokePath()
+}
+
+public func drawItem(_ item: CanvasItem, in ctx: CGContext, isInProgress: Bool, outline: Bool = false) {
+    switch item {
+    case .stroke(let s): drawStroke(s, in: ctx, isInProgress: isInProgress, outline: outline)
+    case .text(let t): drawText(t, in: ctx, outline: outline)
+    case .arrow(let a): drawArrow(a, in: ctx, isInProgress: isInProgress, outline: outline)
+    }
+}
+
+public func drawStroke(_ stroke: Stroke, in ctx: CGContext, isInProgress: Bool, outline: Bool = false) {
     guard !stroke.points.isEmpty else { return }
     let opts = FitiStrokeOptions.make(width: stroke.width, last: !isInProgress || stroke.snappedToLine)
     let polygon = getStroke(points: stroke.points.perfectFreehandInputs, options: opts)
     guard polygon.count >= 3 else { return }
 
     withItemTransform(stroke.transform, in: ctx) {
-        ctx.setFillColor(red: CGFloat(stroke.color.r),
-                         green: CGFloat(stroke.color.g),
-                         blue: CGFloat(stroke.color.b),
-                         alpha: CGFloat(stroke.color.a))
         let path = CGMutablePath()
         path.move(to: CGPoint(x: polygon[0].x, y: polygon[0].y))
         for v in polygon.dropFirst() {
             path.addLine(to: CGPoint(x: v.x, y: v.y))
         }
         path.closeSubpath()
+        strokeHaloIfNeeded(path, color: stroke.color, sizeBasis: stroke.width, outline: outline, in: ctx)
+        ctx.setFillColor(red: CGFloat(stroke.color.r), green: CGFloat(stroke.color.g),
+                         blue: CGFloat(stroke.color.b), alpha: CGFloat(stroke.color.a))
         ctx.addPath(path)
         ctx.fillPath()
     }
 }
 
-public func drawItem(_ item: CanvasItem, in ctx: CGContext, isInProgress: Bool) {
-    switch item {
-    case .stroke(let s): drawStroke(s, in: ctx, isInProgress: isInProgress)
-    case .text(let t): drawText(t, in: ctx)
-    case .arrow(let a): drawArrow(a, in: ctx, isInProgress: isInProgress)
-    }
-}
-
-public func drawText(_ text: TextItem, in ctx: CGContext) {
+public func drawText(_ text: TextItem, in ctx: CGContext, outline: Bool = false) {
     withItemTransform(text.transform, in: ctx) {
         drawTextString(text.string, fontName: text.fontName, fontSize: text.fontSize,
-                       color: text.color, in: ctx)
+                       color: text.color, in: ctx, outline: outline)
     }
 }
 
@@ -49,10 +63,10 @@ public func drawText(_ text: TextItem, in ctx: CGContext) {
 /// edit session) so the glyph stacking and line height stay identical. The caller
 /// is responsible for applying the item transform around this call.
 func drawTextString(_ string: String, fontName: String, fontSize: Double,
-                    color: RGBA, in ctx: CGContext) {
+                    color: RGBA, in ctx: CGContext, outline: Bool = false) {
     let font = NSFont(name: fontName, size: CGFloat(fontSize))
         ?? NSFont.systemFont(ofSize: CGFloat(fontSize))
-    let attrs: [NSAttributedString.Key: Any] = [
+    var attrs: [NSAttributedString.Key: Any] = [
         .font: font,
         .foregroundColor: NSColor(
             calibratedRed: CGFloat(color.r),
@@ -61,6 +75,14 @@ func drawTextString(_ string: String, fontName: String, fontSize: Double,
             alpha: CGFloat(color.a)
         )
     ]
+    if let halo = resolveOutline(enabled: outline, color: color, sizeBasis: fontSize,
+                                 widthFactor: OutlineTuning.textWidthFactor) {
+        attrs[.strokeColor] = NSColor(calibratedRed: CGFloat(halo.haloColor.r),
+                                      green: CGFloat(halo.haloColor.g),
+                                      blue: CGFloat(halo.haloColor.b),
+                                      alpha: CGFloat(halo.haloColor.a))
+        attrs[.strokeWidth] = -100.0 * halo.haloWidth / fontSize
+    }
     // CanvasView is isFlipped and the bake context applies its own y-flip, so the
     // local drawing space has y increasing downward. CoreText ignores the context
     // flip and would render glyphs mirrored vertically, so apply the corrective
