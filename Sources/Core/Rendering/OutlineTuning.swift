@@ -3,10 +3,10 @@
 
 public enum OutlineTuning {
     /// Pen halo line width as a fraction of stroke width (points).
-    public static let strokeWidthFactor: Double = 0.5
+    public static let strokeWidthFactor: Double = 0.4
     /// Arrow halo line width as a fraction of arrow width (points), heavier than the
     /// pen so the outline reads solid on arrows, floored so thin arrows aren't wispy.
-    public static let arrowWidthFactor: Double = 0.8
+    public static let arrowWidthFactor: Double = 0.62
     public static let arrowMinHaloWidth: Double = 6.0
     /// Text halo width (points) by font-size band: the border reads chunky at large
     /// sizes and stays readable at small ones, stepping rather than scaling smoothly.

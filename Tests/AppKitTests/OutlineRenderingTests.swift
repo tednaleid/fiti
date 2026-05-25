@@ -46,11 +46,13 @@ struct OutlineRenderingTests {
             drawStroke(s, in: ctx, isInProgress: false, outline: outline)
             return ctx
         }
-        let on = whiteCount(render(true), xs: stride(from: 95, through: 105, by: 1),
-                            ys: stride(from: 101, through: 116, by: 1))
-        let off = whiteCount(render(false), xs: stride(from: 95, through: 105, by: 1),
-                             ys: stride(from: 101, through: 116, by: 1))
-        #expect(on > 5)
+        // The only white pixels in the frame are the halo; scan the whole image so the
+        // assertion is robust to the halo's exact width (which is a tunable factor).
+        let on = whiteCount(render(true), xs: stride(from: 0, through: 199, by: 1),
+                            ys: stride(from: 0, through: 159, by: 1))
+        let off = whiteCount(render(false), xs: stride(from: 0, through: 199, by: 1),
+                             ys: stride(from: 0, through: 159, by: 1))
+        #expect(on > 20)
         #expect(off == 0)
     }
 
