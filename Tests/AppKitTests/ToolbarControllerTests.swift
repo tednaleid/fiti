@@ -193,19 +193,19 @@ struct ToolbarControllerTests {
         #expect(toolbar.testOnly_sizePickerTool == .text)
     }
 
-    @Test("picking a size preset cell drives controller.currentWidth via onPick")
-    func sizePresetPickUpdatesController() {
+    @Test("tapping size + steps controller.currentWidth to the next preset")
+    func sizeStepUpdatesController() {
         let (toolbar, controller, _) = make()
-        toolbar.testOnly_pickSizePreset(at: 4)   // ValuePresets.sizes[4] == 14
-        #expect(controller.currentWidth == 14)
+        toolbar.testOnly_tapSizeUp()   // default width 6 -> next preset 9
+        #expect(controller.currentWidth == 9)
     }
 
-    @Test("picking an opacity preset cell drives controller.currentColor.a via onPick, preserving rgb")
-    func opacityPresetPickUpdatesController() {
+    @Test("tapping opacity + steps controller.currentColor.a, preserving rgb")
+    func opacityStepUpdatesController() {
         let (toolbar, controller, _) = make()
-        controller.currentColor = RGBA(r: 0.2, g: 0.4, b: 0.6, a: 1.0)
-        toolbar.testOnly_pickOpacityPreset(at: 2)   // ValuePresets.opacities[2] == 0.3
-        #expect(controller.currentColor.a == 0.3)
+        controller.currentColor = RGBA(r: 0.2, g: 0.4, b: 0.6, a: 0.5)
+        toolbar.testOnly_tapOpacityUp()   // 0.5 -> 0.6
+        #expect(abs(controller.currentColor.a - 0.6) < 0.0001)
         #expect(controller.currentColor.r == 0.2)
         #expect(controller.currentColor.g == 0.4)
         #expect(controller.currentColor.b == 0.6)

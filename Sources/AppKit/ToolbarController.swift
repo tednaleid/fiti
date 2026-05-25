@@ -3,11 +3,6 @@
 
 import AppKit
 
-// swiftlint:disable file_length
-// ^ The toolbar controller is the single hub for all toolbar chrome + wiring.
-// Splitting the test hooks / chrome helpers into extensions is a worthwhile
-// follow-up, but artificial fragmentation to hit the line count isn't.
-
 @MainActor
 // swiftlint:disable:next type_body_length
 public final class ToolbarController: NSObject {
@@ -20,14 +15,11 @@ public final class ToolbarController: NSObject {
     private let textButton = NSButton(title: "", target: nil, action: nil)
     private let arrowButton = NSButton(title: "", target: nil, action: nil)
     private let colorWell: NSColorWell
-    private let sizePicker = ValuePickerControl(kind: .size, presets: ValuePresets.sizes, value: 6)
-    private let opacityPicker = ValuePickerControl(kind: .opacity, presets: ValuePresets.opacities, value: 0.8)
+    private let markControl = MarkControl()
     private let hideButton: NSButton
     private let autoFadeButton = NSButton(title: "", target: nil, action: nil)
     private var quickPickButtons: [NSButton] = []
 
-    private let widthLabel = NSTextField(labelWithString: "size")
-    private let opacityLabel = NSTextField(labelWithString: "opacity")
     private(set) var activeSwatchIndex: Int?
 
     public init(controller: AppController, defaults: UserDefaults = .standard,
@@ -44,17 +36,12 @@ public final class ToolbarController: NSObject {
         buildContent()
         updateVisibility(for: controller.mode)
 
-        sizePicker.setValue(controller.currentWidth)
-        sizePicker.color = controller.currentColor
-        sizePicker.currentTool = controller.currentTool
-        sizePicker.outlineOn = outlineOn(for: controller.currentTool)
-        sizePicker.toolTipText = "Size — s / S"
-        sizePicker.onPick = { [weak self] v in self?.controller.currentWidth = v }
-
-        opacityPicker.setValue(controller.currentColor.a)
-        opacityPicker.color = controller.currentColor
-        opacityPicker.toolTipText = "Opacity — o / O"
-        opacityPicker.onPick = { [weak self] v in
+        markControl.width = controller.currentWidth
+        markControl.color = controller.currentColor
+        markControl.currentTool = controller.currentTool
+        markControl.outlineOn = outlineOn(for: controller.currentTool)
+        markControl.onWidth = { [weak self] v in self?.controller.currentWidth = v }
+        markControl.onOpacity = { [weak self] v in
             guard let self else { return }
             let c = self.controller.currentColor
             self.controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: v)
@@ -63,13 +50,11 @@ public final class ToolbarController: NSObject {
         // React to external writes (HTTP, other adapters) — keep widgets in sync and persist.
         controller.onCurrentColorChanged = { [weak self] color in
             self?.syncColorWidgets(with: color)
-            self?.sizePicker.color = color
-            self?.opacityPicker.color = color
-            self?.opacityPicker.setValue(color.a)
+            self?.markControl.color = color
             self?.persistColor()
         }
         controller.onCurrentWidthChanged = { [weak self] width in
-            self?.sizePicker.setValue(width)
+            self?.markControl.width = width
             self?.defaults.set(width, forKey: "fiti.width")
         }
         controller.onDrawingsVisibilityChanged = { [weak self] visible in
@@ -79,9 +64,12 @@ public final class ToolbarController: NSObject {
             self?.updateAutoFadeGlyph(enabled: enabled)
         }
         controller.onCurrentToolChanged = { [weak self] tool in
-            self?.updateToolHighlights()
-            self?.sizePicker.currentTool = tool
-            self?.sizePicker.outlineOn = self?.outlineOn(for: tool) ?? false
+            guard let self else { return }
+            self.updateToolHighlights()
+            if tool != .selection {
+                self.markControl.currentTool = tool
+                self.markControl.outlineOn = self.outlineOn(for: tool)
+            }
         }
     }
 
@@ -148,13 +136,7 @@ public final class ToolbarController: NSObject {
         colorWell.toolTip = "Custom color"
         stack.addArrangedSubview(colorWell)
 
-        styleSliderLabel(widthLabel)
-        stack.addArrangedSubview(widthLabel)
-        stack.addArrangedSubview(sizePicker)
-
-        styleSliderLabel(opacityLabel)
-        stack.addArrangedSubview(opacityLabel)
-        stack.addArrangedSubview(opacityPicker)
+        stack.addArrangedSubview(markControl)
 
         hideButton.target = self
         hideButton.action = #selector(toggleHide(_:))
@@ -226,11 +208,6 @@ public final class ToolbarController: NSObject {
         button.layer?.backgroundColor = active
             ? NSColor.controlAccentColor.withAlphaComponent(0.25).cgColor
             : NSColor.clear.cgColor
-    }
-
-    private func styleSliderLabel(_ field: NSTextField) {
-        field.font = .systemFont(ofSize: 10)
-        field.alignment = .center
     }
 
     private func makeSwatchImage(r: Double, g: Double, b: Double) -> NSImage {
@@ -353,12 +330,11 @@ public final class ToolbarController: NSObject {
     }
 
     internal func testOnly_setWidth(_ value: Double) {
-        sizePicker.setValue(value)
+        markControl.width = value
         controller.currentWidth = value
     }
 
     internal func testOnly_setOpacity(_ value: Double) {
-        opacityPicker.setValue(value)
         let c = controller.currentColor
         controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: value)
     }
@@ -375,21 +351,21 @@ public final class ToolbarController: NSObject {
         autoFadeClicked(autoFadeButton)
     }
 
-    func testOnly_pickSizePreset(at index: Int) { sizePicker.testOnly_selectPreset(at: index) }
-    func testOnly_pickOpacityPreset(at index: Int) { opacityPicker.testOnly_selectPreset(at: index) }
+    func testOnly_tapSizeUp() { markControl.testOnly_tapSizeUp() }
+    func testOnly_tapOpacityUp() { markControl.testOnly_tapOpacityUp() }
 
     // swiftlint:disable identifier_name
     internal var testOnly_colorWellColor: NSColor { colorWell.color }
-    internal var testOnly_widthSliderValue: Double { sizePicker.value }
+    internal var testOnly_widthSliderValue: Double { markControl.width }
     internal var testOnly_hideButtonGlyphName: String { currentHideGlyphName }
     internal var testOnly_autoFadeGlyphName: String { currentAutoFadeGlyphName }
     internal var testOnly_colorWellTooltip: String? { colorWell.toolTip }
-    internal var testOnly_widthSliderTooltip: String? { sizePicker.toolTipText }
-    internal var testOnly_opacitySliderTooltip: String? { opacityPicker.toolTipText }
+    internal var testOnly_widthSliderTooltip: String? { markControl.testOnly_sizeTooltip }
+    internal var testOnly_opacitySliderTooltip: String? { markControl.testOnly_opacityTooltip }
     internal var testOnly_hideButtonTooltip: String? { hideButton.toolTip }
     internal var testOnly_autoFadeTooltip: String? { autoFadeButton.toolTip }
-    internal var testOnly_widthLabelText: String { widthLabel.stringValue }
-    internal var testOnly_opacityLabelText: String { opacityLabel.stringValue }
+    internal var testOnly_widthLabelText: String { markControl.testOnly_sizeLabelText }
+    internal var testOnly_opacityLabelText: String { markControl.testOnly_opacityLabelText }
     internal var testOnly_activeSwatchIndex: Int? { activeSwatchIndex }
     internal var testOnly_penTooltip: String? { penButton.toolTip }
     internal var testOnly_textTooltip: String? { textButton.toolTip }
@@ -399,8 +375,8 @@ public final class ToolbarController: NSObject {
     internal var testOnly_arrowActiveBackground: Bool { hasActiveBackground(arrowButton) }
     internal var testOnly_hideButtonActiveBackground: Bool { hasActiveBackground(hideButton) }
     internal var testOnly_autoFadeActiveBackground: Bool { hasActiveBackground(autoFadeButton) }
-    internal var testOnly_sizePickerTool: Tool { sizePicker.currentTool }
-    internal var testOnly_sizePickerOutlineOn: Bool { sizePicker.outlineOn }
+    internal var testOnly_sizePickerTool: Tool { markControl.testOnly_previewTool }
+    internal var testOnly_sizePickerOutlineOn: Bool { markControl.outlineOn }
     // swiftlint:enable identifier_name
 
     private func hasActiveBackground(_ button: NSButton) -> Bool {
