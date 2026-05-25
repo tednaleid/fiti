@@ -66,23 +66,12 @@ func drawTextString(_ string: String, fontName: String, fontSize: Double,
                     color: RGBA, in ctx: CGContext, outline: Bool = false) {
     let font = NSFont(name: fontName, size: CGFloat(fontSize))
         ?? NSFont.systemFont(ofSize: CGFloat(fontSize))
-    var attrs: [NSAttributedString.Key: Any] = [
-        .font: font,
-        .foregroundColor: NSColor(
-            calibratedRed: CGFloat(color.r),
-            green: CGFloat(color.g),
-            blue: CGFloat(color.b),
-            alpha: CGFloat(color.a)
-        )
-    ]
-    if let halo = resolveOutline(enabled: outline, color: color, sizeBasis: fontSize,
-                                 widthFactor: OutlineTuning.textWidthFactor) {
-        attrs[.strokeColor] = NSColor(calibratedRed: CGFloat(halo.haloColor.r),
-                                      green: CGFloat(halo.haloColor.g),
-                                      blue: CGFloat(halo.haloColor.b),
-                                      alpha: CGFloat(halo.haloColor.a))
-        attrs[.strokeWidth] = -100.0 * halo.haloWidth / fontSize
-    }
+    let fillColor = NSColor(
+        calibratedRed: CGFloat(color.r),
+        green: CGFloat(color.g),
+        blue: CGFloat(color.b),
+        alpha: CGFloat(color.a)
+    )
     // CanvasView is isFlipped and the bake context applies its own y-flip, so the
     // local drawing space has y increasing downward. CoreText ignores the context
     // flip and would render glyphs mirrored vertically, so apply the corrective
@@ -92,15 +81,38 @@ func drawTextString(_ string: String, fontName: String, fontSize: Double,
     let lh = lineHeight(for: font)
     let ascent = font.ascender
     let lines = string.components(separatedBy: "\n")
-    for (index, line) in lines.enumerated() {
-        let attrStr = NSAttributedString(string: line, attributes: attrs)
-        let ctLine = CTLineCreateWithAttributedString(attrStr)
-        // y is downward in this space: line 0 sits at the top of the local box
-        // (0,0)-(bounds.w, lines*lineHeight) and subsequent lines descend. With the
-        // flipped text matrix the glyph rises from its baseline, so place the baseline
-        // at the line's top plus the font ascent.
-        let yOffset = CGFloat(index) * lh + ascent
-        ctx.textPosition = CGPoint(x: 0, y: yOffset)
-        CTLineDraw(ctLine, ctx)
+
+    // Draw every line with `attrs` at the stacked baseline positions. y is downward
+    // here: line 0 sits at the top of the local box and subsequent lines descend; with
+    // the flipped text matrix the glyph rises from its baseline, so place the baseline
+    // at the line's top plus the font ascent.
+    func drawLines(_ attrs: [NSAttributedString.Key: Any]) {
+        for (index, line) in lines.enumerated() {
+            let attrStr = NSAttributedString(string: line, attributes: attrs)
+            let ctLine = CTLineCreateWithAttributedString(attrStr)
+            let yOffset = CGFloat(index) * lh + ascent
+            ctx.textPosition = CGPoint(x: 0, y: yOffset)
+            CTLineDraw(ctLine, ctx)
+        }
     }
+
+    // Halo behind the fill: first stroke the glyph contours thickly in the contrast
+    // color (positive strokeWidth = stroke only, no fill), then fill the glyphs in the
+    // mark color on top. The fill covers the inner half of the halo stroke, so the
+    // interior stays the full mark color and only the outer halo shows. (A single-pass
+    // negative strokeWidth would paint the stroke over the fill, eating thin glyph stems.)
+    if let halo = resolveOutline(enabled: outline, color: color, sizeBasis: fontSize,
+                                 widthFactor: OutlineTuning.textWidthFactor) {
+        let haloColor = NSColor(calibratedRed: CGFloat(halo.haloColor.r),
+                                green: CGFloat(halo.haloColor.g),
+                                blue: CGFloat(halo.haloColor.b),
+                                alpha: CGFloat(halo.haloColor.a))
+        drawLines([
+            .font: font,
+            .foregroundColor: haloColor,
+            .strokeColor: haloColor,
+            .strokeWidth: 100.0 * halo.haloWidth / fontSize
+        ])
+    }
+    drawLines([.font: font, .foregroundColor: fillColor])
 }

@@ -24,6 +24,16 @@ struct OutlineRenderingTests {
         } }
         return n
     }
+    private func redCount(_ ctx: CGContext, xs: StrideThrough<Int>, ys: StrideThrough<Int>) -> Int {
+        let bpr = ctx.bytesPerRow
+        let p = ctx.data!.bindMemory(to: UInt8.self, capacity: bpr * ctx.height)
+        var n = 0
+        for y in ys { for x in xs {
+            let i = y * bpr + x * 4
+            if p[i + 3] > 120 && p[i] > 100 && p[i + 1] < 90 && p[i + 2] < 90 { n += 1 }
+        } }
+        return n
+    }
     private func darkRed() -> RGBA { RGBA(r: 0.5, g: 0.1, b: 0.1, a: 1) }
 
     @Test("stroke gets a white halo with outline on, none with it off")
@@ -62,7 +72,7 @@ struct OutlineRenderingTests {
         #expect(off == 0)
     }
 
-    @Test("text gets white halo pixels on the glyphs with outline on, none with it off")
+    @Test("text keeps a full mark-color interior with the halo behind it")
     func textHalo() {
         func render(_ outline: Bool) -> CGContext {
             let t = TextItem(id: "a", string: "H", fontName: "Helvetica-Bold", fontSize: 60,
@@ -72,11 +82,14 @@ struct OutlineRenderingTests {
             drawText(t, in: ctx, outline: outline)
             return ctx
         }
-        let on = whiteCount(render(true), xs: stride(from: 0, through: 119, by: 1),
-                            ys: stride(from: 0, through: 99, by: 1))
-        let off = whiteCount(render(false), xs: stride(from: 0, through: 119, by: 1),
-                             ys: stride(from: 0, through: 99, by: 1))
-        #expect(on > 5)
-        #expect(off == 0)
+        let allX = stride(from: 0, through: 119, by: 1)
+        let allY = stride(from: 0, through: 99, by: 1)
+        let onCtx = render(true)
+        let haloOn = whiteCount(onCtx, xs: allX, ys: allY)
+        let redOn = redCount(onCtx, xs: allX, ys: allY)
+        let haloOff = whiteCount(render(false), xs: allX, ys: allY)
+        #expect(haloOn > 5)        // halo present around the glyphs
+        #expect(redOn > haloOn)    // mark-color fill dominates: halo is behind, not eating the interior
+        #expect(haloOff == 0)      // no halo without outline
     }
 }
