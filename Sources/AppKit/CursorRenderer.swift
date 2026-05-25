@@ -3,6 +3,30 @@
 
 import AppKit
 
+/// Draws the filled brush dab (inner color disc + outside contrast ring) used by
+/// both the brush cursor and the size picker's pen preview. `diameter` is the
+/// brush spec; the visible fill is half that (matching what gets drawn).
+@MainActor
+func fitiBrushDabImage(color: RGBA, diameter: Double, outlineWidth: CGFloat) -> NSImage {
+    let fillDiameter = max(1.0, CGFloat(diameter) / 2)
+    let outerDiameter = fillDiameter + outlineWidth * 2
+    let size = NSSize(width: outerDiameter, height: outerDiameter)
+    let outline = CursorSpec.outlineColor(for: color)
+    let outerRect = NSRect(x: 0, y: 0, width: outerDiameter, height: outerDiameter)
+    let innerRect = NSRect(x: outlineWidth, y: outlineWidth, width: fillDiameter, height: fillDiameter)
+    return NSImage(size: size, flipped: false) { _ in
+        let ring = NSBezierPath()
+        ring.append(NSBezierPath(ovalIn: outerRect))
+        ring.append(NSBezierPath(ovalIn: innerRect))
+        ring.windingRule = .evenOdd
+        NSColor(srgbRed: outline.r, green: outline.g, blue: outline.b, alpha: outline.a).setFill()
+        ring.fill()
+        NSColor(srgbRed: color.r, green: color.g, blue: color.b, alpha: color.a).setFill()
+        NSBezierPath(ovalIn: innerRect).fill()
+        return true
+    }
+}
+
 @MainActor
 public final class CursorRenderer {
     private weak var view: CanvasInputView?
@@ -76,35 +100,9 @@ public final class CursorRenderer {
     }()
 
     private func makeBrushCursor(color: RGBA, diameter: Double) -> NSCursor {
-        // Inner ≈ visible stroke diameter. perfect-freehand's `size=N` produces
-        // strokes ~N/2 wide at typical (slow-stroke, low-pressure) rendering
-        // under our FitiStrokeOptions (thinning=0.5, simulatePressure=true),
-        // so we halve the spec to match what users actually see drawn. Outline
-        // lives OUTSIDE the inner diameter so it can't tint the user's color
-        // choice. Even-odd fill on the ring keeps the inner pixels transparent
-        // until we draw the fill, preserving alpha.
-        let fillDiameter = max(1.0, CGFloat(diameter) / 2)
-        let outlineWidth = self.outlineWidth
-        let outerDiameter = fillDiameter + outlineWidth * 2
-        let size = NSSize(width: outerDiameter, height: outerDiameter)
-        let outline = CursorSpec.outlineColor(for: color)
-        let outerRect = NSRect(x: 0, y: 0, width: outerDiameter, height: outerDiameter)
-        let innerRect = NSRect(x: outlineWidth, y: outlineWidth, width: fillDiameter, height: fillDiameter)
-
-        let image = NSImage(size: size, flipped: false) { _ in
-            let ring = NSBezierPath()
-            ring.append(NSBezierPath(ovalIn: outerRect))
-            ring.append(NSBezierPath(ovalIn: innerRect))
-            ring.windingRule = .evenOdd
-            NSColor(srgbRed: outline.r, green: outline.g, blue: outline.b, alpha: outline.a).setFill()
-            ring.fill()
-
-            NSColor(srgbRed: color.r, green: color.g, blue: color.b, alpha: color.a).setFill()
-            NSBezierPath(ovalIn: innerRect).fill()
-            return true
-        }
-
-        return NSCursor(image: image, hotSpot: NSPoint(x: outerDiameter / 2, y: outerDiameter / 2))
+        let image = fitiBrushDabImage(color: color, diameter: diameter, outlineWidth: outlineWidth)
+        let center = image.size.width / 2
+        return NSCursor(image: image, hotSpot: NSPoint(x: center, y: center))
     }
 
     /// A solid arrowhead filled with the current color and a 1pt adaptive outline,
