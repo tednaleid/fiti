@@ -95,7 +95,12 @@ public final class CanvasView: NSView, Renderer {
     /// those below vs above the active group (the one the in-progress item joins).
     private func renderSplit(for frame: RenderFrame, inProgressId: ItemId?) -> RenderSplit {
         let committed = frame.items.filter { $0.id != inProgressId }
-        guard let live = frame.inProgress else {
+        // Only lift the active layer when the in-progress item is actually drawable.
+        // A just-started item with no geometry yet (e.g. an arrow at pointer-down,
+        // tail == head) is not drawn by drawLiveGroup, so lifting its layer here would
+        // pull those committed items out of the static bake and leave them unpainted
+        // until the first move.
+        guard let live = frame.inProgress, isLiveDrawable(live) else {
             return RenderSplit(below: committed, above: [], lifted: [])
         }
         let plan = LayerPlan.compute(items: committed + [live],

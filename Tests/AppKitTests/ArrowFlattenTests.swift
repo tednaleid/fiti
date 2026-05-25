@@ -95,4 +95,23 @@ struct ArrowFlattenTests {
         let comCenter = try #require(comRep.colorAt(x: centerX, y: centerY)).alphaComponent
         #expect(abs(liveCenter - comCenter) < 0.08, "live arrow is pixel-identical to committed")
     }
+
+    @Test("a just-started zero-length arrow does not hide committed marks")
+    func degenerateArrowKeepsCommittedVisible() throws {
+        let view = CanvasView(frame: NSRect(x: 0, y: 0, width: 100, height: 100))
+        view.testOnly_overrideBackingScale = 1
+        let red = RGBA(r: 1, g: 0, b: 0, a: 1)
+        // An in-progress arrow at pointer-down has tail == head (no geometry). It shares
+        // the committed mark's hue, so it would join that layer. Lifting the layer for a
+        // non-drawable live item once pulled the committed mark out of the static bake
+        // and left it unpainted until the first move.
+        let degenerate = ArrowItem(id: "live", color: red, width: 14, transform: .identity,
+                                   tail: Point(x: 50, y: 50), head: Point(x: 50, y: 50), createdAt: 2)
+        view.render(RenderFrame(items: [.arrow(hArrow("committed", y: 50, red))],
+                                inProgress: .arrow(degenerate),
+                                canvasSize: Size(width: 100, height: 100)))
+        let rep = NSBitmapImageRep(cgImage: try #require(view.testOnly_committedImage))
+        let onShaft = try #require(rep.colorAt(x: armX, y: armY)).alphaComponent
+        #expect(onShaft > 0.5, "committed mark stays painted while a zero-length arrow is in progress")
+    }
 }
