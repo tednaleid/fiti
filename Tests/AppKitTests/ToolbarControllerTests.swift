@@ -169,6 +169,24 @@ struct ToolbarControllerTests {
         #expect(toolbar.testOnly_sizePickerTool == .text)
     }
 
+    @Test("picking a size preset cell drives controller.currentWidth via onPick")
+    func sizePresetPickUpdatesController() {
+        let (toolbar, controller, _) = make()
+        toolbar.testOnly_pickSizePreset(at: 4)   // ValuePresets.sizes[4] == 14
+        #expect(controller.currentWidth == 14)
+    }
+
+    @Test("picking an opacity preset cell drives controller.currentColor.a via onPick, preserving rgb")
+    func opacityPresetPickUpdatesController() {
+        let (toolbar, controller, _) = make()
+        controller.currentColor = RGBA(r: 0.2, g: 0.4, b: 0.6, a: 1.0)
+        toolbar.testOnly_pickOpacityPreset(at: 2)   // ValuePresets.opacities[2] == 0.3
+        #expect(controller.currentColor.a == 0.3)
+        #expect(controller.currentColor.r == 0.2)
+        #expect(controller.currentColor.g == 0.4)
+        #expect(controller.currentColor.b == 0.6)
+    }
+
     @Test("external write to drawingsVisible updates the hide button glyph")
     func externalHideWriteUpdatesGlyph() {
         let (toolbar, controller, _) = make()

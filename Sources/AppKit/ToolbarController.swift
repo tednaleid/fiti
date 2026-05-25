@@ -354,6 +354,9 @@ public final class ToolbarController: NSObject {
         autoFadeClicked(autoFadeButton)
     }
 
+    func testOnly_pickSizePreset(at index: Int) { sizePicker.testOnly_selectPreset(at: index) }
+    func testOnly_pickOpacityPreset(at index: Int) { opacityPicker.testOnly_selectPreset(at: index) }
+
     // swiftlint:disable identifier_name
     internal var testOnly_colorWellColor: NSColor { colorWell.color }
     internal var testOnly_widthSliderValue: Double { sizePicker.value }
