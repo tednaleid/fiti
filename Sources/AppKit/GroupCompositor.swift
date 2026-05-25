@@ -50,6 +50,8 @@ private func inkPad(_ item: CanvasItem) -> Double {
         return s.width * linearScale(s.transform) + 1
     case .text:
         return 2
+    case .arrow(let a):
+        return a.width * linearScale(a.transform) + 1
     }
 }
 

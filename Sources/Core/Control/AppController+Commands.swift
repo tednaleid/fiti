@@ -76,6 +76,9 @@ extension AppController {
             t.bounds = textMeasurer.measure(string: t.string, fontName: t.fontName,
                                             fontSize: t.fontSize)
             return .text(t)
+        case .arrow(var a):
+            a.width = direction == .up ? min(40, a.width * 1.1) : max(1, a.width / 1.1)
+            return .arrow(a)
         }
     }
 

@@ -33,6 +33,7 @@ public func drawItem(_ item: CanvasItem, in ctx: CGContext, isInProgress: Bool) 
     switch item {
     case .stroke(let s): drawStroke(s, in: ctx, isInProgress: isInProgress)
     case .text(let t): drawText(t, in: ctx)
+    case .arrow(let a): drawArrow(a, in: ctx, isInProgress: isInProgress)
     }
 }
 

@@ -6,11 +6,13 @@ import Foundation
 public enum CanvasItem: Equatable, Codable, Sendable {
     case stroke(Stroke)
     case text(TextItem)
+    case arrow(ArrowItem)
 
     public var id: ItemId {
         switch self {
         case .stroke(let s): return s.id
         case .text(let t): return t.id
+        case .arrow(let a): return a.id
         }
     }
 
@@ -18,6 +20,7 @@ public enum CanvasItem: Equatable, Codable, Sendable {
         switch self {
         case .stroke(let s): return s.createdAt
         case .text(let t): return t.createdAt
+        case .arrow(let a): return a.createdAt
         }
     }
 
@@ -25,6 +28,7 @@ public enum CanvasItem: Equatable, Codable, Sendable {
         switch self {
         case .stroke(let s): return s.color
         case .text(let t): return t.color
+        case .arrow(let a): return a.color
         }
     }
 
@@ -33,12 +37,14 @@ public enum CanvasItem: Equatable, Codable, Sendable {
             switch self {
             case .stroke(let s): return s.transform
             case .text(let t): return t.transform
+            case .arrow(let a): return a.transform
             }
         }
         set {
             switch self {
             case .stroke(var s): s.transform = newValue; self = .stroke(s)
             case .text(var t): t.transform = newValue; self = .text(t)
+            case .arrow(var a): a.transform = newValue; self = .arrow(a)
             }
         }
     }
@@ -49,6 +55,7 @@ public enum CanvasItem: Equatable, Codable, Sendable {
         switch self {
         case .stroke(var s): s.color = newColor; return .stroke(s)
         case .text(var t): t.color = newColor; return .text(t)
+        case .arrow(var a): a.color = newColor; return .arrow(a)
         }
     }
 

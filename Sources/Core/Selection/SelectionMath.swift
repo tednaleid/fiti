@@ -50,6 +50,8 @@ public enum SelectionMath {
                 if strokeHit(s, query: query, tolerance: tolerance) { return id }
             case .text(let t):
                 if pointInTextItem(point, text: t, tolerance: tolerance) { return id }
+            case .arrow(let a):
+                if pointInArrow(point, arrow: a) { return id }
             }
         }
         return nil
@@ -201,7 +203,51 @@ public enum SelectionMath {
                 if p.y > maxY { maxY = p.y }
             }
             return Rect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+        case .arrow(let a):
+            return arrowAABB(a)
         }
+    }
+
+    /// World-space vertices of an arrow's local outline, pushed through its transform.
+    /// Same convention as textWorldCorners: rotate scale*local, then translate by x,y.
+    private static func worldOutline(_ a: ArrowItem) -> [Point] {
+        let local = ArrowGeometry.outline(tail: a.tail, head: a.head, width: a.width)
+        let cosθ = cos(a.transform.rotate * .pi / 180.0)
+        let sinθ = sin(a.transform.rotate * .pi / 180.0)
+        return local.map { p in
+            let sx = p.x * a.transform.scale, sy = p.y * a.transform.scale
+            return Point(x: sx * cosθ - sy * sinθ + a.transform.x,
+                         y: sx * sinθ + sy * cosθ + a.transform.y)
+        }
+    }
+
+    /// World-space AABB enclosing an arrow's transformed outline, or nil if degenerate.
+    private static func arrowAABB(_ a: ArrowItem) -> Rect? {
+        let pts = worldOutline(a)
+        guard let first = pts.first else { return nil }
+        var minX = first.x, maxX = first.x, minY = first.y, maxY = first.y
+        for p in pts.dropFirst() {
+            minX = min(minX, p.x); maxX = max(maxX, p.x)
+            minY = min(minY, p.y); maxY = max(maxY, p.y)
+        }
+        return Rect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
+    /// Returns true if `point` lies inside the arrow's transformed outline polygon.
+    private static func pointInArrow(_ point: Point, arrow a: ArrowItem) -> Bool {
+        let poly = worldOutline(a)
+        guard poly.count >= 3 else { return false }
+        var inside = false
+        var j = poly.count - 1
+        for i in 0..<poly.count {
+            let pi = poly[i], pj = poly[j]
+            if (pi.y > point.y) != (pj.y > point.y) {
+                let x = (pj.x - pi.x) * (point.y - pi.y) / (pj.y - pi.y) + pi.x
+                if point.x < x { inside.toggle() }
+            }
+            j = i
+        }
+        return inside
     }
 
     /// World-space corners of a text item's local bounds rect, pushed through its transform.
