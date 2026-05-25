@@ -258,16 +258,16 @@ struct ToolbarControllerTooltipTests {
         #expect(toolbar.testOnly_colorWellTooltip == "Custom color")
     }
 
-    @Test("width slider has 'Stroke size — s / S' tooltip")
+    @Test("width control has 'Size — s / S' tooltip")
     func widthSliderTooltip() {
         let (toolbar, _) = make()
-        #expect(toolbar.testOnly_widthSliderTooltip == "Stroke size — s / S")
+        #expect(toolbar.testOnly_widthSliderTooltip == "Size — s / S")
     }
 
-    @Test("opacity slider has 'Stroke opacity — o / O' tooltip")
+    @Test("opacity control has 'Opacity — o / O' tooltip")
     func opacitySliderTooltip() {
         let (toolbar, _) = make()
-        #expect(toolbar.testOnly_opacitySliderTooltip == "Stroke opacity — o / O")
+        #expect(toolbar.testOnly_opacitySliderTooltip == "Opacity — o / O")
     }
 
     @Test("hide button tooltip flips with drawingsVisible")
@@ -286,16 +286,16 @@ struct ToolbarControllerTooltipTests {
         #expect(toolbar.testOnly_autoFadeTooltip == "Auto-fade on — f")
     }
 
-    @Test("width label text is 'stroke size'")
+    @Test("width label text is 'size'")
     func widthLabelText() {
         let (toolbar, _) = make()
-        #expect(toolbar.testOnly_widthLabelText == "stroke size")
+        #expect(toolbar.testOnly_widthLabelText == "size")
     }
 
-    @Test("opacity label text is 'stroke opacity'")
+    @Test("opacity label text is 'opacity'")
     func opacityLabelText() {
         let (toolbar, _) = make()
-        #expect(toolbar.testOnly_opacityLabelText == "stroke opacity")
+        #expect(toolbar.testOnly_opacityLabelText == "opacity")
     }
 }
 

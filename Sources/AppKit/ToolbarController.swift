@@ -20,8 +20,8 @@ public final class ToolbarController: NSObject {
     private let autoFadeButton = NSButton(title: "", target: nil, action: nil)
     private var quickPickButtons: [NSButton] = []
 
-    private let widthLabel = NSTextField(labelWithString: "stroke size")
-    private let opacityLabel = NSTextField(labelWithString: "stroke opacity")
+    private let widthLabel = NSTextField(labelWithString: "size")
+    private let opacityLabel = NSTextField(labelWithString: "opacity")
     private(set) var activeSwatchIndex: Int?
 
     public init(controller: AppController, defaults: UserDefaults = .standard) {
@@ -124,7 +124,7 @@ public final class ToolbarController: NSObject {
         widthSlider.target = self
         widthSlider.action = #selector(widthChanged(_:))
         widthSlider.doubleValue = controller.currentWidth
-        widthSlider.toolTip = "Stroke size — s / S"
+        widthSlider.toolTip = "Size — s / S"
         styleSliderLabel(widthLabel)
         stack.addArrangedSubview(widthLabel)
         stack.addArrangedSubview(widthSlider)
@@ -132,7 +132,7 @@ public final class ToolbarController: NSObject {
         opacitySlider.target = self
         opacitySlider.action = #selector(opacityChanged(_:))
         opacitySlider.doubleValue = controller.currentColor.a
-        opacitySlider.toolTip = "Stroke opacity — o / O"
+        opacitySlider.toolTip = "Opacity — o / O"
         styleSliderLabel(opacityLabel)
         stack.addArrangedSubview(opacityLabel)
         stack.addArrangedSubview(opacitySlider)
