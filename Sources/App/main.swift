@@ -69,7 +69,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
             editor: editor,
             onOpenPreferences: { [weak self] in self?.preferences.show() }
         )
-        toolbar = ToolbarController(controller: controller)
+        toolbar = ToolbarController(controller: controller, outlineSettings: outlineSettings)
         keyMonitor = KeyMonitor(controller: controller)
         composeControllerCallbacks()
         followToolbarToScreen(clearStrokes: false)  // initial sync — autosaved toolbar position may be on a non-main screen

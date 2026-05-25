@@ -144,6 +144,30 @@ struct ToolbarControllerTests {
         _ = toolbar
     }
 
+    @Test("size picker outline flag follows the tool's outline setting")
+    func sizePickerOutlineFollowsTool() {
+        let editor = Editor(clock: VirtualClock(), ids: SeededIdGenerator(prefix: "s"))
+        let controller = AppController(
+            editor: editor,
+            window: RecordingWindow(),
+            detector: RecordingStationaryDetector(),
+            clock: VirtualClock(),
+            ticker: RecordingFadeTicker(),
+            textMeasurer: CoreTextMeasurer()
+        )
+        let settings = DefaultOutlineSettings(textOutline: true, arrowOutline: false, penOutline: false)
+        let toolbar = ToolbarController(controller: controller,
+                                        defaults: UserDefaults(suiteName: UUID().uuidString)!,
+                                        outlineSettings: settings)
+        controller.activate()
+        controller.currentTool = .text
+        #expect(toolbar.testOnly_sizePickerOutlineOn == true)
+        controller.currentTool = .arrow
+        #expect(toolbar.testOnly_sizePickerOutlineOn == false)
+        controller.currentTool = .pen
+        #expect(toolbar.testOnly_sizePickerOutlineOn == false)
+    }
+
     @Test("external write to currentColor updates the color well")
     func externalColorWriteUpdatesWidget() {
         let (toolbar, controller, _) = make()

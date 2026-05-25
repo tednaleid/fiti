@@ -3,11 +3,17 @@
 
 import AppKit
 
+// swiftlint:disable file_length
+// ^ The toolbar controller is the single hub for all toolbar chrome + wiring.
+// Splitting the test hooks / chrome helpers into extensions is a worthwhile
+// follow-up, but artificial fragmentation to hit the line count isn't.
+
 @MainActor
 // swiftlint:disable:next type_body_length
 public final class ToolbarController: NSObject {
     private let controller: AppController
     private let defaults: UserDefaults
+    private let outlineSettings: OutlineSettings
     internal let panel: ToolbarPanel
 
     private let penButton = NSButton(title: "", target: nil, action: nil)
@@ -24,9 +30,11 @@ public final class ToolbarController: NSObject {
     private let opacityLabel = NSTextField(labelWithString: "opacity")
     private(set) var activeSwatchIndex: Int?
 
-    public init(controller: AppController, defaults: UserDefaults = .standard) {
+    public init(controller: AppController, defaults: UserDefaults = .standard,
+                outlineSettings: OutlineSettings = DefaultOutlineSettings()) {
         self.controller = controller
         self.defaults = defaults
+        self.outlineSettings = outlineSettings
         self.panel = ToolbarPanel()
         self.colorWell = NSColorWell()
         self.hideButton = NSButton(title: "", target: nil, action: nil)
@@ -39,6 +47,7 @@ public final class ToolbarController: NSObject {
         sizePicker.setValue(controller.currentWidth)
         sizePicker.color = controller.currentColor
         sizePicker.currentTool = controller.currentTool
+        sizePicker.outlineOn = outlineOn(for: controller.currentTool)
         sizePicker.toolTipText = "Size — s / S"
         sizePicker.onPick = { [weak self] v in self?.controller.currentWidth = v }
 
@@ -72,6 +81,18 @@ public final class ToolbarController: NSObject {
         controller.onCurrentToolChanged = { [weak self] tool in
             self?.updateToolHighlights()
             self?.sizePicker.currentTool = tool
+            self?.sizePicker.outlineOn = self?.outlineOn(for: tool) ?? false
+        }
+    }
+
+    /// Whether the size-glyph preview should show an outline: the live per-tool
+    /// outline setting. Selection has no mark of its own, so no outline.
+    private func outlineOn(for tool: Tool) -> Bool {
+        switch tool {
+        case .pen: return outlineSettings.penOutline
+        case .text: return outlineSettings.textOutline
+        case .arrow: return outlineSettings.arrowOutline
+        case .selection: return false
         }
     }
 
@@ -379,6 +400,7 @@ public final class ToolbarController: NSObject {
     internal var testOnly_hideButtonActiveBackground: Bool { hasActiveBackground(hideButton) }
     internal var testOnly_autoFadeActiveBackground: Bool { hasActiveBackground(autoFadeButton) }
     internal var testOnly_sizePickerTool: Tool { sizePicker.currentTool }
+    internal var testOnly_sizePickerOutlineOn: Bool { sizePicker.outlineOn }
     // swiftlint:enable identifier_name
 
     private func hasActiveBackground(_ button: NSButton) -> Bool {
