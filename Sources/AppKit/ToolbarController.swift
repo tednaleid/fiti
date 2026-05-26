@@ -48,7 +48,7 @@ public final class ToolbarController: NSObject {
 
         // React to external writes (HTTP, other adapters) — keep widgets in sync and persist.
         controller.onCurrentColorChanged = { [weak self] color in
-            self?.syncColorWidgets(with: color)
+            self?.updateSwatchHighlights()
             self?.markControl.color = color
             self?.persistColor()
         }
@@ -94,10 +94,6 @@ public final class ToolbarController: NSObject {
             // via the panel's window level (see ToolbarPanel) + acceptsFirstMouse.
             panel.makeKeyAndOrderFront(nil)
         }
-    }
-
-    private func syncColorWidgets(with color: RGBA) {
-        updateSwatchHighlights()
     }
 
     // swiftlint:disable:next function_body_length

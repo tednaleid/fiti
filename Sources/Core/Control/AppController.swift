@@ -365,9 +365,10 @@ public final class AppController { // swiftlint:disable:this type_body_length
         mode = newMode
     }
 
-    /// Starting a new mark means the user wants to see drawings, so a pen/arrow/
-    /// text mark started while hidden flips drawings back on. Selection and hover
-    /// never call this, so `h` stays a deliberate peek-away toggle.
+    /// Drawing or editing a mark means the user wants to see drawings, so a
+    /// pen/arrow stroke or a text pointer-down (new or editing existing text)
+    /// while hidden flips drawings back on. Selection and hover never call this,
+    /// so `h` stays a deliberate peek-away toggle.
     func revealDrawingsForNewMark() {
         if !drawingsVisible { drawingsVisible = true }
     }

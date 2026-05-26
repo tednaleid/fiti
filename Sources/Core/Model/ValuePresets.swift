@@ -1,4 +1,4 @@
-// ABOUTME: Pure size/opacity preset values plus next/previous/closest stepping.
+// ABOUTME: Pure size/opacity preset values plus next/previous stepping.
 // ABOUTME: Backs the toolbar pickers and the keyboard size/opacity shortcuts.
 
 import Foundation
@@ -22,17 +22,4 @@ public func nextPreset(after value: Double, in presets: [Double]) -> Double {
 /// less (empty list -> `value`). Presets must be ascending.
 public func previousPreset(before value: Double, in presets: [Double]) -> Double {
     presets.last(where: { $0 < value }) ?? presets.first ?? value
-}
-
-/// Index of the preset nearest `value`, ties resolving to the lower index.
-/// `nil` for an empty list.
-public func closestPresetIndex(to value: Double, in presets: [Double]) -> Int? {
-    guard !presets.isEmpty else { return nil }
-    var best = 0
-    var bestDist = abs(presets[0] - value)
-    for i in 1..<presets.count {
-        let d = abs(presets[i] - value)
-        if d < bestDist { bestDist = d; best = i }
-    }
-    return best
 }

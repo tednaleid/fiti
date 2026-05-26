@@ -1,4 +1,4 @@
-// ABOUTME: Tests the size/opacity preset lists and next/previous/closest helpers
+// ABOUTME: Tests the size/opacity preset lists and next/previous stepping helpers
 // ABOUTME: that back the toolbar pickers and the keyboard size/opacity shortcuts.
 
 import Testing
@@ -31,13 +31,5 @@ struct ValuePresetsTests {
         #expect(previousPreset(before: 0.5, in: ValuePresets.opacities) == 0.4)
         #expect(nextPreset(after: 1.0, in: ValuePresets.opacities) == 1.0)
         #expect(previousPreset(before: 0.1, in: ValuePresets.opacities) == 0.1)
-    }
-
-    @Test("closestPresetIndex picks the nearest cell, ties to the lower index")
-    func closest() {
-        #expect(closestPresetIndex(to: 6, in: ValuePresets.sizes) == 2)
-        #expect(closestPresetIndex(to: 7, in: ValuePresets.sizes) == 2)   // 7 closer to 6 than 9
-        #expect(closestPresetIndex(to: 8, in: ValuePresets.sizes) == 3)   // 8 closer to 9
-        #expect(closestPresetIndex(to: 0, in: []) == nil)
     }
 }
