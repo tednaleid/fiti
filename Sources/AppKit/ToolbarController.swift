@@ -92,7 +92,12 @@ public final class ToolbarController: NSObject {
         if mode == .inactive {
             panel.orderOut(nil)
         } else {
-            panel.orderFront(nil)
+            // Key, not just front: a non-activating panel can hold key focus
+            // while the app is inactive (opt-f can't bring an accessory app
+            // foreground), so keyboard-driven chrome like the color panel works
+            // without a prior canvas draw. Clicks reach the buttons regardless,
+            // via the panel's window level (see ToolbarPanel) + acceptsFirstMouse.
+            panel.makeKeyAndOrderFront(nil)
         }
     }
 
