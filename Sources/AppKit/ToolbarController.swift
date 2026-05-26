@@ -179,6 +179,9 @@ public final class ToolbarController: NSObject {
         for (i, btn) in quickPickButtons.enumerated() {
             setActiveBackground(btn, active: i == match)
         }
+        // The custom-color wheel is "active" when the color isn't one of the
+        // palette swatches (i.e. it came from the color panel).
+        setActiveBackground(customColorButton, active: match == nil)
     }
 
     private func matchingSwatchIndex(for color: RGBA) -> Int? {
@@ -404,6 +407,7 @@ public final class ToolbarController: NSObject {
     internal var testOnly_widthLabelText: String { markControl.testOnly_sizeLabelText }
     internal var testOnly_opacityLabelText: String { markControl.testOnly_opacityLabelText }
     internal var testOnly_activeSwatchIndex: Int? { activeSwatchIndex }
+    internal var testOnly_customColorActiveBackground: Bool { hasActiveBackground(customColorButton) }
     internal var testOnly_penTooltip: String? { penButton.toolTip }
     internal var testOnly_textTooltip: String? { textButton.toolTip }
     internal var testOnly_arrowTooltip: String? { arrowButton.toolTip }

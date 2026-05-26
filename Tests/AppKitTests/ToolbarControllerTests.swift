@@ -406,6 +406,18 @@ struct ToolbarControllerActiveStateTests {
         #expect(toolbar.testOnly_activeSwatchIndex == nil)
     }
 
+    @Test("custom-color wheel is active only when the color isn't a palette color")
+    func customColorWheelActiveForNonPalette() {
+        let (toolbar, controller) = make()
+        // Default red is a palette color, so the wheel starts inactive.
+        #expect(toolbar.testOnly_customColorActiveBackground == false)
+        controller.currentColor = RGBA(r: 0.123, g: 0.456, b: 0.789, a: 1.0)
+        #expect(toolbar.testOnly_customColorActiveBackground == true)
+        let green = QuickPickPalette.colors[5]
+        controller.currentColor = RGBA(r: green.r, g: green.g, b: green.b, a: 1.0)
+        #expect(toolbar.testOnly_customColorActiveBackground == false)
+    }
+
     @Test("matching ignores alpha — only RGB is compared")
     func swatchMatchIgnoresAlpha() {
         let (toolbar, controller) = make()
