@@ -107,7 +107,10 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     @MainActor
     private func wireInputAndSubscriptions() {
         input = NSEventInputSource(view: inputView)
-        input.onPointerDown   = { [weak self] in self?.controller.pointerDown($0, modifiers: $1) }
+        input.onPointerDown   = { [weak self] in
+            self?.closeColorPanelIfOpen()   // drawing dismisses the system color picker
+            self?.controller.pointerDown($0, modifiers: $1)
+        }
         input.onPointerMoved  = { [weak self] in self?.controller.pointerMoved($0, modifiers: $1) }
         input.onPointerUp     = { [weak self] in self?.controller.pointerUp(modifiers: $0) }
         input.onPointerHover  = { [weak self] in self?.controller.pointerHover($0, modifiers: $1) }
@@ -134,6 +137,15 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
     private var canvasSize: Size {
         Size(width: Double(canvas.frame.width), height: Double(canvas.frame.height))
+    }
+
+    /// Dismiss the system color panel when the user starts drawing, so a visible
+    /// picker doesn't sit there un-interactable once fiti drawing has focus.
+    @MainActor
+    private func closeColorPanelIfOpen() {
+        if NSColorPanel.sharedColorPanelExists && NSColorPanel.shared.isVisible {
+            NSColorPanel.shared.orderOut(nil)
+        }
     }
 
     @MainActor

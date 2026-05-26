@@ -38,7 +38,7 @@ final class MarkControl: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) not supported") }
 
     private static func stepper(_ title: String) -> NSButton {
-        let b = NSButton(title: title, target: nil, action: nil)
+        let b = FirstMouseButton(title: title, target: nil, action: nil)
         b.isBordered = false
         b.font = .systemFont(ofSize: 15, weight: .medium)
         return b

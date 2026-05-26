@@ -16,13 +16,13 @@ public final class ToolbarController: NSObject {
     private let outlineSettings: OutlineSettings
     internal let panel: ToolbarPanel
 
-    private let penButton = NSButton(title: "", target: nil, action: nil)
-    private let textButton = NSButton(title: "", target: nil, action: nil)
-    private let arrowButton = NSButton(title: "", target: nil, action: nil)
-    private let customColorButton = NSButton(title: "", target: nil, action: nil)
+    private let penButton = FirstMouseButton(title: "", target: nil, action: nil)
+    private let textButton = FirstMouseButton(title: "", target: nil, action: nil)
+    private let arrowButton = FirstMouseButton(title: "", target: nil, action: nil)
+    private let customColorButton = FirstMouseButton(title: "", target: nil, action: nil)
     private let markControl = MarkControl()
     private let hideButton: NSButton
-    private let autoFadeButton = NSButton(title: "", target: nil, action: nil)
+    private let autoFadeButton = FirstMouseButton(title: "", target: nil, action: nil)
     private var quickPickButtons: [NSButton] = []
 
     private(set) var activeSwatchIndex: Int?
@@ -33,7 +33,7 @@ public final class ToolbarController: NSObject {
         self.defaults = defaults
         self.outlineSettings = outlineSettings
         self.panel = ToolbarPanel()
-        self.hideButton = NSButton(title: "", target: nil, action: nil)
+        self.hideButton = FirstMouseButton(title: "", target: nil, action: nil)
         super.init()
 
         loadPersistedState()
@@ -119,7 +119,7 @@ public final class ToolbarController: NSObject {
         stack.addArrangedSubview(arrowButton)
 
         for (i, color) in QuickPickPalette.colors.enumerated() {
-            let btn = NSButton(title: "", target: self, action: #selector(colorClicked(_:)))
+            let btn = FirstMouseButton(title: "", target: self, action: #selector(colorClicked(_:)))
             btn.tag = i
             btn.bezelStyle = .regularSquare
             btn.image = makeSwatchImage(r: color.r, g: color.g, b: color.b)
