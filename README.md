@@ -26,7 +26,7 @@ The cask installs `Fiti.app` to `/Applications`.
 
 ## Use
 
-Press `Opt+F` to activate. The cursor becomes a circle that previews the current pen color, opacity, and width, and a floating toolbar appears with color quick-picks, a custom color well, stroke size and opacity sliders, a hide/show toggle, and an auto-fade toggle. The toolbar remembers its position across launches.
+Press `Opt+F` to activate. With the pen the cursor becomes a circle that previews the current color, opacity, and width, and a floating toolbar appears: tool buttons (pen, arrow, text), color quick-picks, a color-wheel button for custom colors, size and opacity controls with a live preview of the current mark, a hide/show toggle, and an auto-fade toggle. The toolbar remembers its position across launches and stays clickable even while another app is frontmost.
 
 ### System-wide
 
@@ -43,12 +43,16 @@ These single-key shortcuts only fire while fiti has key focus, and pass through 
 
 | Action | Shortcut |
 | --- | --- |
+| Pen / Arrow / Text tool | `p` / `a` / `t` |
+| Select (press and hold) | `Space` |
 | Pick color | `1`-`8` |
-| Stroke size larger / smaller | `s` / `Shift+S` |
-| Stroke opacity more / less | `o` / `Shift+O` |
+| Size larger / smaller | `s` / `Shift+S` |
+| Opacity more / less | `o` / `Shift+O` |
 | Toggle hide drawings | `h` |
 | Toggle auto-fade | `f` |
-| Clear all strokes | `Delete` |
+| Clear (or delete selection) | `Delete` |
+
+Size and opacity step through preset values, and apply to whichever tool is active (for text, size sets the font size).
 
 Hover over any toolbar control to see its action and shortcut. The menubar's "Drawing" submenu lists them too.
 

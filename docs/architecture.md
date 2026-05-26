@@ -12,7 +12,7 @@ graph LR
     subgraph App["Sources/App (composition root)"]
         Main["main.swift<br/>FitiAppDelegate"]
         Surface["FitiDevHTTPSurface"]
-        Args["Args / SystemClock / UUIDStrokeIds"]
+        Args["Args / SystemClock / UUIDItemIds"]
     end
 
     subgraph AppKit["Sources/AppKit (adapters)"]
@@ -32,9 +32,9 @@ graph LR
     end
 
     subgraph Core["Sources/Core (pure Swift, no platform deps)"]
-        Controller["AppController<br/>+AutoFade +Commands<br/>+SelectionGesture"]
+        Controller["AppController<br/>+AutoFade +Commands +SelectionGesture<br/>+ArrowTool +TextTool"]
         Editor["Editor<br/>(subscribe / emit)"]
-        Doc["FitiDoc<br/>Stroke / Point / Transform"]
+        Doc["FitiDoc<br/>CanvasItem (stroke/arrow/text)<br/>keyed by ItemId"]
         SelMath["SelectionMath"]
         Ports["Ports: Renderer · WindowControl<br/>InputSource · Clock · IdGenerator<br/>FadeTicker · StationaryDetector<br/>HotkeyRegistry · LaunchAtLogin"]
         Frame["RenderFrame"]
@@ -45,7 +45,7 @@ graph LR
     User -->|key events| Keys
     User -->|Opt+F system-wide| Hotkeys
     Input -->|onPointer*(modifiers)<br/>onClear/onDeactivate/onUndo/onRedo| Controller
-    Keys -->|run(KeyCommand)<br/>currentTool = .selection/.pen| Controller
+    Keys -->|run(KeyCommand)<br/>currentTool = .pen/.arrow/.text/.selection| Controller
     Hotkeys -->|onActivation| Controller
     Controller --> Editor
     Controller --> SelMath
@@ -73,7 +73,7 @@ A **port** is a protocol in `Sources/Core/Ports/` that Core depends on. An **ada
 | `InputSource` | `NSEventInputSource` | In-app mouse + key events; carries `PointerModifiers` (Cmd / Shift) on every pointer event |
 | `HotkeyRegistry` | `KeyboardShortcutsHotkeys` | System-wide activation hotkey (Opt+F default, user-rebindable) |
 | `Clock` | `SystemClock` | `now()` for stroke timestamps and the fade window |
-| `IdGenerator` | `UUIDStrokeIds` | Fresh `StrokeId` per stroke |
+| `IdGenerator` | `UUIDItemIds` | Fresh `ItemId` per item |
 | `FadeTicker` | `TimerFadeTicker` | ~30 Hz tick driving the auto-fade ramp |
 | `StationaryDetector` | `TaskStationaryDetector` | Hold-to-straighten dwell detection |
 | `LaunchAtLogin` | `SMAppServiceLaunchAtLogin` | Login-item registration |
@@ -81,7 +81,7 @@ A **port** is a protocol in `Sources/Core/Ports/` that Core depends on. An **ada
 
 `RenderFrame`, `InverseOp`, and the model types also live under `Sources/Core/` but are plain value types (DTOs), not ports — Core owns them outright.
 
-Two AppKit types are adapters that hold an `AppController` reference and call it directly rather than backing a port: **`KeyMonitor`** (active-app keyboard shortcuts, below) and **`CursorRenderer`** (paints the brush cursor in response to `AppController.onCursorChanged`). They are presentation glue, not abstractions Core depends on.
+Two AppKit types are adapters that hold an `AppController` reference and call it directly rather than backing a port: **`KeyMonitor`** (active-app keyboard shortcuts, below) and **`CursorRenderer`**. The cursor is *pure derived state*: `AppController.currentCursor` maps the current mode, tool, hover point, and toolbar region to a `CursorSpec` (brush circle, crosshair, arrowhead, I-beam, or a resize/rotate `SystemCursor`), emitting through `onCursorChanged`; `CursorRenderer` just paints whatever spec it is handed. Hovering the toolbar region yields the system arrow so the toolbar reads as ordinary chrome. They are presentation glue, not abstractions Core depends on.
 
 The composition root is `Sources/App/main.swift` (`FitiAppDelegate`). It is the only file that imports both Core and an adapter module, and it wires the concrete adapters into Core's ports. It also owns a couple of pure-AppKit behaviors that never reach Core — notably **multi-monitor follow**: an observer on the toolbar panel's `didChangeScreenNotification` relocates the full-screen canvas window to whichever display hosts the toolbar (drawings clear on the switch).
 
@@ -89,45 +89,46 @@ Test doubles live under `Tests/CoreTests/Doubles/` (`RecordingRenderer`, `Record
 
 ## Editor and the document model
 
-`Editor` is the single source of truth for the drawing document. It owns a `FitiDoc` (a map of `Stroke` keyed by `StrokeId`, plus an ordered list `strokeOrder`) and exposes the only mutating operations: `startStroke`, `appendPoint`, `endStroke`, `eraseStroke`, `eraseStrokes`, `transformStrokes`, `clear`, `undo`, `redo`.
+`Editor` is the single source of truth for the drawing document. It owns a `FitiDoc` (a map of `CanvasItem` keyed by `ItemId`, plus an ordered list `itemOrder`) and exposes the only mutating operations: `startStroke`/`appendPoint`/`endStroke` (the pen), `addItem`/`replaceItem` (arrow and text), `eraseStroke`, `eraseItems`, `transformItems`, `clear`, `undo`, `redo`. A `CanvasItem` is the sum type over `Stroke`, `ArrowItem`, and `TextItem`; everything below that says "item" applies to all three.
 
 Every mutation pushes an `InverseOp` onto the undo stack — applied as a *forward edit*, not a history rewind — so the same pattern works whether the backing store stays a Swift struct or is replaced by Automerge later. The cases:
 
 | InverseOp | Pushed by | Undo does |
 | --- | --- | --- |
-| `deleteStroke(id)` | `startStroke`/`endStroke` | removes the just-added stroke |
-| `restoreStroke(snapshot:atIndex:)` | `eraseStroke` | re-inserts one stroke at its old z-index |
-| `deleteStrokes([id])` / `restoreStrokes(entries:)` | batch erase paths | removes / re-inserts a set at original z-order |
-| `setTransforms(entries:)` | `transformStrokes` | restores each stroke's pre-edit `Transform` |
+| `deleteItem(id)` | `startStroke`/`endStroke`, `addItem` | removes the just-added item |
+| `restoreItem(snapshot:atIndex:)` | `eraseStroke` | re-inserts one item at its old z-index |
+| `deleteItems([id])` / `restoreItems(entries:)` | batch erase paths | removes / re-inserts a set at original z-order |
+| `setTransforms(entries:)` | `transformItems` | restores each item's pre-edit `Transform` |
+| `replaceItems(entries:)` | `replaceItem` (text edit commit) | restores items' prior full values |
 
-`transformStrokes(_:)` and `eraseStrokes(ids:)` are batched: one multi-stroke drag or delete is a single undo entry. `applyInverse` is symmetric — applying a `setTransforms` captures the current transforms and returns the inverse, so undo and redo flow through the same code.
+`transformItems(_:)` and `eraseItems(ids:)` are batched: one multi-item drag or delete is a single undo entry. `applyInverse` is symmetric — applying a `setTransforms` captures the current transforms and returns the inverse, so undo and redo flow through the same code.
 
-Subscribers (`CanvasView`, and in dev mode anything that polls `/state`) get a fresh `RenderFrame` after every mutation, built by `RenderFrame.from(editor:canvasSize:)`. The view never reads Editor internals.
+Subscribers (`CanvasView`, and in dev mode anything that polls `/state`) get a fresh `RenderFrame` after every mutation, built by `RenderFrame.from(editor:canvasSize:overrides:editingItemId:)`. The view never reads Editor internals.
 
 ## Modes, tools, and input handling
 
 `AppController` carries two orthogonal pieces of interaction state:
 
 - **`Mode`** — activation state (inactive vs. active). When inactive the overlay is click-through and the cursor is the system arrow. Activation is `Opt+F` (the `HotkeyRegistry` port) or the menubar.
-- **`Tool`** — `.pen` (default) or `.selection`, parallel to `Mode` so adding tools doesn't explode the mode enum. Any active mode can host any tool.
+- **`Tool`** — `.pen` (default), `.arrow`, `.text`, or `.selection`, parallel to `Mode` so adding tools doesn't explode the mode enum. Any active mode can host any tool.
 
-**Active-app keyboard shortcuts.** While fiti is active, `KeyMonitor` (an `NSEvent` local monitor on `[.keyDown, .keyUp]`) dispatches single-character keys through the pure-Core `KeyCommandRegistry` → `AppController.run(_:)`. Commands: `1`–`8` pick colors, `s`/`Shift+S` size, `o`/`Shift+O` opacity, `h` hide, `f` auto-fade, `Delete` clear. The registry is the source of truth; the menubar "Drawing" submenu and toolbar tooltips mirror it.
+**Active-app keyboard shortcuts.** While fiti is active, `KeyMonitor` (an `NSEvent` local monitor on `[.keyDown, .keyUp]`) dispatches single-character keys through the pure-Core `KeyCommandRegistry` → `AppController.run(_:)`. Commands: `1`–`8` pick colors, `p`/`a`/`t` select the pen/arrow/text tool, `s`/`Shift+S` size, `o`/`Shift+O` opacity, `h` hide, `f` auto-fade, `Delete` clear. Size and opacity step through preset values (`ValuePresets`) rather than free-scaling. The registry is the source of truth; the menubar "Drawing" submenu and toolbar tooltips mirror it.
 
-**Space press-and-hold** is the tool switch: Space `keyDown` (ignoring autorepeat) sets `currentTool = .selection`; `keyUp` reverts to `.pen`. Non-Space keyUp events pass straight through.
+**Space press-and-hold** switches to the selection tool: Space `keyDown` (ignoring autorepeat) sets `currentTool = .selection`; `keyUp` reverts to whichever tool was active before (so Space-from-text returns to text, not pen). It works from pen and text alike; while a text edit session is open, Space is a literal space instead. Non-Space keyUp events pass straight through.
 
 **Modifier plumbing.** `PointerModifiers` (a Core value type: `command`, `shift`) crosses the boundary so the gesture logic sees Cmd/Shift without Core importing NSEvent. `CanvasInputView` extracts `event.modifierFlags` into one and `NSEventInputSource` forwards it on every `pointerDown/Moved/Up`.
 
 ### The selection gesture state machine
 
-`AppController+SelectionGesture` routes pointer events when `currentTool == .selection`. Geometry is pure-Core in `SelectionMath` (`hitTest`, `marqueeHit`, `selectionBounds`) — all of which apply a stroke's `Transform` before computing, so rotated/scaled strokes test correctly.
+`AppController+SelectionGesture` routes pointer events when `currentTool == .selection`. Geometry is pure-Core in `SelectionMath` (`hitTestItem`, `marqueeHitItems`, `selectionBoundsItems`, `region`) — all of which apply an item's `Transform` before computing, so rotated/scaled items test correctly.
 
-- **pointerDown** hit-tests. A hit replaces the selection (`selectedStrokeIds = [hit]`) and arms a `.translate` gesture, snapshotting each selected stroke's original transform. `Cmd`-click toggles membership instead. A miss arms a `.marquee`.
-- **pointerMoved** updates the live state: a `.translate` writes `inFlightTransforms` (`[StrokeId: Transform]` overlay, computed from the drag delta against the snapshots); a `.marquee` updates `marqueeRect`.
-- **pointerUp** commits. `.translate` calls `editor.transformStrokes` (one undo entry) **then** clears `inFlightTransforms`, so the post-commit render reads the new editor state. `.marquee` resolves `SelectionMath.marqueeHit` into `selectedStrokeIds`.
+- **pointerDown** is region-first: `SelectionMath.region` classifies the point against the current `selectionBox` as `.rotateHandle`, `.corner`, `.body`, or `.outside`. Rotate node arms `.rotate`, a corner arms `.resize`, the body arms `.translate`, and `.outside` hit-tests an item — a hit replaces the selection (`selectedItemIds = [hit]`) and arms `.translate`, a miss arms a `.marquee`. Each gesture snapshots the selected items' transforms. `Cmd`-click toggles membership instead; `Cmd`-drag arms an additive marquee.
+- **pointerMoved** updates the live state via the pure `SelectionTransforms`: `.translate`/`.resize`/`.rotate` each write `inFlightTransforms` (`[ItemId: Transform]` overlay) and the live `selectionBox`; a `.marquee` updates `marqueeRect`.
+- **pointerUp** commits. `.translate`/`.resize`/`.rotate` call `editor.transformItems` (one undo entry) **then** clear `inFlightTransforms`, so the post-commit render reads the new editor state. `.marquee` resolves `SelectionMath.marqueeHitItems` into `selectedItemIds`.
 
-`selectedStrokeIds`, `inFlightTransforms`, and `marqueeRect` each publish on change; `main.swift` subscribes to push selection bounds and the live frame to the canvas. `Delete` with a non-empty selection erases only the selection (via `run(.clear)`'s selection-aware branch); with no selection it clears everything. `Cmd+K` always routes through `clear()` directly and wipes everything. Drawing a new pen stroke, auto-fade expiry, and `clear()` all reset `selectedStrokeIds` so the selection chrome never lingers over absent strokes.
+`selectedItemIds`, `inFlightTransforms`, and `marqueeRect` each publish on change; `main.swift` subscribes to push selection bounds and the live frame to the canvas. `Delete` with a non-empty selection erases only the selection (via `run(.clear)`'s selection-aware branch); with no selection it clears everything. `Cmd+K` always routes through `clear()` directly and wipes everything. Drawing a new mark, auto-fade expiry, and `clear()` all reset `selectedItemIds` so the selection chrome never lingers over absent items.
 
-Resize (corner handles) and rotate (top handle) are drawn but not yet interactive — that gesture work is the deferred sub-task; it will reuse this same state machine and the live-overlay rendering below.
+**Resize and rotate are interactive**, routed through `SelectionTransforms` (pure Core): a corner drag scales the selection from the opposite corner as anchor (clamped to a minimum factor), and the rotate node spins the box about its center, with `Shift` snapping to 15° increments. Both preview through `inFlightTransforms` and commit one `transformItems` entry. Rotate keeps the box's angle on commit; translate and resize recompute an upright box.
 
 ## The rendering layers
 
@@ -135,15 +136,15 @@ Naive renderers redraw every stroke every frame. With 200 committed strokes and 
 
 A `RenderFrame` carries three buckets:
 
-- **`strokes`** — committed strokes to bake. During a selection drag this *excludes* the dragged strokes.
-- **`liveStrokes`** — in-flight selection strokes, with their override `Transform` applied, drawn live.
-- **`inProgress`** — the pen stroke currently being drawn, drawn live.
+- **`items`** — committed items to bake. During a selection drag this *excludes* the dragged items.
+- **`liveItems`** — in-flight selection items, with their override `Transform` applied, drawn live.
+- **`inProgress`** — the pen stroke or arrow currently being drawn, drawn live.
 
 `CanvasView`:
 
-- **Bakes `strokes` once** into an off-screen `CGImage`, keyed by a *signature* — a list of `(StrokeId, Transform)` pairs (`BakeSignatureEntry`). The transform is part of the key because a committed stroke's transform legitimately changes on a translate commit or an undo/redo, and those must invalidate the bake.
-- **Blits the bake, then draws `liveStrokes`, then `inProgress`**, then the selection chrome (box + handles + marquee), every frame.
-- **Re-bakes only when the signature changes.** Because dragged strokes live in `liveStrokes` (not `strokes`) for the duration of a drag, the signature is *stable across the whole gesture* — the bake regenerates only at drag start (selected strokes leave the committed set) and at commit (they rejoin with their new transforms). A drag costs N live-stroke redraws per frame, not a full re-bake.
+- **Bakes `items` once** into an off-screen `CGImage`, keyed by a *signature* — a list of `(ItemId, Transform)` pairs (`BakeSignatureEntry`). The transform is part of the key because a committed item's transform legitimately changes on a translate/resize/rotate commit or an undo/redo, and those must invalidate the bake.
+- **Blits the bake, then draws `liveItems`, then `inProgress`**, then the selection chrome (box + handles + marquee), every frame.
+- **Re-bakes only when the signature changes.** Because dragged items live in `liveItems` (not `items`) for the duration of a drag, the signature is *stable across the whole gesture* — the bake regenerates only at drag start (selected items leave the committed set) and at commit (they rejoin with their new transforms). A drag costs N live-item redraws per frame, not a full re-bake.
 
 ```mermaid
 sequenceDiagram
@@ -152,18 +153,18 @@ sequenceDiagram
     participant View as draw(dirtyRect:)
 
     Note over C,View: Mid-drag: pointerMoved fires every move
-    C->>CV: render(strokes=[A], liveStrokes=[B@T_n], inProgress=nil)
-    CV->>CV: signature = [(A, …)] (unchanged — B is not in strokes)
+    C->>CV: render(items=[A], liveItems=[B@T_n], inProgress=nil)
+    CV->>CV: signature = [(A, …)] (unchanged — B is not in items)
     CV->>View: needsDisplay = true
-    View->>View: blit committedImage (cached, A only)<br/>+ drawStroke(B @ T_n)
+    View->>View: blit committedImage (cached, A only)<br/>+ drawItem(B @ T_n)
 
-    Note over C,View: pointerUp: transformStrokes commits B
-    C->>CV: render(strokes=[A, B@T_final], liveStrokes=[], inProgress=nil)
+    Note over C,View: pointerUp: transformItems commits B
+    C->>CV: render(items=[A, B@T_final], liveItems=[], inProgress=nil)
     CV->>CV: signature changed → re-bake (A + B)
     View->>View: blit new committedImage, no live overlay
 ```
 
-`drawStroke` (shared by `CanvasView` and `SnapshotRenderer`) applies the stroke's `Transform` to the `CGContext` CTM (`translate → rotate → scale`, matching `SelectionMath.transformed`) before filling the perfect-freehand polygon, so a translated/scaled/rotated stroke renders at its transformed position. `SnapshotRenderer` shares `drawStroke` but skips the cache — the snapshot endpoint is rare and can afford a full redraw.
+`drawItem` (in `StrokeDrawing.swift`, shared by `CanvasView` and `SnapshotRenderer`) dispatches on the `CanvasItem` case to `drawStroke` / `drawArrow` / `drawText`. Each applies the item's `Transform` to the `CGContext` CTM (`translate → rotate → scale`, matching `SelectionMath.transformed`) before drawing — for a stroke, filling the perfect-freehand polygon — so a translated/scaled/rotated item renders at its transformed position. `SnapshotRenderer` shares `drawItem` but skips the cache — the snapshot endpoint is rare and can afford a full redraw.
 
 **Retina.** The bake is sized in backing-store pixels (`Int(canvasSize × window.backingScaleFactor)`) and a CTM scale lets `drawStroke` keep working in logical points, so the committed cache is sharp on 2× displays.
 
