@@ -14,16 +14,10 @@ The app sits in the menubar with no Dock icon and stays out of your way until yo
 brew install --cask tednaleid/fiti/fiti
 ```
 
-Or, if you already have the tap:
-
-```bash
-brew install --cask fiti
-```
-
 To update:
 
 ```bash
-brew upgrade --cask fiti
+brew update && brew upgrade --cask fiti
 ```
 
 The cask installs `Fiti.app` to `/Applications`.
@@ -31,6 +25,8 @@ The cask installs `Fiti.app` to `/Applications`.
 ## Use
 
 Press `Opt+F` to activate. With the pen the cursor becomes a circle that previews the current color, opacity, and width, and a floating toolbar appears: tool buttons (pen, arrow, text), color quick-picks, a color-wheel button for custom colors, size and opacity controls with a live preview of the current mark, a hide/show toggle, and an auto-fade toggle. The toolbar remembers its position across launches and stays clickable even while another app is frontmost.
+
+Text and arrows get an auto-contrasting outline so they stay legible over any background (a light mark gets a dark halo, a dark mark a light one); the pen is unoutlined by default. Toggle the outline per tool in Preferences.
 
 ### System-wide
 
@@ -71,7 +67,7 @@ Hover over any toolbar control to see its action and shortcut. The menubar's "Dr
 
 ### Auto-fade
 
-Toggle the clock glyph on the toolbar (or press `f`) to enable auto-fade. Drawings stay solid for 8 seconds after the last stroke, ramp down to invisible over the following 2 seconds, then clear. Any new stroke or `Cmd+Z` resets the timer and restores everything at full opacity. Toggling off mid-fade snaps strokes back to full opacity.
+Toggle the clock glyph on the toolbar (or press `f`) to enable auto-fade. Drawings stay solid for 5 seconds after the last mark (the hold is configurable under Preferences, 0 to 60 seconds), ramp down to invisible over the following 2 seconds, then clear. Any new mark or `Cmd+Z` resets the timer and restores everything at full opacity. Toggling off mid-fade snaps everything back to full opacity.
 
 ## Development
 
