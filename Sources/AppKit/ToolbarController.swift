@@ -3,11 +3,6 @@
 
 import AppKit
 
-// swiftlint:disable file_length
-// ^ The toolbar controller is the single hub for all toolbar chrome + wiring.
-// A follow-up could split the test hooks / icon builders into extensions;
-// artificial fragmentation just to hit the line count isn't worth it now.
-
 @MainActor
 // swiftlint:disable:next type_body_length
 public final class ToolbarController: NSObject {
@@ -127,7 +122,7 @@ public final class ToolbarController: NSObject {
             let btn = FirstMouseButton(title: "", target: self, action: #selector(colorClicked(_:)))
             btn.tag = i
             btn.bezelStyle = .regularSquare
-            btn.image = makeSwatchImage(r: color.r, g: color.g, b: color.b)
+            btn.image = ToolbarIcons.swatch(r: color.r, g: color.g, b: color.b)
             btn.imagePosition = .imageOnly
             btn.toolTip = "\(color.name) — \(i + 1)"
             quickPickButtons.append(btn)
@@ -136,7 +131,7 @@ public final class ToolbarController: NSObject {
 
         // Custom-color picker: a color-wheel button (clearly "pick any color"),
         // grouped with the swatches. Opens the macOS color panel on click.
-        customColorButton.image = makeColorWheelImage(diameter: 22)
+        customColorButton.image = ToolbarIcons.colorWheel(diameter: 22)
         customColorButton.imagePosition = .imageOnly
         customColorButton.bezelStyle = .regularSquare
         customColorButton.target = self
@@ -221,38 +216,14 @@ public final class ToolbarController: NSObject {
             : NSColor.clear.cgColor
     }
 
-    private func makeSwatchImage(r: Double, g: Double, b: Double) -> NSImage {
-        let size = NSSize(width: 22, height: 22)
-        let img = NSImage(size: size)
-        img.lockFocus()
-        NSColor(red: CGFloat(r), green: CGFloat(g), blue: CGFloat(b), alpha: 1).setFill()
-        NSBezierPath(roundedRect: NSRect(origin: .zero, size: size), xRadius: 3, yRadius: 3).fill()
-        img.unlockFocus()
-        return img
-    }
-
     internal private(set) var currentHideGlyphName: String = "eye"
     internal private(set) var currentAutoFadeGlyphName: String = "timer"
-
-    /// Builds an SF Symbol image. When `withRedX` is true, palette rendering
-    /// colors the secondary layer (the slash on `eye.slash` or the X badge on
-    /// `clock.badge.xmark`) red while the base symbol keeps the label color.
-    private func icon(named name: String, withRedX: Bool, accessibilityDescription: String?) -> NSImage? {
-        if withRedX {
-            let config = NSImage.SymbolConfiguration(paletteColors: [.labelColor, .systemRed])
-            return NSImage(systemSymbolName: name, accessibilityDescription: accessibilityDescription)?
-                .withSymbolConfiguration(config)
-        }
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: accessibilityDescription)
-        image?.isTemplate = true
-        return image
-    }
 
     private func updateHideButtonGlyph(visible: Bool) {
         let name = visible ? "eye" : "eye.slash"
         currentHideGlyphName = name
-        hideButton.image = icon(named: name, withRedX: !visible,
-                                accessibilityDescription: visible ? "Hide" : "Show")
+        hideButton.image = ToolbarIcons.symbol(named: name, withRedX: !visible,
+                                               accessibilityDescription: visible ? "Hide" : "Show")
         hideButton.toolTip = visible ? "Hide drawings — h" : "Show drawings — h"
         // Active = hiding is engaged (drawings not visible).
         setActiveBackground(hideButton, active: !visible)
@@ -261,8 +232,8 @@ public final class ToolbarController: NSObject {
     private func updateAutoFadeGlyph(enabled: Bool) {
         let name = enabled ? "clock" : "clock.badge.xmark"
         currentAutoFadeGlyphName = name
-        autoFadeButton.image = icon(named: name, withRedX: !enabled,
-                                    accessibilityDescription: "Auto-fade drawings")
+        autoFadeButton.image = ToolbarIcons.symbol(named: name, withRedX: !enabled,
+                                                   accessibilityDescription: "Auto-fade drawings")
         autoFadeButton.toolTip = enabled ? "Auto-fade on — f" : "Auto-fade off — f"
         // Active = auto-fade timer is running.
         setActiveBackground(autoFadeButton, active: enabled)
@@ -306,26 +277,6 @@ public final class ToolbarController: NSObject {
         let a = controller.currentColor.a
         controller.currentColor = RGBA(r: Double(c.redComponent), g: Double(c.greenComponent),
                                        b: Double(c.blueComponent), a: a)
-    }
-
-    /// A 12-wedge rainbow wheel image for the custom-color button.
-    private func makeColorWheelImage(diameter: CGFloat) -> NSImage {
-        let img = NSImage(size: NSSize(width: diameter, height: diameter))
-        img.lockFocus()
-        let center = NSPoint(x: diameter / 2, y: diameter / 2)
-        let wedges = 12
-        for i in 0..<wedges {
-            let path = NSBezierPath()
-            path.move(to: center)
-            path.appendArc(withCenter: center, radius: diameter / 2,
-                           startAngle: CGFloat(i) / CGFloat(wedges) * 360,
-                           endAngle: CGFloat(i + 1) / CGFloat(wedges) * 360)
-            path.close()
-            NSColor(hue: CGFloat(i) / CGFloat(wedges), saturation: 0.85, brightness: 0.95, alpha: 1).setFill()
-            path.fill()
-        }
-        img.unlockFocus()
-        return img
     }
 
     @objc private func toggleHide(_ sender: NSButton) {
