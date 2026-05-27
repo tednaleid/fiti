@@ -44,8 +44,8 @@ graph LR
     User -->|NSEvent| Input
     User -->|key events| Keys
     User -->|Opt+F system-wide| Hotkeys
-    Input -->|onPointer*(modifiers)<br/>onClear/onDeactivate/onUndo/onRedo| Controller
-    Keys -->|run(KeyCommand)<br/>currentTool = .pen/.arrow/.text/.selection| Controller
+    Input -->|"onPointer*(modifiers)<br/>onClear/onDeactivate/onUndo/onRedo"| Controller
+    Keys -->|"run(KeyCommand)<br/>currentTool = .pen/.arrow/.text/.selection"| Controller
     Hotkeys -->|onActivation| Controller
     Controller --> Editor
     Controller --> SelMath
