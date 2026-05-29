@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>fiti Remote Control</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        #header {
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        #status {
+            font-size: 14px;
+            color: #aaa;
+        }
+        #status.connected {
+            color: #0f0;
+        }
+        #canvas {
+            flex: 1;
+            background: #000;
+            border-radius: 8px;
+            cursor: crosshair;
+            position: relative;
+        }
+        #canvas canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        #pairing {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        #pairing.hidden {
+            display: none;
+        }
+        .pairing-card {
+            background: #2a2a2a;
+            padding: 40px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+        }
+        .pin-display {
+            font-size: 48px;
+            font-weight: bold;
+            letter-spacing: 8px;
+            margin: 20px 0;
+            color: #0f0;
+        }
+        .pin-instruction {
+            color: #aaa;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            text-align: center;
+            border: 2px solid #444;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+        button {
+            width: 100%;
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #1e7e34;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        .checkbox-container {
+            margin: 15px 0;
+            text-align: left;
+        }
+        .checkbox-container label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #toolbar {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .toolbar-item {
+            flex: 1;
+            padding: 8px;
+            background: #2a2a2a;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stroke-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="header">
+            <div id="status">Connecting...</div>
+            <div id="toolbar">
+                <div class="toolbar-item">
+                    <span>Tool: <strong id="tool">pen</strong></span>
+                    <div class="stroke-info" id="stroke-info">No active stroke</div>
+                </div>
+            </div>
+        </div>
+        <div id="canvas">
+            <canvas id="drawingCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Pairing overlay -->
+    <div id="pairing">
+        <div class="pairing-card">
+            <h2>Pair with fiti</h2>
+            <div class="pin-instruction">Enter the 4-digit PIN shown in the app:</div>
+            <div class="pin-display" id="pin-display">-----</div>
+            <input type="text" id="pin-input" maxlength="4" placeholder="1234" inputmode="numeric" autocorrect="off" autocapitalize="off" spellcheck="false">
+            <div class="checkbox-container">
+                <label>
+                    <input type="checkbox" id="remember">
+                    Remember this device
+                </label>
+            </div>
+            <button id="pair-btn" class="btn-primary">Pair</button>
+            <div id="pair-error" style="color: #dc3545; margin-top: 10px; display: none;"></div>
+        </div>
+    </div>
+
+    <script src="client.js"></script>
+</body>
+</html>
