@@ -22,6 +22,8 @@ public protocol DevHTTPSurface: AnyObject {
     var textOutline: Bool { get }
     var arrowOutline: Bool { get }
     var penOutline: Bool { get }
+    var popoverOpen: Bool { get }
+    var popoverAxis: PresetAxis? { get }
 
     func activate()
     func deactivate()
@@ -45,5 +47,9 @@ public protocol DevHTTPSurface: AnyObject {
     func setDrawingsVisible(_ visible: Bool)
     /// Set one tool's outline ("text" | "arrow" | "pen"). Returns false if unknown.
     func setOutline(tool: String, enabled: Bool) -> Bool
+    /// Open or toggle the size/opacity popover (re-triggering the same axis closes it).
+    func triggerPopover(axis: PresetAxis)
+    /// PNG of the open popover panel, or nil when closed.
+    func popoverPNG() -> Data?
 }
 #endif

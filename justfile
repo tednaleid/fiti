@@ -276,6 +276,18 @@ inspect-tool TOOL:
         -H 'Content-Type: application/json' \
         -d '{"tool":"{{TOOL}}"}'
 
+# Open/toggle the size or opacity popover (AXIS is size|opacity). Re-run to close.
+[group('inspect')]
+inspect-popover AXIS:
+    @curl -sf -X POST localhost:{{dev_port}}/popover \
+        -H 'Content-Type: application/json' \
+        -d '{"axis":"{{AXIS}}"}' | jq .
+
+# Capture the open popover panel to a PNG under .llm/inspect/ (open it first).
+[group('inspect')]
+inspect-popover-screenshot path=(".llm/inspect/popover-" + `date +%Y%m%d-%H%M%S` + ".png"):
+    @mkdir -p .llm/inspect && curl -sf 'localhost:{{dev_port}}/popover.png' -o '{{path}}' && echo '{{path}}'
+
 [group('inspect')]
 inspect-type TEXT:
     @curl -sf -X POST localhost:{{dev_port}}/text \

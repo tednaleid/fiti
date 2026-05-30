@@ -159,6 +159,7 @@ public final class DevHTTPServer: @unchecked Sendable {
         installHistoryRoutes()
         installSnapshotRoute()
         installOutlineRoute()
+        installPopoverRoutes()
     }
 
     private func installToolbarRoutes() {
@@ -292,7 +293,9 @@ public final class DevHTTPServer: @unchecked Sendable {
                         "pen": surface.penOutline],
             "currentTool": String(describing: surface.currentTool),
             "isEditingText": surface.isEditingText,
-            "editingText": surface.editingText as Any
+            "editingText": surface.editingText as Any,
+            "popoverOpen": surface.popoverOpen,
+            "popoverAxis": surface.popoverAxis?.name as Any
         ]
         return .json(payload)
     }

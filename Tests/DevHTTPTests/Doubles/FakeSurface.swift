@@ -20,6 +20,8 @@ public final class FakeSurface: DevHTTPSurface {
     public var textOutline: Bool = true
     public var arrowOutline: Bool = true
     public var penOutline: Bool = false
+    public var popoverOpen: Bool = false
+    public var popoverAxis: PresetAxis?
 
     public var activateCalls = 0
     public var deactivateCalls = 0
@@ -32,6 +34,8 @@ public final class FakeSurface: DevHTTPSurface {
     public var lastTypedText: String?
     public var textActions: [String] = []
     public var lastCaretMove: TextEditSession.CaretMove?
+    public var popoverTriggers: [PresetAxis] = []
+    public var popoverPNGReturn: Data? = Data([0x89, 0x50, 0x4E, 0x47])
 
     public init() {}
 
@@ -86,4 +90,19 @@ public final class FakeSurface: DevHTTPSurface {
         lastCaretMove = direction
         textActions.append("caret:\(direction)")
     }
+
+    // Mirrors the real toggle: re-triggering the same axis closes; any axis while
+    // closed (or a different axis) opens on that axis.
+    public func triggerPopover(axis: PresetAxis) {
+        popoverTriggers.append(axis)
+        if popoverOpen, popoverAxis == axis {
+            popoverOpen = false
+            popoverAxis = nil
+        } else {
+            popoverOpen = true
+            popoverAxis = axis
+        }
+    }
+
+    public func popoverPNG() -> Data? { popoverOpen ? popoverPNGReturn : nil }
 }

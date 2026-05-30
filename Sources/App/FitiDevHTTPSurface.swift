@@ -10,19 +10,30 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
     private let canvasSizeProvider: () -> Size
     private let outlineSettings: OutlineSettings
     private let onOutlineChanged: () -> Void
+    private let triggerPopoverHandler: (PresetAxis) -> Void
+    private let popoverPNGProvider: () -> Data?
+    private let popoverStateProvider: () -> (open: Bool, axis: PresetAxis?)
 
     public init(controller: AppController, canvasSize: @escaping () -> Size,
                 outlineSettings: OutlineSettings,
-                onOutlineChanged: @escaping () -> Void) {
+                onOutlineChanged: @escaping () -> Void,
+                triggerPopover: @escaping (PresetAxis) -> Void = { _ in },
+                popoverPNG: @escaping () -> Data? = { nil },
+                popoverState: @escaping () -> (open: Bool, axis: PresetAxis?) = { (false, nil) }) {
         self.controller = controller
         self.canvasSizeProvider = canvasSize
         self.outlineSettings = outlineSettings
         self.onOutlineChanged = onOutlineChanged
+        self.triggerPopoverHandler = triggerPopover
+        self.popoverPNGProvider = popoverPNG
+        self.popoverStateProvider = popoverState
     }
 
     public var textOutline: Bool { outlineSettings.textOutline }
     public var arrowOutline: Bool { outlineSettings.arrowOutline }
     public var penOutline: Bool { outlineSettings.penOutline }
+    public var popoverOpen: Bool { popoverStateProvider().open }
+    public var popoverAxis: PresetAxis? { popoverStateProvider().axis }
     public func setOutline(tool: String, enabled: Bool) -> Bool {
         switch tool {
         case "text": outlineSettings.textOutline = enabled
@@ -97,5 +108,14 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
         let frame = RenderFrame.from(editor: controller.editor, canvasSize: canvasSize)
         return SnapshotRenderer.png(from: frame, outline: outlineSettings.flags)
     }
+
+    // Auto-activate so the toolbar (and thus the popover) is on screen before we
+    // trigger it — matching how setTool/pointerDown bypass the activation gate.
+    public func triggerPopover(axis: PresetAxis) {
+        if controller.mode == .inactive { controller.activate() }
+        triggerPopoverHandler(axis)
+    }
+
+    public func popoverPNG() -> Data? { popoverPNGProvider() }
 }
 #endif

@@ -90,7 +90,12 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         let surface = FitiDevHTTPSurface(controller: controller,
                                          canvasSize: { [weak self] in self?.canvasSize ?? Size(width: 0, height: 0) },
                                          outlineSettings: self.outlineSettings,
-                                         onOutlineChanged: { [weak self] in self?.canvas.refresh() })
+                                         onOutlineChanged: { [weak self] in self?.canvas.refresh() },
+                                         triggerPopover: { [weak self] axis in self?.toolbar.triggerPopover(axis: axis) },
+                                         popoverPNG: { [weak self] in self?.toolbar.popoverSnapshotPNG() },
+                                         popoverState: { [weak self] in
+                                             (self?.toolbar.popoverIsOpen ?? false, self?.toolbar.popoverAxis)
+                                         })
         do {
             let server = try DevHTTPServer(surface: surface, port: args.port)
             try server.start()
