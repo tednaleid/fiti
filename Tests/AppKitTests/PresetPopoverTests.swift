@@ -181,4 +181,19 @@ struct PresetPopoverTests {
         }
         #expect(pop.testOnly_monitorCount == 0)
     }
+
+    @Test("snapshotPNG returns nil when closed, PNG data when open")
+    func snapshotPNG() {
+        let pop = PresetPopover()
+        #expect(pop.snapshotPNG() == nil)
+        pop.open(axis: .size, currentValue: 14,
+                 color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { _ in })
+        let data = pop.snapshotPNG()
+        #expect(data != nil)
+        // PNG magic number: 89 50 4E 47.
+        #expect(Array(data!.prefix(4)) == [0x89, 0x50, 0x4E, 0x47])
+        pop.close()
+        #expect(pop.snapshotPNG() == nil)
+    }
 }

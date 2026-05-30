@@ -123,6 +123,29 @@ struct ToolbarControllerTests {
         #expect(toolbar.testOnly_popoverOpen == false)
     }
 
+    @Test("triggerPopover opens the matching axis and toggles closed on re-trigger")
+    func triggerPopoverTogglesByAxis() {
+        let (toolbar, _, _) = make()
+        toolbar.triggerPopover(axis: .size)
+        #expect(toolbar.popoverIsOpen)
+        #expect(toolbar.popoverAxis == .size)
+        toolbar.triggerPopover(axis: .opacity)   // swap
+        #expect(toolbar.popoverAxis == .opacity)
+        toolbar.triggerPopover(axis: .opacity)   // re-trigger closes
+        #expect(toolbar.popoverIsOpen == false)
+        #expect(toolbar.popoverAxis == nil)
+    }
+
+    @Test("popoverSnapshotPNG is nil when closed and PNG data when open")
+    func popoverSnapshot() {
+        let (toolbar, _, _) = make()
+        #expect(toolbar.popoverSnapshotPNG() == nil)
+        toolbar.triggerPopover(axis: .size)
+        let data = toolbar.popoverSnapshotPNG()
+        #expect(data != nil)
+        #expect(Array(data!.prefix(4)) == [0x89, 0x50, 0x4E, 0x47])
+    }
+
     @Test("hide button toggles controller.drawingsVisible")
     func hideButton() {
         let (toolbar, controller, _) = make()

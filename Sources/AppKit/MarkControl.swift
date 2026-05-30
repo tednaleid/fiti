@@ -49,12 +49,13 @@ final class MarkControl: NSView {
         ])
     }
 
-    @objc private func sizeClicked() {
-        onOpenPopover?(.size, previewScreenRect())
-    }
+    @objc private func sizeClicked() { triggerOpen(.size) }
+    @objc private func opacityClicked() { triggerOpen(.opacity) }
 
-    @objc private func opacityClicked() {
-        onOpenPopover?(.opacity, previewScreenRect())
+    /// Open (or toggle) the popover for `axis`, exactly as a trigger-button click does.
+    /// Shared by the buttons and the dev HTTP `/popover` route.
+    func triggerOpen(_ axis: PresetAxis) {
+        onOpenPopover?(axis, previewScreenRect())
     }
 
     private func previewScreenRect() -> NSRect {

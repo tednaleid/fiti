@@ -56,4 +56,21 @@ extension ToolbarController {
         markControl.setSizeButtonActive(popover.currentAxis == .size)
         markControl.setOpacityButtonActive(popover.currentAxis == .opacity)
     }
+
+    // MARK: - Dev HTTP introspection
+
+    /// Open or toggle the popover for `axis`, exactly as clicking its trigger button
+    /// would. Re-triggering the same axis closes it. Drives the dev `/popover` route.
+    public func triggerPopover(axis: PresetAxis) {
+        markControl.triggerOpen(axis)
+    }
+
+    /// Whether a popover is currently open. Drives `/state`.
+    public var popoverIsOpen: Bool { popover.isOpen }
+
+    /// The open popover's axis, or nil when closed. Drives `/state`.
+    public var popoverAxis: PresetAxis? { popover.currentAxis }
+
+    /// PNG of the open popover panel, or nil when closed. Drives `/popover.png`.
+    public func popoverSnapshotPNG() -> Data? { popover.snapshotPNG() }
 }
