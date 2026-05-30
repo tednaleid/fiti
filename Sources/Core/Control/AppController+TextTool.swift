@@ -6,8 +6,7 @@ import Foundation
 extension AppController {
     public func escapePressed() {
         if isEditingText {
-            commitText()
-            currentTool = .pen
+            commitText()   // stay in the text tool, ready for the next text
         } else {
             deactivate()
         }

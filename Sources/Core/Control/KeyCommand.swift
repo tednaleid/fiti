@@ -50,7 +50,8 @@ public enum KeyCommandRegistry {
         // key (fn+Delete) is U+F728 and is intentionally unbound for now.
         KeyBinding(character: "\u{7F}"): .clear,
         KeyBinding(character: "t"): .selectTool(.text),
-        KeyBinding(character: "p"): .selectTool(.pen),
+        // The pen tool is labeled "Drawing" in the UI; `d` is its home-row shortcut.
+        KeyBinding(character: "d"): .selectTool(.pen),
         KeyBinding(character: "a"): .selectTool(.arrow)
     ]
 

@@ -112,8 +112,8 @@ public final class ToolbarController: NSObject {
         stack.edgeInsets = NSEdgeInsets(top: 8, left: 8, bottom: 8, right: 8)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
-        configureToolButton(penButton, symbol: "pencil.tip", accessibility: "Pen",
-                            tooltip: "Pen — p", action: #selector(penClicked(_:)))
+        configureToolButton(penButton, symbol: "pencil.tip", accessibility: "Drawing",
+                            tooltip: "Drawing — d", action: #selector(penClicked(_:)))
         configureToolButton(textButton, symbol: "textformat", accessibility: "Text",
                             tooltip: "Text — t", action: #selector(textClicked(_:)))
         configureToolButton(arrowButton, symbol: "line.diagonal.arrow", accessibility: "Arrow",

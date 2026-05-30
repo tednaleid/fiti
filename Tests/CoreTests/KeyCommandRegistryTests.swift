@@ -43,10 +43,11 @@ struct KeyCommandRegistryTests {
         #expect(lookup("e") == nil)
     }
 
-    @Test("'t' selects text tool; 'p' selects pen tool")
+    @Test("'t' selects text tool; 'd' selects drawing (pen) tool")
     func toolBindings() {
         #expect(lookup("t") == .selectTool(.text))
-        #expect(lookup("p") == .selectTool(.pen))
+        #expect(lookup("d") == .selectTool(.pen))
+        #expect(lookup("p") == nil)   // 'p' is no longer bound
     }
 
     @Test("uppercase variants without shift are not silently mapped")

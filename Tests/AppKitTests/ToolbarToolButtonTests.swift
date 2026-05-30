@@ -79,7 +79,7 @@ struct ToolbarToolButtonTests {
     @Test("tool buttons have shortcut tooltips")
     func toolButtonTooltips() {
         let (toolbar, _) = make()
-        #expect(toolbar.testOnly_penTooltip == "Pen — p")
+        #expect(toolbar.testOnly_penTooltip == "Drawing — d")
         #expect(toolbar.testOnly_textTooltip == "Text — t")
         #expect(toolbar.testOnly_arrowTooltip == "Arrow — a")
     }

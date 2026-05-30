@@ -59,12 +59,12 @@ struct TextToolTests {
         #expect(c.textSession?.caret == 2)
     }
 
-    @Test("Esc while typing commits and drops to pen")
+    @Test("Esc while typing commits and stays in the text tool")
     func escWhileTyping() {
         let c = make()
         c.pointerDown(StrokePoint(x: 0, y: 0)); c.insertText("hi")
         c.escapePressed()
-        #expect(c.currentTool == .pen)
+        #expect(c.currentTool == .text)
         #expect(c.isEditingText == false)
         #expect(c.editor.doc.itemOrder.count == 1)
     }

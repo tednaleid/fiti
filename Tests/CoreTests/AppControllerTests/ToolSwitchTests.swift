@@ -23,9 +23,9 @@ struct ToolSwitchTests {
         #expect(c.currentTool == .pen)
     }
 
-    @Test("t and p are registered bindings")
+    @Test("t and d are registered bindings")
     func bindings() {
         #expect(KeyCommandRegistry.command(for: KeyBinding(character: "t")) == .selectTool(.text))
-        #expect(KeyCommandRegistry.command(for: KeyBinding(character: "p")) == .selectTool(.pen))
+        #expect(KeyCommandRegistry.command(for: KeyBinding(character: "d")) == .selectTool(.pen))
     }
 }

@@ -18,7 +18,7 @@ public final class PreferencesController: NSObject {
     private let statusField: NSTextField
     private let textOutlineCheckbox = NSButton(checkboxWithTitle: "Text", target: nil, action: nil)
     private let arrowOutlineCheckbox = NSButton(checkboxWithTitle: "Arrows", target: nil, action: nil)
-    private let penOutlineCheckbox = NSButton(checkboxWithTitle: "Pen", target: nil, action: nil)
+    private let penOutlineCheckbox = NSButton(checkboxWithTitle: "Drawing", target: nil, action: nil)
 
     private static let approvalHint = "Approve fiti in System Settings \u{2192} General \u{2192} Login Items."
 
