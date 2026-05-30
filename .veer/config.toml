@@ -1,0 +1,78 @@
+# veer rules - evaluated in order, first match wins.
+# Run 'veer list' to see active rules, 'veer test "<cmd>"' to preview behavior.
+# See .claude/skills/veer/SKILL.md for a guide on adding rules.
+
+[[rule]]
+id = "no-curl-pipe-shell"
+name = "Block curl piped to a shell"
+action = "reject"
+message = "Don't pipe curl to bash/sh -- download, inspect, then execute."
+[rule.match]
+command_all = ["curl", "bash"]
+
+# ─── justfile redirects ───────────────────────────────────────────────────
+# The justfile is the entry point for everything. These reject direct use of
+# the underlying tools the recipes wrap. (Recipe-internal calls run inside a
+# `just` subprocess and are never seen by veer, so there is no conflict.)
+# All are reject, not rewrite: each tool maps to several `just` targets, so the
+# agent must pick the right one from the message.
+
+[[rule]]
+id = "use-just-xcodebuild"
+name = "Redirect xcodebuild to just"
+action = "reject"
+message = "Don't run xcodebuild directly. Use 'just build' (Debug .app), 'just test' (unit), 'just test-integration', or 'just check' (full CI gate). Build output must land in /tmp/fiti-build, which the recipes handle."
+[rule.match]
+command = "xcodebuild"
+
+[[rule]]
+id = "use-just-swift-test"
+name = "Redirect swift test to just test"
+action = "reject"
+message = "Don't run 'swift test' directly. Use 'just test' (it runs the xcodebuild unit bundle plus the PerfectFreehand package tests)."
+[rule.match]
+command = "swift"
+arg = "test"
+
+[[rule]]
+id = "use-just-lint"
+name = "Redirect swiftlint to just lint"
+action = "reject"
+message = "Don't run swiftlint directly. Use 'just lint' (it runs SwiftLint --strict plus the Sources/Core import-discipline check)."
+[rule.match]
+command = "swiftlint"
+
+[[rule]]
+id = "use-just-generate"
+name = "Redirect xcodegen to just generate"
+action = "reject"
+message = "Don't run xcodegen directly. Use 'just generate' to regenerate fiti.xcodeproj from project.yml."
+[rule.match]
+command = "xcodegen"
+
+[[rule]]
+id = "use-just-clean"
+name = "Redirect rm -rf to just clean"
+action = "reject"
+message = "Never bare 'rm -rf'. Use 'just clean' to remove build artifacts (the repo is under Dropbox and in-tree deletes can poison codesign). For a path 'just clean' does not cover, confirm with Ted first."
+[rule.match]
+command = "rm"
+flag_all = ["r", "f"]
+
+[[rule]]
+id = "use-just-install"
+name = "Redirect manual app copy to just install"
+action = "reject"
+message = "Don't hand-copy the built .app into ~/Applications. Use 'just install' (it rebuilds and copies /tmp/fiti-build/Debug/Fiti.app to ~/Applications/Fiti.app), or 'just run' / 'just run-bg' to install and launch."
+[rule.match]
+command = "cp"
+arg_regex = "Applications/Fiti\\.app"
+
+[[rule]]
+id = "use-just-inspect"
+name = "Redirect raw curl on the dev port to just inspect-*"
+action = "reject"
+message = "Don't curl the dev introspection API directly. Use the 'just inspect-*' recipes (inspect-state, inspect-doc, inspect-screenshot, inspect-pointer, inspect-activate, inspect-clear, inspect-undo, ...) -- they add jq formatting and the screenshot path convention."
+[rule.match]
+command = "curl"
+arg_regex = "localhost:9876|127\\.0\\.0\\.1:9876|:9876/"
