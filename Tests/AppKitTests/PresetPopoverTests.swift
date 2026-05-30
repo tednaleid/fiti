@@ -91,4 +91,28 @@ struct PresetPopoverTests {
         #expect(pop.testOnly_selectedCellIndex == nil)
         pop.close()
     }
+
+    @Test("clicking cell N fires onPick with axis.values[N] and closes the popover")
+    func cellClickPicksAndCloses() {
+        let pop = PresetPopover()
+        var picked: [Double] = []
+        pop.open(axis: .size, currentValue: 14,
+                 color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { picked.append($0) })
+        pop.testOnly_clickCell(at: 6)  // ValuePresets.sizes[6] == 30
+        #expect(picked == [30])
+        #expect(pop.isOpen == false)
+    }
+
+    @Test("clicking an opacity cell fires onPick with the matching opacity preset")
+    func opacityCellClick() {
+        let pop = PresetPopover()
+        var picked: [Double] = []
+        pop.open(axis: .opacity, currentValue: 0.5,
+                 color: RGBA(r: 1, g: 0, b: 0, a: 0.5), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { picked.append($0) })
+        pop.testOnly_clickCell(at: 9)  // 1.0
+        #expect(picked.count == 1)
+        #expect(abs(picked[0] - 1.0) < 1e-6)
+    }
 }

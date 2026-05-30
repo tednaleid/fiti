@@ -101,6 +101,8 @@ final class PresetPopover {
         // swiftlint:enable function_parameter_count
         let cell = FirstMouseButton(title: "", target: nil, action: nil)
         cell.tag = index
+        cell.target = self
+        cell.action = #selector(cellClicked(_:))
         cell.bezelStyle = .regularSquare
         cell.isBordered = false
         cell.imagePosition = .imageOnly
@@ -120,6 +122,14 @@ final class PresetPopover {
         cell.widthAnchor.constraint(equalToConstant: CGFloat(MarkPreview.canvasSize.width)).isActive = true
         cell.heightAnchor.constraint(equalToConstant: CGFloat(MarkPreview.canvasSize.height)).isActive = true
         return cell
+    }
+
+    @objc private func cellClicked(_ sender: NSButton) {
+        guard let axis = currentAxis else { return }
+        let value = axis.values[sender.tag]
+        let pick = onPick
+        close()
+        pick?(value)
     }
 
     private func setActiveBackground(_ button: NSButton, active: Bool) {
@@ -149,6 +159,9 @@ final class PresetPopover {
     var testOnly_cellCount: Int { cells.count }
     var testOnly_selectedCellIndex: Int? {
         cells.firstIndex { ($0.layer?.backgroundColor?.alpha ?? 0) > 0 }
+    }
+    func testOnly_clickCell(at index: Int) {
+        cellClicked(cells[index])
     }
     // swiftlint:enable identifier_name
 }
