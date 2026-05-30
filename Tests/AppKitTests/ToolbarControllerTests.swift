@@ -477,4 +477,32 @@ struct ToolbarControllerActiveStateTests {
         controller.autoFadeEnabled = false
         #expect(toolbar.testOnly_autoFadeActiveBackground == false)
     }
+
+    @Test("size button gains an active background while its popover is open")
+    func sizeButtonActiveWhileOpen() {
+        let (toolbar, _) = make()
+        #expect(toolbar.testOnly_sizeButtonActive == false)
+        toolbar.testOnly_clickSizeButton()
+        #expect(toolbar.testOnly_sizeButtonActive == true)
+        #expect(toolbar.testOnly_opacityButtonActive == false)
+        toolbar.testOnly_clickSizeButton()  // close
+        #expect(toolbar.testOnly_sizeButtonActive == false)
+    }
+
+    @Test("opacity button gains an active background while its popover is open")
+    func opacityButtonActiveWhileOpen() {
+        let (toolbar, _) = make()
+        toolbar.testOnly_clickOpacityButton()
+        #expect(toolbar.testOnly_opacityButtonActive == true)
+        #expect(toolbar.testOnly_sizeButtonActive == false)
+    }
+
+    @Test("swap clears the previous trigger's active background and lights the new one")
+    func swapMovesActiveHighlight() {
+        let (toolbar, _) = make()
+        toolbar.testOnly_clickSizeButton()
+        toolbar.testOnly_clickOpacityButton()
+        #expect(toolbar.testOnly_sizeButtonActive == false)
+        #expect(toolbar.testOnly_opacityButtonActive == true)
+    }
 }
