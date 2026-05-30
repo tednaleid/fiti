@@ -77,6 +77,22 @@ struct DevHTTPServerTests {
         #expect(Array(data.prefix(4)) == [0x89, 0x50, 0x4E, 0x47])
     }
 
+    @Test("GET /toolbar.png returns the toolbar PNG")
+    @MainActor
+    func toolbarPNG() async throws {
+        let surface = FakeSurface()
+        let server = try DevHTTPServer(surface: surface, port: 0)
+        defer { server.stop() }
+        try server.start()
+        let port = server.boundPort!
+
+        let (data, response) = try await URLSession.shared.data(from: URL(string: "http://localhost:\(port)/toolbar.png")!)
+        let http = try #require(response as? HTTPURLResponse)
+        #expect(http.statusCode == 200)
+        #expect(http.value(forHTTPHeaderField: "Content-Type") == "image/png")
+        #expect(Array(data.prefix(4)) == [0x89, 0x50, 0x4E, 0x47])
+    }
+
     @MainActor
     private func post(_ url: String, body: String) async throws -> (Data, URLResponse) {
         var req = URLRequest(url: URL(string: url)!)

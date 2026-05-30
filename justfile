@@ -288,6 +288,11 @@ inspect-popover AXIS:
 inspect-popover-screenshot path=(".llm/inspect/popover-" + `date +%Y%m%d-%H%M%S` + ".png"):
     @mkdir -p .llm/inspect && curl -sf 'localhost:{{dev_port}}/popover.png' -o '{{path}}' && echo '{{path}}'
 
+# Capture the whole toolbar panel to a PNG under .llm/inspect/ (toolbar chrome).
+[group('inspect')]
+inspect-toolbar-screenshot path=(".llm/inspect/toolbar-" + `date +%Y%m%d-%H%M%S` + ".png"):
+    @mkdir -p .llm/inspect && curl -sf 'localhost:{{dev_port}}/toolbar.png' -o '{{path}}' && echo '{{path}}'
+
 [group('inspect')]
 inspect-type TEXT:
     @curl -sf -X POST localhost:{{dev_port}}/text \

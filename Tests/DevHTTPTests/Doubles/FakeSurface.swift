@@ -36,6 +36,7 @@ public final class FakeSurface: DevHTTPSurface {
     public var lastCaretMove: TextEditSession.CaretMove?
     public var popoverTriggers: [PresetAxis] = []
     public var popoverPNGReturn: Data? = Data([0x89, 0x50, 0x4E, 0x47])
+    public var toolbarPNGReturn: Data? = Data([0x89, 0x50, 0x4E, 0x47])
 
     public init() {}
 
@@ -105,4 +106,5 @@ public final class FakeSurface: DevHTTPSurface {
     }
 
     public func popoverPNG() -> Data? { popoverOpen ? popoverPNGReturn : nil }
+    public func toolbarPNG() -> Data? { toolbarPNGReturn }
 }

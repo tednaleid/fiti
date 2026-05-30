@@ -13,13 +13,15 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
     private let triggerPopoverHandler: (PresetAxis) -> Void
     private let popoverPNGProvider: () -> Data?
     private let popoverStateProvider: () -> (open: Bool, axis: PresetAxis?)
+    private let toolbarPNGProvider: () -> Data?
 
     public init(controller: AppController, canvasSize: @escaping () -> Size,
                 outlineSettings: OutlineSettings,
                 onOutlineChanged: @escaping () -> Void,
                 triggerPopover: @escaping (PresetAxis) -> Void = { _ in },
                 popoverPNG: @escaping () -> Data? = { nil },
-                popoverState: @escaping () -> (open: Bool, axis: PresetAxis?) = { (false, nil) }) {
+                popoverState: @escaping () -> (open: Bool, axis: PresetAxis?) = { (false, nil) },
+                toolbarPNG: @escaping () -> Data? = { nil }) {
         self.controller = controller
         self.canvasSizeProvider = canvasSize
         self.outlineSettings = outlineSettings
@@ -27,6 +29,7 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
         self.triggerPopoverHandler = triggerPopover
         self.popoverPNGProvider = popoverPNG
         self.popoverStateProvider = popoverState
+        self.toolbarPNGProvider = toolbarPNG
     }
 
     public var textOutline: Bool { outlineSettings.textOutline }
@@ -117,5 +120,6 @@ public final class FitiDevHTTPSurface: DevHTTPSurface {
     }
 
     public func popoverPNG() -> Data? { popoverPNGProvider() }
+    public func toolbarPNG() -> Data? { toolbarPNGProvider() }
 }
 #endif

@@ -103,12 +103,8 @@ final class PresetPopover {
     /// Render the open popover panel's view hierarchy to PNG, for the dev HTTP
     /// `/popover.png` introspection endpoint. Returns nil when the popover is closed.
     func snapshotPNG() -> Data? {
-        guard isOpen, let content = panel.contentView else { return nil }
-        let bounds = content.bounds
-        guard bounds.width > 0, bounds.height > 0,
-              let rep = content.bitmapImageRepForCachingDisplay(in: bounds) else { return nil }
-        content.cacheDisplay(in: bounds, to: rep)
-        return rep.representation(using: .png, properties: [:])
+        guard isOpen else { return nil }
+        return panel.contentView?.snapshotPNG()
     }
 
     private func installLocalKeyMonitor() {

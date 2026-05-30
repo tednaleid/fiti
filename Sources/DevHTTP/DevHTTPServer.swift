@@ -184,16 +184,6 @@ public final class DevHTTPServer: @unchecked Sendable {
         }
     }
 
-    private func installSnapshotRoute() {
-        router.add("GET", "/snapshot.png") { [weak self] _, _ in
-            guard let data = self?.surface.snapshotPNG() else {
-                return HTTPResponse(status: 500, reason: "Internal Server Error",
-                                    body: Data("snapshot unavailable".utf8))
-            }
-            return .png(data)
-        }
-    }
-
     private func installHistoryRoutes() {
         router.add("POST", "/clear") { [weak self] _, _ in
             self?.surface.clear()

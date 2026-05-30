@@ -95,7 +95,8 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
                                          popoverPNG: { [weak self] in self?.toolbar.popoverSnapshotPNG() },
                                          popoverState: { [weak self] in
                                              (self?.toolbar.popoverIsOpen ?? false, self?.toolbar.popoverAxis)
-                                         })
+                                         },
+                                         toolbarPNG: { [weak self] in self?.toolbar.toolbarSnapshotPNG() })
         do {
             let server = try DevHTTPServer(surface: surface, port: args.port)
             try server.start()

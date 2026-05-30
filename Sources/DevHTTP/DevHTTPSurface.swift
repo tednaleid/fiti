@@ -51,5 +51,7 @@ public protocol DevHTTPSurface: AnyObject {
     func triggerPopover(axis: PresetAxis)
     /// PNG of the open popover panel, or nil when closed.
     func popoverPNG() -> Data?
+    /// PNG of the whole toolbar panel (always available while the toolbar is up).
+    func toolbarPNG() -> Data?
 }
 #endif

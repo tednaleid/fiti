@@ -100,6 +100,10 @@ public final class ToolbarController: NSObject {
         }
     }
 
+    /// PNG of the whole toolbar panel, for the dev HTTP `/toolbar.png` endpoint —
+    /// lets a scripted client inspect toolbar chrome the canvas snapshot can't show.
+    public func toolbarSnapshotPNG() -> Data? { panel.contentView?.snapshotPNG() }
+
     // swiftlint:disable:next function_body_length
     private func buildContent() {
         let stack = NSStackView()
