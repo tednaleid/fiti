@@ -50,4 +50,45 @@ struct PresetPopoverTests {
         pop.close()
         #expect(pop.isOpen == false)
     }
+
+    @Test("open builds 10 cells for the size axis")
+    func tenCellsForSize() {
+        let pop = PresetPopover()
+        pop.open(axis: .size, currentValue: 14,
+                 color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { _ in })
+        #expect(pop.testOnly_cellCount == 10)
+        pop.close()
+    }
+
+    @Test("open builds 10 cells for the opacity axis")
+    func tenCellsForOpacity() {
+        let pop = PresetPopover()
+        pop.open(axis: .opacity, currentValue: 0.7,
+                 color: RGBA(r: 0, g: 0, b: 1, a: 0.7), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { _ in })
+        #expect(pop.testOnly_cellCount == 10)
+        pop.close()
+    }
+
+    @Test("the cell at the matching preset index has the active background")
+    func matchingCellHighlighted() {
+        let pop = PresetPopover()
+        // Size 14 → preset index 4 (ValuePresets.sizes is [2,4,6,9,14,...]).
+        pop.open(axis: .size, currentValue: 14,
+                 color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { _ in })
+        #expect(pop.testOnly_selectedCellIndex == 4)
+        pop.close()
+    }
+
+    @Test("off-preset currentValue leaves no cell highlighted")
+    func offPresetNoHighlight() {
+        let pop = PresetPopover()
+        pop.open(axis: .size, currentValue: 7,  // not in ValuePresets.sizes
+                 color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 7, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { _ in })
+        #expect(pop.testOnly_selectedCellIndex == nil)
+        pop.close()
+    }
 }
