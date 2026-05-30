@@ -19,12 +19,14 @@ final class FirstMouseButton: NSButton {
         hoverArea = area
     }
 
-    override func mouseEntered(with event: NSEvent) { setHover(true) }
-    override func mouseExited(with event: NSEvent) { setHover(false) }
+    override func mouseEntered(with event: NSEvent) { setHoverHighlight(true) }
+    override func mouseExited(with event: NSEvent) { setHoverHighlight(false) }
 
     /// Brighter-accent outline ring on hover. Sits over any active-state fill the
     /// owning controller sets (the fill is the layer background; this is the border).
-    private func setHover(_ on: Bool) {
+    /// Internal so a sibling (the stroke preview's halves) can light a button up
+    /// while the pointer is over the corresponding region rather than the button.
+    func setHoverHighlight(_ on: Bool) {
         wantsLayer = true
         layer?.cornerRadius = 4
         layer?.borderWidth = on ? 1.5 : 0

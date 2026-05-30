@@ -18,14 +18,14 @@ final class MarkPreview: NSView {
     }
     private(set) var previewTool: Tool = .pen
     private let imageView = NSImageView()
-    /// Overlay drawn over the hovered half (size = top, opacity = bottom) as a
-    /// brighter-accent ring, matching the buttons' mouseover affordance.
-    private let hoverOverlay = NSView()
     private var hoverArea: NSTrackingArea?
     private var hoveredAxis: PresetAxis?
 
     /// Fired when the user clicks the preview: top half → `.size`, bottom half → `.opacity`.
     var onHalfClick: ((PresetAxis) -> Void)?
+    /// Fired as the pointer moves over the halves (nil on exit). The toolbar uses it
+    /// to light up the size or opacity button — signaling which a click would open.
+    var onHalfHover: ((PresetAxis?) -> Void)?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -66,12 +66,7 @@ final class MarkPreview: NSView {
     private func setHoveredAxis(_ axis: PresetAxis?) {
         guard axis != hoveredAxis else { return }
         hoveredAxis = axis
-        guard let axis else { hoverOverlay.isHidden = true; return }
-        // Non-flipped: the top half (size) is the upper y range.
-        let half = bounds.height / 2
-        hoverOverlay.frame = NSRect(x: 0, y: axis == .size ? half : 0,
-                                    width: bounds.width, height: half).insetBy(dx: 1, dy: 1)
-        hoverOverlay.isHidden = false
+        onHalfHover?(axis)
     }
 
     /// Which axis a click at `y` (view coords, non-flipped) targets: the top half
@@ -92,14 +87,6 @@ final class MarkPreview: NSView {
             widthAnchor.constraint(equalToConstant: CGFloat(Self.canvasSize.width)),
             heightAnchor.constraint(equalToConstant: CGFloat(Self.canvasSize.height))
         ])
-
-        // Hover ring overlay, on top of the image, hidden until a half is hovered.
-        hoverOverlay.wantsLayer = true
-        hoverOverlay.layer?.cornerRadius = 4
-        hoverOverlay.layer?.borderWidth = 1.5
-        hoverOverlay.layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.9).cgColor
-        hoverOverlay.isHidden = true
-        addSubview(hoverOverlay)   // added after imageView → draws on top
     }
 
     private func refresh() {

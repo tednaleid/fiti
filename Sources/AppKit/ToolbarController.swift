@@ -169,20 +169,21 @@ public final class ToolbarController: NSObject {
             stack.trailingAnchor.constraint(equalTo: container.trailingAnchor)
         ])
         panel.contentView = container
-        normalizeButtonWidths()
+        normalizeButtonSizes()
         updateSwatchHighlights()
         updateToolHighlights()
     }
 
-    /// Make every toolbar button the same width as the color swatches (the widest
+    /// Make every toolbar button the same size as the color swatches (the largest
     /// buttons), so the single column reads as a uniform stack rather than ragged —
-    /// the tool icons and the size/opacity triggers are otherwise narrower.
-    private func normalizeButtonWidths() {
+    /// the tool icons and the size/opacity triggers are otherwise smaller.
+    private func normalizeButtonSizes() {
         guard let reference = quickPickButtons.first else { return }
         let others = [penButton, textButton, arrowButton, customColorButton,
                       hideButton, autoFadeButton] + markControl.triggerButtons
         for button in others {
             button.widthAnchor.constraint(equalTo: reference.widthAnchor).isActive = true
+            button.heightAnchor.constraint(equalTo: reference.heightAnchor).isActive = true
         }
     }
 

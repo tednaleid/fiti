@@ -30,25 +30,22 @@ final class MarkControl: NSView {
     required init?(coder: NSCoder) { fatalError("init(coder:) not supported") }
 
     /// The two trigger buttons, exposed so ToolbarController can normalize their
-    /// width against the color swatches (the widest toolbar buttons).
+    /// size against the color swatches (the widest toolbar buttons).
     var triggerButtons: [NSButton] { [sizeButton, opacityButton] }
-
-    /// Trigger-button height, matching the other toolbar buttons. Width is set by
-    /// ToolbarController to equal the swatch width.
-    private static let buttonHeight: CGFloat = 28
 
     private func build() {
         sizeButton.target = self
         sizeButton.action = #selector(sizeClicked)
         opacityButton.target = self
         opacityButton.action = #selector(opacityClicked)
-        for button in [sizeButton, opacityButton] {
-            button.translatesAutoresizingMaskIntoConstraints = false
-            button.heightAnchor.constraint(equalToConstant: Self.buttonHeight).isActive = true
-        }
 
-        // Top half of the rendered stroke opens size; bottom half opens opacity.
+        // Top/bottom half of the rendered stroke opens size/opacity, and hovering a
+        // half lights that axis's button — signaling which a click would open.
         preview.onHalfClick = { [weak self] axis in self?.triggerOpen(axis) }
+        preview.onHalfHover = { [weak self] axis in
+            self?.sizeButton.setHoverHighlight(axis == .size)
+            self?.opacityButton.setHoverHighlight(axis == .opacity)
+        }
 
         let stack = NSStackView(views: [sizeButton, preview, opacityButton])
         stack.orientation = .vertical
