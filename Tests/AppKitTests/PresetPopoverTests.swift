@@ -182,6 +182,35 @@ struct PresetPopoverTests {
         #expect(pop.testOnly_monitorCount == 0)
     }
 
+    @Test("refresh rebuilds cells with new style and moves the selection")
+    func refreshUpdatesCells() {
+        let pop = PresetPopover()
+        pop.open(axis: .size, currentValue: 14,
+                 color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { _ in })
+        #expect(pop.testOnly_selectedCellIndex == 4)
+        let redSnapshot = pop.snapshotPNG()
+
+        // Same axis still open: change color to blue and move the value to 30 (index 6).
+        pop.refresh(currentValue: 30, color: RGBA(r: 0, g: 0, b: 1, a: 1),
+                    width: 30, tool: .pen, outlineOn: false)
+        #expect(pop.isOpen)                        // refresh does not close
+        #expect(pop.testOnly_cellCount == 10)
+        #expect(pop.testOnly_selectedCellIndex == 6)   // highlight followed the new value
+        #expect(pop.snapshotPNG() != redSnapshot)      // cells re-rendered in the new color
+
+        pop.close()
+    }
+
+    @Test("refresh is a no-op when the popover is closed")
+    func refreshClosedIsNoop() {
+        let pop = PresetPopover()
+        pop.refresh(currentValue: 30, color: RGBA(r: 0, g: 0, b: 1, a: 1),
+                    width: 30, tool: .pen, outlineOn: false)
+        #expect(pop.isOpen == false)
+        #expect(pop.testOnly_cellCount == 0)
+    }
+
     @Test("snapshotPNG returns nil when closed, PNG data when open")
     func snapshotPNG() {
         let pop = PresetPopover()

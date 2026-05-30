@@ -90,6 +90,16 @@ final class PresetPopover {
         removeGlobalMouseMonitor()
     }
 
+    /// Rebuild the open popover's cells for a new style/value — e.g. the user changed
+    /// color or width while it stays open. Keeps the current axis; no-op when closed.
+    func refresh(currentValue: Double, color: RGBA, width: Double, tool: Tool, outlineOn: Bool) {
+        guard isOpen, let axis = currentAxis else { return }
+        for cell in cells { cell.removeFromSuperview() }
+        cells.removeAll()
+        buildCells(axis: axis, currentValue: currentValue,
+                   color: color, width: width, tool: tool, outlineOn: outlineOn)
+    }
+
     /// Render the open popover panel's view hierarchy to PNG, for the dev HTTP
     /// `/popover.png` introspection endpoint. Returns nil when the popover is closed.
     func snapshotPNG() -> Data? {

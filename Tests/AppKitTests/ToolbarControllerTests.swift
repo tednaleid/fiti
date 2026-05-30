@@ -146,6 +146,18 @@ struct ToolbarControllerTests {
         #expect(Array(data!.prefix(4)) == [0x89, 0x50, 0x4E, 0x47])
     }
 
+    @Test("changing color while the popover is open keeps it open and re-renders the cells")
+    func colorChangeRefreshesOpenPopover() {
+        let (toolbar, controller, _) = make()
+        controller.currentColor = RGBA(r: 0.85, g: 0.2, b: 0.2, a: 1)  // red
+        toolbar.triggerPopover(axis: .size)
+        let before = toolbar.popoverSnapshotPNG()
+        controller.currentColor = RGBA(r: 0.2, g: 0.2, b: 0.85, a: 1)  // blue
+        #expect(toolbar.popoverIsOpen)            // stays open
+        #expect(toolbar.popoverAxis == .size)
+        #expect(toolbar.popoverSnapshotPNG() != before)  // cells re-rendered in the new color
+    }
+
     @Test("hide button toggles controller.drawingsVisible")
     func hideButton() {
         let (toolbar, controller, _) = make()

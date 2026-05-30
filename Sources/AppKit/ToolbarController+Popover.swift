@@ -57,6 +57,18 @@ extension ToolbarController {
         markControl.setOpacityButtonActive(popover.currentAxis == .opacity)
     }
 
+    /// Re-render the open popover's cells against the current color/width — called when
+    /// the user changes color or width while the popover stays open. No-op when closed.
+    func refreshOpenPopover() {
+        guard let axis = popover.currentAxis else { return }
+        let currentValue: Double = (axis == .size) ? controller.currentWidth : controller.currentColor.a
+        popover.refresh(currentValue: currentValue,
+                        color: controller.currentColor,
+                        width: controller.currentWidth,
+                        tool: markControl.currentTool,
+                        outlineOn: outlineOn(for: markControl.currentTool))
+    }
+
     // MARK: - Dev HTTP introspection
 
     /// Open or toggle the popover for `axis`, exactly as clicking its trigger button

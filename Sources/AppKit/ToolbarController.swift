@@ -49,10 +49,12 @@ public final class ToolbarController: NSObject {
             self?.updateSwatchHighlights()
             self?.markControl.color = color
             self?.persistColor()
+            self?.refreshOpenPopover()
         }
         controller.onCurrentWidthChanged = { [weak self] width in
             self?.markControl.width = width
             self?.defaults.set(width, forKey: "fiti.width")
+            self?.refreshOpenPopover()
         }
         controller.onDrawingsVisibilityChanged = { [weak self] visible in
             self?.updateHideButtonGlyph(visible: visible)
