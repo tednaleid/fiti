@@ -146,4 +146,15 @@ struct PresetPopoverTests {
         #expect(pop.isOpen == true)
         pop.close()
     }
+
+    @Test("NSApplication.didResignActiveNotification closes the popover")
+    func resignActiveClosesPopover() {
+        let pop = PresetPopover()
+        pop.open(axis: .opacity, currentValue: 0.7,
+                 color: RGBA(r: 0, g: 0, b: 1, a: 0.7), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { _ in })
+        NotificationCenter.default.post(name: NSApplication.didResignActiveNotification,
+                                        object: NSApp)
+        #expect(pop.isOpen == false)
+    }
 }

@@ -10,6 +10,7 @@ final class PresetPopover {
     private var cells: [NSButton] = []
     private var onPick: ((Double) -> Void)?
     private var localKeyMonitor: Any?
+    private var deactivationObserver: NSObjectProtocol?
     private let escKeyCode: UInt16 = 0x35
 
     private(set) var currentAxis: PresetAxis?
@@ -72,6 +73,7 @@ final class PresetPopover {
         positionPanel(anchor: anchor, edge: edge)
         panel.orderFront(nil)
         installLocalKeyMonitor()
+        installDeactivationObserver()
     }
 
     func close() {
@@ -82,6 +84,7 @@ final class PresetPopover {
         cells.removeAll()
         panel.orderOut(nil)
         removeLocalKeyMonitor()
+        removeDeactivationObserver()
     }
 
     private func installLocalKeyMonitor() {
@@ -96,6 +99,22 @@ final class PresetPopover {
         if let token = localKeyMonitor {
             NSEvent.removeMonitor(token)
             localKeyMonitor = nil
+        }
+    }
+
+    private func installDeactivationObserver() {
+        if deactivationObserver != nil { return }
+        deactivationObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didResignActiveNotification,
+            object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.close() }
+        }
+    }
+
+    private func removeDeactivationObserver() {
+        if let observer = deactivationObserver {
+            NotificationCenter.default.removeObserver(observer)
+            deactivationObserver = nil
         }
     }
 
