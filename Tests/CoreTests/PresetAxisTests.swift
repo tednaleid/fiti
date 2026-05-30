@@ -48,4 +48,18 @@ struct PresetAxisTests {
         #expect(PresetAxis.opacity.selectedIndex(for: 0.75) == nil)
         #expect(PresetAxis.opacity.selectedIndex(for: 0.05) == nil)
     }
+
+    @Test("name is the lowercase axis identifier")
+    func name() {
+        #expect(PresetAxis.size.name == "size")
+        #expect(PresetAxis.opacity.name == "opacity")
+    }
+
+    @Test("init(name:) round-trips the name and rejects unknown strings")
+    func initFromName() {
+        #expect(PresetAxis(name: "size") == .size)
+        #expect(PresetAxis(name: "opacity") == .opacity)
+        #expect(PresetAxis(name: "bogus") == nil)
+        #expect(PresetAxis(name: "Size") == nil)  // case-sensitive
+    }
 }

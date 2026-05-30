@@ -7,6 +7,23 @@ public enum PresetAxis: Equatable, Sendable {
     case size
     case opacity
 
+    /// Lowercase identifier used by the dev HTTP API (`{"axis":"size"}`) and `/state`.
+    public var name: String {
+        switch self {
+        case .size: return "size"
+        case .opacity: return "opacity"
+        }
+    }
+
+    /// Parse an axis from its `name`. Case-sensitive; returns nil for anything else.
+    public init?(name: String) {
+        switch name {
+        case "size": self = .size
+        case "opacity": self = .opacity
+        default: return nil
+        }
+    }
+
     public var values: [Double] {
         switch self {
         case .size: return ValuePresets.sizes
