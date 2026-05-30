@@ -1,5 +1,5 @@
-// ABOUTME: Tests MarkControl — preset stepping via the buttons, edge-disabling,
-// ABOUTME: preview ignores the selection tool, and crash-free real-pipeline rendering.
+// ABOUTME: Tests MarkControl — the toolbar's size/opacity composite. Buttons trigger
+// ABOUTME: the popover-open callback; MarkPreview holds the live mark snapshot.
 
 import AppKit
 import Testing
@@ -7,43 +7,26 @@ import Testing
 @Suite("MarkControl")
 @MainActor
 struct MarkControlTests {
-    @Test("size steppers fire onWidth with the next/previous preset")
-    func sizeStepping() {
+    @Test("size button click invokes onOpenPopover with .size and the preview rect")
+    func sizeButtonOpensPopover() {
         let mc = MarkControl()
-        var picked: [Double] = []
-        mc.onWidth = { picked.append($0) }
-        mc.width = 14
-        mc.testOnly_tapSizeUp()    // 14 -> 20
-        mc.testOnly_tapSizeDown()  // 14 -> 9 (still reads width 14; controller would update it)
-        #expect(picked == [20, 9])
+        var calls: [(PresetAxis, NSRect)] = []
+        mc.onOpenPopover = { axis, rect in calls.append((axis, rect)) }
+        mc.testOnly_clickSizeButton()
+        #expect(calls.count == 1)
+        #expect(calls.first?.0 == .size)
+        #expect(calls.first?.1.width == CGFloat(MarkPreview.canvasSize.width))
+        #expect(calls.first?.1.height == CGFloat(MarkPreview.canvasSize.height))
     }
 
-    @Test("opacity steppers fire onOpacity with the next/previous preset")
-    func opacityStepping() {
+    @Test("opacity button click invokes onOpenPopover with .opacity and the preview rect")
+    func opacityButtonOpensPopover() {
         let mc = MarkControl()
-        var picked: [Double] = []
-        mc.onOpacity = { picked.append($0) }
-        mc.color = RGBA(r: 1, g: 0, b: 0, a: 0.5)
-        mc.testOnly_tapOpacityUp()    // 0.5 -> 0.6
-        mc.testOnly_tapOpacityDown()  // 0.5 -> 0.4
-        #expect(picked.count == 2)
-        #expect(abs(picked[0] - 0.6) < 0.0001)
-        #expect(abs(picked[1] - 0.4) < 0.0001)
-    }
-
-    @Test("minus disables at the smallest preset, plus at the largest")
-    func edgeDisabling() {
-        let mc = MarkControl()
-        mc.width = 2            // smallest size preset
-        #expect(mc.testOnly_sizeMinusEnabled == false)
-        #expect(mc.testOnly_sizePlusEnabled == true)
-        mc.width = 100          // largest
-        #expect(mc.testOnly_sizePlusEnabled == false)
-        #expect(mc.testOnly_sizeMinusEnabled == true)
-        mc.color = RGBA(r: 1, g: 0, b: 0, a: 0.1)   // smallest opacity
-        #expect(mc.testOnly_opacityMinusEnabled == false)
-        mc.color = RGBA(r: 1, g: 0, b: 0, a: 1.0)   // largest
-        #expect(mc.testOnly_opacityPlusEnabled == false)
+        var calls: [(PresetAxis, NSRect)] = []
+        mc.onOpenPopover = { axis, rect in calls.append((axis, rect)) }
+        mc.testOnly_clickOpacityButton()
+        #expect(calls.count == 1)
+        #expect(calls.first?.0 == .opacity)
     }
 
     @Test("preview ignores the selection tool, keeping the prior drawing tool")
@@ -52,7 +35,7 @@ struct MarkControlTests {
         mc.currentTool = .text
         #expect(mc.testOnly_previewTool == .text)
         mc.currentTool = .selection
-        #expect(mc.testOnly_previewTool == .text)   // unchanged
+        #expect(mc.testOnly_previewTool == .text)
         mc.currentTool = .arrow
         #expect(mc.testOnly_previewTool == .arrow)
     }
@@ -71,12 +54,15 @@ struct MarkControlTests {
         }
     }
 
-    @Test("labels read 'size' and 'opacity' with the keyboard-hint tooltips")
-    func labels() {
+    @Test("size button has the size tooltip and lineweight SF Symbol")
+    func sizeButtonTooltip() {
         let mc = MarkControl()
-        #expect(mc.testOnly_sizeLabelText == "size")
-        #expect(mc.testOnly_opacityLabelText == "opacity")
-        #expect(mc.testOnly_sizeTooltip == "Size — s / S")
-        #expect(mc.testOnly_opacityTooltip == "Opacity — o / O")
+        #expect(mc.testOnly_sizeButtonTooltip == "Size — s / S")
+    }
+
+    @Test("opacity button has the opacity tooltip and drop SF Symbol")
+    func opacityButtonTooltip() {
+        let mc = MarkControl()
+        #expect(mc.testOnly_opacityButtonTooltip == "Opacity — o / O")
     }
 }

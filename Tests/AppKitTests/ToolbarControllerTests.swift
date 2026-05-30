@@ -58,22 +58,60 @@ struct ToolbarControllerTests {
         #expect(controller.currentColor.a == 0.5, "alpha should be preserved")
     }
 
-    @Test("opacity slider writes controller.currentColor.a but preserves rgb")
-    func opacityPreservesRGB() {
+    @Test("clicking the size button opens the popover with axis .size")
+    func sizeButtonOpensPopover() {
+        let (toolbar, _, _) = make()
+        toolbar.testOnly_clickSizeButton()
+        #expect(toolbar.testOnly_popoverOpen)
+        #expect(toolbar.testOnly_popoverAxis == .size)
+    }
+
+    @Test("clicking the opacity button opens the popover with axis .opacity")
+    func opacityButtonOpensPopover() {
+        let (toolbar, _, _) = make()
+        toolbar.testOnly_clickOpacityButton()
+        #expect(toolbar.testOnly_popoverOpen)
+        #expect(toolbar.testOnly_popoverAxis == .opacity)
+    }
+
+    @Test("re-clicking the same trigger toggles the popover closed")
+    func reclickSameTriggerCloses() {
+        let (toolbar, _, _) = make()
+        toolbar.testOnly_clickSizeButton()
+        #expect(toolbar.testOnly_popoverOpen)
+        toolbar.testOnly_clickSizeButton()
+        #expect(toolbar.testOnly_popoverOpen == false)
+    }
+
+    @Test("clicking the other trigger swaps the popover axis")
+    func clickOtherTriggerSwaps() {
+        let (toolbar, _, _) = make()
+        toolbar.testOnly_clickSizeButton()
+        #expect(toolbar.testOnly_popoverAxis == .size)
+        toolbar.testOnly_clickOpacityButton()
+        #expect(toolbar.testOnly_popoverOpen)
+        #expect(toolbar.testOnly_popoverAxis == .opacity)
+    }
+
+    @Test("picking a size cell writes through to controller.currentWidth")
+    func sizePickWritesWidth() {
         let (toolbar, controller, _) = make()
-        controller.currentColor = RGBA(r: 0.2, g: 0.4, b: 0.6, a: 1.0)
-        toolbar.testOnly_setOpacity(0.3)
-        #expect(controller.currentColor.a == 0.3)
+        toolbar.testOnly_clickSizeButton()
+        toolbar.testOnly_pickPopoverCell(at: 6)  // ValuePresets.sizes[6] == 30
+        #expect(controller.currentWidth == 30)
+        #expect(toolbar.testOnly_popoverOpen == false)
+    }
+
+    @Test("picking an opacity cell writes controller.currentColor.a, preserving rgb")
+    func opacityPickWritesAlpha() {
+        let (toolbar, controller, _) = make()
+        controller.currentColor = RGBA(r: 0.2, g: 0.4, b: 0.6, a: 0.5)
+        toolbar.testOnly_clickOpacityButton()
+        toolbar.testOnly_pickPopoverCell(at: 9)  // 1.0
+        #expect(abs(controller.currentColor.a - 1.0) < 1e-6)
         #expect(controller.currentColor.r == 0.2)
         #expect(controller.currentColor.g == 0.4)
         #expect(controller.currentColor.b == 0.6)
-    }
-
-    @Test("width slider writes controller.currentWidth")
-    func widthSlider() {
-        let (toolbar, controller, _) = make()
-        toolbar.testOnly_setWidth(12)
-        #expect(controller.currentWidth == 12)
     }
 
     @Test("hide button toggles controller.drawingsVisible")
@@ -123,10 +161,14 @@ struct ToolbarControllerTests {
             textMeasurer: CoreTextMeasurer()
         )
         let toolbar = ToolbarController(controller: controller, defaults: suite)
-        toolbar.testOnly_setWidth(9)
-        toolbar.testOnly_setOpacity(0.6)
+        // Persistence is driven by AppController setters (not by widgets), so go
+        // directly through the controller — equivalent to the keyboard/HTTP path.
+        controller.currentWidth = 9
+        let c = controller.currentColor
+        controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: 0.6)
         #expect(suite.double(forKey: "fiti.width") == 9)
         #expect(suite.double(forKey: "fiti.color.a") == 0.6)
+        _ = toolbar
     }
 
     @Test("non-widget color/width changes persist (keyboard/menubar/HTTP path)")
@@ -191,24 +233,6 @@ struct ToolbarControllerTests {
         controller.activate()
         controller.currentTool = .text
         #expect(toolbar.testOnly_sizePickerTool == .text)
-    }
-
-    @Test("tapping size + steps controller.currentWidth to the next preset")
-    func sizeStepUpdatesController() {
-        let (toolbar, controller, _) = make()
-        toolbar.testOnly_tapSizeUp()   // default width 6 -> next preset 9
-        #expect(controller.currentWidth == 9)
-    }
-
-    @Test("tapping opacity + steps controller.currentColor.a, preserving rgb")
-    func opacityStepUpdatesController() {
-        let (toolbar, controller, _) = make()
-        controller.currentColor = RGBA(r: 0.2, g: 0.4, b: 0.6, a: 0.5)
-        toolbar.testOnly_tapOpacityUp()   // 0.5 -> 0.6
-        #expect(abs(controller.currentColor.a - 0.6) < 0.0001)
-        #expect(controller.currentColor.r == 0.2)
-        #expect(controller.currentColor.g == 0.4)
-        #expect(controller.currentColor.b == 0.6)
     }
 
     @Test("external write to drawingsVisible updates the hide button glyph")
@@ -324,16 +348,16 @@ struct ToolbarControllerTooltipTests {
         #expect(toolbar.testOnly_customColorTooltip == "Custom color")
     }
 
-    @Test("width control has 'Size — s / S' tooltip")
-    func widthSliderTooltip() {
+    @Test("size button tooltip is 'Size — s / S'")
+    func sizeButtonTooltip() {
         let (toolbar, _) = make()
-        #expect(toolbar.testOnly_widthSliderTooltip == "Size — s / S")
+        #expect(toolbar.testOnly_sizeButtonTooltip == "Size — s / S")
     }
 
-    @Test("opacity control has 'Opacity — o / O' tooltip")
-    func opacitySliderTooltip() {
+    @Test("opacity button tooltip is 'Opacity — o / O'")
+    func opacityButtonTooltip() {
         let (toolbar, _) = make()
-        #expect(toolbar.testOnly_opacitySliderTooltip == "Opacity — o / O")
+        #expect(toolbar.testOnly_opacityButtonTooltip == "Opacity — o / O")
     }
 
     @Test("hide button tooltip flips with drawingsVisible")
@@ -352,17 +376,6 @@ struct ToolbarControllerTooltipTests {
         #expect(toolbar.testOnly_autoFadeTooltip == "Auto-fade on — f")
     }
 
-    @Test("width label text is 'size'")
-    func widthLabelText() {
-        let (toolbar, _) = make()
-        #expect(toolbar.testOnly_widthLabelText == "size")
-    }
-
-    @Test("opacity label text is 'opacity'")
-    func opacityLabelText() {
-        let (toolbar, _) = make()
-        #expect(toolbar.testOnly_opacityLabelText == "opacity")
-    }
 }
 
 @Suite("ToolbarController active-state highlights")

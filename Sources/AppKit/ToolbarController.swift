@@ -1,6 +1,7 @@
 // ABOUTME: Floating toolbar that appears when fiti activates. Owns color /
 // ABOUTME: width / opacity / hide controls; writes through to AppController.
 
+// swiftlint:disable file_length
 import AppKit
 
 @MainActor
@@ -16,6 +17,7 @@ public final class ToolbarController: NSObject {
     private let arrowButton = FirstMouseButton(title: "", target: nil, action: nil)
     private let customColorButton = FirstMouseButton(title: "", target: nil, action: nil)
     private let markControl = MarkControl()
+    private let popover = PresetPopover()
     private let hideButton: NSButton
     private let autoFadeButton = FirstMouseButton(title: "", target: nil, action: nil)
     private var quickPickButtons: [NSButton] = []
@@ -39,11 +41,8 @@ public final class ToolbarController: NSObject {
         markControl.color = controller.currentColor
         markControl.currentTool = controller.currentTool
         markControl.outlineOn = outlineOn(for: controller.currentTool)
-        markControl.onWidth = { [weak self] v in self?.controller.currentWidth = v }
-        markControl.onOpacity = { [weak self] v in
-            guard let self else { return }
-            let c = self.controller.currentColor
-            self.controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: v)
+        markControl.onOpenPopover = { [weak self] axis, anchor in
+            self?.handleOpenPopover(axis: axis, anchor: anchor)
         }
 
         // React to external writes (HTTP, other adapters) — keep widgets in sync and persist.
@@ -70,6 +69,59 @@ public final class ToolbarController: NSObject {
                 self.markControl.outlineOn = self.outlineOn(for: tool)
             }
         }
+    }
+
+    private func handleOpenPopover(axis: PresetAxis, anchor: NSRect) {
+        if popover.isOpen, popover.currentAxis == axis {
+            popover.close()
+            updateTriggerHighlights()
+            return
+        }
+        if popover.isOpen { popover.close() }
+
+        let edge = pickEdge()
+        let currentValue: Double
+        switch axis {
+        case .size: currentValue = controller.currentWidth
+        case .opacity: currentValue = controller.currentColor.a
+        }
+        // markControl.currentTool already reflects the last drawing tool, because
+        // controller.onCurrentToolChanged skips updating it when tool == .selection.
+        let tool: Tool = markControl.currentTool
+        popover.open(axis: axis,
+                     currentValue: currentValue,
+                     color: controller.currentColor,
+                     width: controller.currentWidth,
+                     tool: tool,
+                     outlineOn: outlineOn(for: tool),
+                     anchor: anchor,
+                     edge: edge,
+                     onPick: { [weak self] value in
+                         self?.commitPick(axis: axis, value: value)
+                     })
+        updateTriggerHighlights()
+    }
+
+    private func commitPick(axis: PresetAxis, value: Double) {
+        switch axis {
+        case .size:
+            controller.currentWidth = value
+        case .opacity:
+            let c = controller.currentColor
+            controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: value)
+        }
+        updateTriggerHighlights()
+    }
+
+    private func pickEdge() -> PopoverEdge {
+        guard let screen = panel.screen else { return .maxX }
+        return PopoverEdgePicker.pick(toolbarMidX: Double(panel.frame.midX),
+                                      screenMidX: Double(screen.frame.midX))
+    }
+
+    private func updateTriggerHighlights() {
+        markControl.setSizeButtonActive(popover.currentAxis == .size)
+        markControl.setOpacityButtonActive(popover.currentAxis == .opacity)
     }
 
     /// Whether the size-glyph preview should show an outline: the live per-tool
@@ -321,16 +373,6 @@ public final class ToolbarController: NSObject {
         return quickPickButtons[index].toolTip
     }
 
-    internal func testOnly_setWidth(_ value: Double) {
-        markControl.width = value
-        controller.currentWidth = value
-    }
-
-    internal func testOnly_setOpacity(_ value: Double) {
-        let c = controller.currentColor
-        controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: value)
-    }
-
     internal func testOnly_toggleHide() { toggleHide(hideButton) }
 
     internal func testOnly_clickPen() { penClicked(penButton) }
@@ -343,21 +385,23 @@ public final class ToolbarController: NSObject {
         autoFadeClicked(autoFadeButton)
     }
 
-    func testOnly_tapSizeUp() { markControl.testOnly_tapSizeUp() }
-    func testOnly_tapOpacityUp() { markControl.testOnly_tapOpacityUp() }
-
     // swiftlint:disable identifier_name
+    func testOnly_clickSizeButton() { markControl.testOnly_clickSizeButton() }
+    func testOnly_clickOpacityButton() { markControl.testOnly_clickOpacityButton() }
+    func testOnly_pickPopoverCell(at index: Int) { popover.testOnly_clickCell(at: index) }
+    var testOnly_popoverOpen: Bool { popover.isOpen }
+    var testOnly_popoverAxis: PresetAxis? { popover.currentAxis }
+    var testOnly_sizeButtonTooltip: String? { markControl.testOnly_sizeButtonTooltip }
+    var testOnly_opacityButtonTooltip: String? { markControl.testOnly_opacityButtonTooltip }
+    var testOnly_sizeButtonActive: Bool { markControl.testOnly_sizeButtonActive }
+    var testOnly_opacityButtonActive: Bool { markControl.testOnly_opacityButtonActive }
     internal var testOnly_markColor: RGBA { markControl.testOnly_color }
     internal var testOnly_widthSliderValue: Double { markControl.width }
     internal var testOnly_hideButtonGlyphName: String { currentHideGlyphName }
     internal var testOnly_autoFadeGlyphName: String { currentAutoFadeGlyphName }
     internal var testOnly_customColorTooltip: String? { customColorButton.toolTip }
-    internal var testOnly_widthSliderTooltip: String? { markControl.testOnly_sizeTooltip }
-    internal var testOnly_opacitySliderTooltip: String? { markControl.testOnly_opacityTooltip }
     internal var testOnly_hideButtonTooltip: String? { hideButton.toolTip }
     internal var testOnly_autoFadeTooltip: String? { autoFadeButton.toolTip }
-    internal var testOnly_widthLabelText: String { markControl.testOnly_sizeLabelText }
-    internal var testOnly_opacityLabelText: String { markControl.testOnly_opacityLabelText }
     internal var testOnly_activeSwatchIndex: Int? { activeSwatchIndex }
     internal var testOnly_customColorActiveBackground: Bool { hasActiveBackground(customColorButton) }
     internal var testOnly_penTooltip: String? { penButton.toolTip }
