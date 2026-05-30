@@ -376,3 +376,34 @@ Swift Testing throughout. Full suite stays under five seconds.
   existing live preview does one such call on every state change without
   perceptible lag, so ten on a single open is fine. We do not cache cell
   images across opens; each open rebuilds with current color/outline/tool.
+
+## Refinements after review (2026-05-30)
+
+Hands-on use after the initial implementation produced these follow-on changes,
+all on top of the design above:
+
+- **Popover reacts to color/width changes while open.** Picking a color (or
+  width) while the popover stays open re-renders every cell to the new value,
+  rather than showing stale cells. `PresetPopover.refresh(...)` rebuilds the
+  cells in place; `ToolbarController` calls it from `onCurrentColorChanged` /
+  `onCurrentWidthChanged` when the popover is open.
+- **Stroke preview is a split click target.** The top half of the rendered
+  stroke opens the size popover, the bottom half opens opacity — funnelling
+  through the same `triggerOpen` path as the buttons. Hit test (`MarkPreview`)
+  is unit-tested; the preview fires on first mouse.
+- **Stroke-half hover lights the matching trigger button.** Hovering the top
+  half highlights the size button and the bottom half the opacity button (via
+  `FirstMouseButton.setHoverHighlight`), signalling which popover a click opens.
+  The button + its adjacent stroke-half are one contiguous region (the
+  `MarkControl` stack spacing is 0, so there is no dead gap).
+- **Mouseover outline ring on every toolbar button.** `FirstMouseButton` draws
+  a brighter-accent border ring on hover; since every toolbar button uses it,
+  they all get the affordance.
+- **Uniform button size.** Every toolbar button is width- and height-constrained
+  to a color swatch (the largest), so the single column reads as a uniform stack
+  (`ToolbarController.normalizeButtonSizes`).
+- **Dev HTTP introspection.** `POST /popover {axis}` opens/toggles the popover,
+  `GET /popover.png` captures the open panel, `GET /toolbar.png` captures the
+  toolbar panel (via `NSView.snapshotPNG` → `cacheDisplay`). `PresetAxis` gained
+  `name` / `init?(name:)` for the route. `/toolbar.png` is faint for SF-symbol
+  buttons — see the memory note on `cacheDisplay` vibrancy/template limits.
