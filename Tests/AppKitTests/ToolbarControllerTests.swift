@@ -114,6 +114,15 @@ struct ToolbarControllerTests {
         #expect(controller.currentColor.b == 0.6)
     }
 
+    @Test("changing currentTool while the popover is open closes it")
+    func toolChangeClosesPopover() {
+        let (toolbar, controller, _) = make()
+        toolbar.testOnly_clickSizeButton()
+        #expect(toolbar.testOnly_popoverOpen)
+        controller.currentTool = .arrow
+        #expect(toolbar.testOnly_popoverOpen == false)
+    }
+
     @Test("hide button toggles controller.drawingsVisible")
     func hideButton() {
         let (toolbar, controller, _) = make()

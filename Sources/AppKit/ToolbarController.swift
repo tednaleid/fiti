@@ -62,6 +62,10 @@ public final class ToolbarController: NSObject {
         }
         controller.onCurrentToolChanged = { [weak self] tool in
             guard let self else { return }
+            if self.popover.isOpen {
+                self.popover.close()
+                self.updateTriggerHighlights()
+            }
             self.updateToolHighlights()
             if tool != .selection {
                 self.markControl.currentTool = tool
