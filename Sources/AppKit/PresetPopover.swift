@@ -9,6 +9,8 @@ final class PresetPopover {
     private let stack: NSStackView
     private var cells: [NSButton] = []
     private var onPick: ((Double) -> Void)?
+    private var localKeyMonitor: Any?
+    private let escKeyCode: UInt16 = 0x35
 
     private(set) var currentAxis: PresetAxis?
     var isOpen: Bool { currentAxis != nil }
@@ -69,6 +71,7 @@ final class PresetPopover {
                    color: color, width: width, tool: tool, outlineOn: outlineOn)
         positionPanel(anchor: anchor, edge: edge)
         panel.orderFront(nil)
+        installLocalKeyMonitor()
     }
 
     func close() {
@@ -78,6 +81,29 @@ final class PresetPopover {
         for cell in cells { cell.removeFromSuperview() }
         cells.removeAll()
         panel.orderOut(nil)
+        removeLocalKeyMonitor()
+    }
+
+    private func installLocalKeyMonitor() {
+        if localKeyMonitor != nil { return }
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return event }
+            return self.handleLocalKey(event) ? nil : event
+        }
+    }
+
+    private func removeLocalKeyMonitor() {
+        if let token = localKeyMonitor {
+            NSEvent.removeMonitor(token)
+            localKeyMonitor = nil
+        }
+    }
+
+    /// Returns true if the event was consumed (ESC, popover closes); false otherwise.
+    private func handleLocalKey(_ event: NSEvent) -> Bool {
+        guard isOpen, event.keyCode == escKeyCode else { return false }
+        close()
+        return true
     }
 
     // swiftlint:disable function_parameter_count
@@ -163,5 +189,6 @@ final class PresetPopover {
     func testOnly_clickCell(at index: Int) {
         cellClicked(cells[index])
     }
+    func testOnly_handleKey(_ event: NSEvent) -> Bool { handleLocalKey(event) }
     // swiftlint:enable identifier_name
 }

@@ -115,4 +115,35 @@ struct PresetPopoverTests {
         #expect(picked.count == 1)
         #expect(abs(picked[0] - 1.0) < 1e-6)
     }
+
+    @Test("delivering an ESC keyDown to the local monitor closes the popover")
+    func escClosesPopover() {
+        let pop = PresetPopover()
+        pop.open(axis: .size, currentValue: 14,
+                 color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { _ in })
+        let escEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+                                        timestamp: 0, windowNumber: 0, context: nil,
+                                        characters: "\u{1B}", charactersIgnoringModifiers: "\u{1B}",
+                                        isARepeat: false, keyCode: 0x35)!
+        let consumed = pop.testOnly_handleKey(escEvent)
+        #expect(consumed)
+        #expect(pop.isOpen == false)
+    }
+
+    @Test("a non-ESC keyDown is not swallowed and does not close the popover")
+    func nonEscIgnored() {
+        let pop = PresetPopover()
+        pop.open(axis: .size, currentValue: 14,
+                 color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { _ in })
+        let aEvent = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+                                      timestamp: 0, windowNumber: 0, context: nil,
+                                      characters: "a", charactersIgnoringModifiers: "a",
+                                      isARepeat: false, keyCode: 0x00)!
+        let consumed = pop.testOnly_handleKey(aEvent)
+        #expect(consumed == false)
+        #expect(pop.isOpen == true)
+        pop.close()
+    }
 }
