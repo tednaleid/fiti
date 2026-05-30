@@ -35,7 +35,7 @@ struct TextToolTests {
         if case .text(let t)? = c.editor.doc.items[c.editor.doc.itemOrder[0]] {
             #expect(t.string == "hi")
             #expect(t.bounds == Size(width: 24, height: 24))   // fake: 2 chars * 12
-            #expect(t.fontSize == c.currentWidth * 4)
+            #expect(t.fontSize == textFontSize(forWidth: c.currentWidth))
             #expect(t.color == c.currentColor)
         } else { Issue.record("expected text item") }
     }

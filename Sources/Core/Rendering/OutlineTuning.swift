@@ -12,7 +12,8 @@ public enum OutlineTuning {
     /// sizes and stays readable at small ones, stepping rather than scaling smoothly.
     /// The first band whose `maxFontSize` is not exceeded wins; above the last band the
     /// largest width is used. On a 2x display the width is roughly its value in device
-    /// pixels. fontSize = width slider * 4, so these bands span the full slider range.
+    /// pixels. fontSize derives from the width slider via `textFontSize(forWidth:)`,
+    /// so these bands span the full slider range.
     public static let textHaloSteps: [(maxFontSize: Double, width: Double)] = [
         (48, 5),
         (96, 8),

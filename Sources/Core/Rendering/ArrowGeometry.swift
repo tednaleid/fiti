@@ -30,7 +30,8 @@ public enum ArrowGeometry {
     /// taken from getStroke's own output (not a duplicated formula) on the shared
     /// `FitiStrokeOptions` with simulation off and a fixed pressure, so the shaft stays
     /// on the same pipeline as the pen while being length-independent.
-    static func shaftHalfWidth(width: Double) -> Double {
+    /// Public so the toolbar preview can reserve room for the round tail cap.
+    public static func shaftHalfWidth(width: Double) -> Double {
         var opts = FitiStrokeOptions.make(width: width, last: true)
         opts.simulatePressure = false
         let inputs = [ShaftInput(x: 0, y: 0, pressure: shaftPressure),

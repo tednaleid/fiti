@@ -11,7 +11,9 @@ struct PresetPopoverTests {
         // A point in screen space that is on a real screen — using NSScreen.main's frame
         // origin avoids screen-edge clamping concerns. Size matches MarkPreview.
         let origin = NSScreen.main?.frame.origin ?? .zero
-        return NSRect(x: origin.x + 100, y: origin.y + 100, width: 60, height: 140)
+        return NSRect(x: origin.x + 100, y: origin.y + 100,
+                      width: CGFloat(MarkPreview.canvasSize.width),
+                      height: CGFloat(MarkPreview.canvasSize.height))
     }
 
     @Test("isOpen is false before open")

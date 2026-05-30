@@ -32,7 +32,7 @@ public func resolveOutline(enabled: Bool, color: RGBA, sizeBasis: Double,
 /// Stepped halo width (points) for text by font-size band: chunkier at large sizes,
 /// with a readable floor at small ones. The first band whose `maxFontSize` is not
 /// exceeded wins; above the last band the largest width is used. See
-/// `OutlineTuning.textHaloSteps`. (fontSize = width slider * 4.)
+/// `OutlineTuning.textHaloSteps`. (fontSize derives from width via `textFontSize(forWidth:)`.)
 public func textHaloWidth(forFontSize fontSize: Double) -> Double {
     for step in OutlineTuning.textHaloSteps where fontSize <= step.maxFontSize {
         return step.width

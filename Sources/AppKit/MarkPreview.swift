@@ -1,12 +1,21 @@
-// ABOUTME: 60x140 live mark preview rendered through SnapshotRenderer — the same image
+// ABOUTME: live mark preview rendered through SnapshotRenderer — the same image
 // ABOUTME: shown in the toolbar and inside each PresetPopover cell. No interaction.
 
 import AppKit
 
 @MainActor
 final class MarkPreview: NSView {
-    static let canvasSize = Size(width: 60, height: 140)
-    private static let markLength: Double = 66
+    /// Preview canvas in logical points. Height is tall enough to show the full
+    /// cap-height of the largest letter and the rounded caps/head of the widest
+    /// pen/arrow. Tweak `canvasHeight` to feel out the band size; the toolbar strip
+    /// and every popover cell scale with it.
+    static let canvasWidth: Double = 60
+    static let canvasHeight: Double = 220
+    static var canvasSize: Size { Size(width: canvasWidth, height: canvasHeight) }
+    /// Top/bottom padding (points) left around a preview mark. Every pen/arrow size
+    /// fills the band minus this margin, so small marks read as thin-not-short while
+    /// the widest still shows its caps/head. Tweak to taste.
+    private static let strokeMargin: Double = 14
 
     var color: RGBA = RGBA(r: 0, g: 0, b: 0, a: 1) { didSet { refresh() } }
     var width: Double = 6 { didSet { refresh() } }
@@ -107,25 +116,40 @@ final class MarkPreview: NSView {
 
     private static func previewItem(tool: Tool, color: RGBA, width: Double) -> CanvasItem {
         let w = canvasSize.width, h = canvasSize.height
-        let cx = w / 2, midY = h / 2, half = markLength / 2
+        let cx = w / 2, midY = h / 2
+        // Vertical extent every pen/arrow mark fills: the band minus top/bottom margin.
+        // Each tool subtracts its own width-dependent cap/head so the path shrinks as
+        // the mark fattens, keeping the filled height constant and the caps unclipped.
+        let fill = h - 2 * strokeMargin
         switch tool {
         case .arrow:
+            // The head tip sits at `head`; the tail adds a round cap of shaftHalfWidth.
+            // Reserve the cap, then shift up by half of it so the tip..cap extent centers.
+            let tailCap = ArrowGeometry.shaftHalfWidth(width: width)
+            let half = max(fill - tailCap, fill * 0.3) / 2
+            let shift = tailCap / 2
             return .arrow(ArrowItem(id: "preview", color: color, width: width, transform: .identity,
-                                    tail: Point(x: cx, y: midY + half),
-                                    head: Point(x: cx, y: midY - half),
+                                    tail: Point(x: cx, y: midY + half - shift),
+                                    head: Point(x: cx, y: midY - half - shift),
                                     createdAt: 0))
         case .text:
-            let fs = width * 4
+            let fs = textFontSize(forWidth: width)
             let font = NSFont(name: "Helvetica", size: CGFloat(fs)) ?? .systemFont(ofSize: CGFloat(fs))
             let glyph = ("A" as NSString).size(withAttributes: [.font: font])
+            // Center the glyph's ink (cap-height) in the band rather than its line box.
+            // The line box carries a large empty descender gap that would float the "A"
+            // upward and clip it; cap-centering keeps the biggest letter fully visible.
+            let inkY = h / 2 - Double(font.ascender) + Double(font.capHeight) / 2
             return .text(TextItem(id: "preview", string: "A", fontName: "Helvetica", fontSize: fs,
                                   color: color,
                                   transform: Transform(x: (w - Double(glyph.width)) / 2,
-                                                       y: (h - Double(glyph.height)) / 2,
+                                                       y: inkY,
                                                        scale: 1, rotate: 0),
                                   bounds: Size(width: Double(glyph.width), height: Double(glyph.height)),
                                   createdAt: 0))
         case .pen, .selection:
+            // Round caps add width/2 at each end, so the pill height is path + width.
+            let half = max(fill - width, fill * 0.3) / 2
             let pts = [(cx, midY - half), (cx - 6, midY - half * 0.25),
                        (cx + 5, midY + half * 0.35), (cx - 2, midY + half)]
                 .map { StrokePoint(x: $0.0, y: $0.1) }

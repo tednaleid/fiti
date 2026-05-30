@@ -32,7 +32,7 @@ extension AppController {
         textSession = TextEditSession(
             itemId: nil, string: "", caret: 0,
             transform: Transform(x: p.x, y: p.y, scale: 1, rotate: 0),
-            color: currentColor, fontName: "Helvetica", fontSize: currentWidth * 4)
+            color: currentColor, fontName: "Helvetica", fontSize: textFontSize(forWidth: currentWidth))
     }
 
     private func beginEditing(_ t: TextItem, at p: Point) {
