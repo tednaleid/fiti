@@ -157,4 +157,28 @@ struct PresetPopoverTests {
                                         object: NSApp)
         #expect(pop.isOpen == false)
     }
+
+    @Test("opening installs three monitors/observers; closing removes them")
+    func monitorsClean() {
+        let pop = PresetPopover()
+        #expect(pop.testOnly_monitorCount == 0)
+        pop.open(axis: .size, currentValue: 14,
+                 color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 14, tool: .pen, outlineOn: false,
+                 anchor: anchor(), edge: .maxX, onPick: { _ in })
+        #expect(pop.testOnly_monitorCount == 3)
+        pop.close()
+        #expect(pop.testOnly_monitorCount == 0)
+    }
+
+    @Test("open/close cycles do not accumulate monitors")
+    func monitorsNoLeakAcrossCycles() {
+        let pop = PresetPopover()
+        for _ in 0..<5 {
+            pop.open(axis: .size, currentValue: 14,
+                     color: RGBA(r: 1, g: 0, b: 0, a: 1), width: 14, tool: .pen, outlineOn: false,
+                     anchor: anchor(), edge: .maxX, onPick: { _ in })
+            pop.close()
+        }
+        #expect(pop.testOnly_monitorCount == 0)
+    }
 }

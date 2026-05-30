@@ -10,6 +10,7 @@ final class PresetPopover {
     private var cells: [NSButton] = []
     private var onPick: ((Double) -> Void)?
     private var localKeyMonitor: Any?
+    private var globalMouseMonitor: Any?
     private var deactivationObserver: NSObjectProtocol?
     private let escKeyCode: UInt16 = 0x35
 
@@ -74,6 +75,7 @@ final class PresetPopover {
         panel.orderFront(nil)
         installLocalKeyMonitor()
         installDeactivationObserver()
+        installGlobalMouseMonitor()
     }
 
     func close() {
@@ -85,6 +87,7 @@ final class PresetPopover {
         panel.orderOut(nil)
         removeLocalKeyMonitor()
         removeDeactivationObserver()
+        removeGlobalMouseMonitor()
     }
 
     private func installLocalKeyMonitor() {
@@ -99,6 +102,20 @@ final class PresetPopover {
         if let token = localKeyMonitor {
             NSEvent.removeMonitor(token)
             localKeyMonitor = nil
+        }
+    }
+
+    private func installGlobalMouseMonitor() {
+        if globalMouseMonitor != nil { return }
+        globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { [weak self] _ in
+            Task { @MainActor in self?.close() }
+        }
+    }
+
+    private func removeGlobalMouseMonitor() {
+        if let token = globalMouseMonitor {
+            NSEvent.removeMonitor(token)
+            globalMouseMonitor = nil
         }
     }
 
@@ -209,5 +226,12 @@ final class PresetPopover {
         cellClicked(cells[index])
     }
     func testOnly_handleKey(_ event: NSEvent) -> Bool { handleLocalKey(event) }
+    var testOnly_monitorCount: Int {
+        var count = 0
+        if localKeyMonitor != nil { count += 1 }
+        if globalMouseMonitor != nil { count += 1 }
+        if deactivationObserver != nil { count += 1 }
+        return count
+    }
     // swiftlint:enable identifier_name
 }
