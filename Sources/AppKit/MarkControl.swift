@@ -29,10 +29,13 @@ final class MarkControl: NSView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) not supported") }
 
-    /// Trigger buttons are sized to match the other toolbar buttons (the color
-    /// swatches and tool icons), since the lineweight/drop glyphs are otherwise
-    /// shorter than their neighbors.
-    private static let buttonSize: CGFloat = 28
+    /// The two trigger buttons, exposed so ToolbarController can normalize their
+    /// width against the color swatches (the widest toolbar buttons).
+    var triggerButtons: [NSButton] { [sizeButton, opacityButton] }
+
+    /// Trigger-button height, matching the other toolbar buttons. Width is set by
+    /// ToolbarController to equal the swatch width.
+    private static let buttonHeight: CGFloat = 28
 
     private func build() {
         sizeButton.target = self
@@ -41,8 +44,7 @@ final class MarkControl: NSView {
         opacityButton.action = #selector(opacityClicked)
         for button in [sizeButton, opacityButton] {
             button.translatesAutoresizingMaskIntoConstraints = false
-            button.widthAnchor.constraint(equalToConstant: Self.buttonSize).isActive = true
-            button.heightAnchor.constraint(equalToConstant: Self.buttonSize).isActive = true
+            button.heightAnchor.constraint(equalToConstant: Self.buttonHeight).isActive = true
         }
 
         // Top half of the rendered stroke opens size; bottom half opens opacity.
