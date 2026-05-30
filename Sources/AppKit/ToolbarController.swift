@@ -1,13 +1,12 @@
 // ABOUTME: Floating toolbar that appears when fiti activates. Owns color /
 // ABOUTME: width / opacity / hide controls; writes through to AppController.
 
-// swiftlint:disable file_length
 import AppKit
 
 @MainActor
 // swiftlint:disable:next type_body_length
 public final class ToolbarController: NSObject {
-    private let controller: AppController
+    let controller: AppController
     private let defaults: UserDefaults
     private let outlineSettings: OutlineSettings
     internal let panel: ToolbarPanel
@@ -16,8 +15,8 @@ public final class ToolbarController: NSObject {
     private let textButton = FirstMouseButton(title: "", target: nil, action: nil)
     private let arrowButton = FirstMouseButton(title: "", target: nil, action: nil)
     private let customColorButton = FirstMouseButton(title: "", target: nil, action: nil)
-    private let markControl = MarkControl()
-    private let popover = PresetPopover()
+    let markControl = MarkControl()
+    let popover = PresetPopover()
     private let hideButton: NSButton
     private let autoFadeButton = FirstMouseButton(title: "", target: nil, action: nil)
     private var quickPickButtons: [NSButton] = []
@@ -71,62 +70,9 @@ public final class ToolbarController: NSObject {
         }
     }
 
-    private func handleOpenPopover(axis: PresetAxis, anchor: NSRect) {
-        if popover.isOpen, popover.currentAxis == axis {
-            popover.close()
-            updateTriggerHighlights()
-            return
-        }
-        if popover.isOpen { popover.close() }
-
-        let edge = pickEdge()
-        let currentValue: Double
-        switch axis {
-        case .size: currentValue = controller.currentWidth
-        case .opacity: currentValue = controller.currentColor.a
-        }
-        // markControl.currentTool already reflects the last drawing tool, because
-        // controller.onCurrentToolChanged skips updating it when tool == .selection.
-        let tool: Tool = markControl.currentTool
-        popover.open(axis: axis,
-                     currentValue: currentValue,
-                     color: controller.currentColor,
-                     width: controller.currentWidth,
-                     tool: tool,
-                     outlineOn: outlineOn(for: tool),
-                     anchor: anchor,
-                     edge: edge,
-                     onPick: { [weak self] value in
-                         self?.commitPick(axis: axis, value: value)
-                     })
-        updateTriggerHighlights()
-    }
-
-    private func commitPick(axis: PresetAxis, value: Double) {
-        switch axis {
-        case .size:
-            controller.currentWidth = value
-        case .opacity:
-            let c = controller.currentColor
-            controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: value)
-        }
-        updateTriggerHighlights()
-    }
-
-    private func pickEdge() -> PopoverEdge {
-        guard let screen = panel.screen else { return .maxX }
-        return PopoverEdgePicker.pick(toolbarMidX: Double(panel.frame.midX),
-                                      screenMidX: Double(screen.frame.midX))
-    }
-
-    private func updateTriggerHighlights() {
-        markControl.setSizeButtonActive(popover.currentAxis == .size)
-        markControl.setOpacityButtonActive(popover.currentAxis == .opacity)
-    }
-
     /// Whether the size-glyph preview should show an outline: the live per-tool
     /// outline setting. Selection has no mark of its own, so no outline.
-    private func outlineOn(for tool: Tool) -> Bool {
+    func outlineOn(for tool: Tool) -> Bool {
         switch tool {
         case .pen: return outlineSettings.penOutline
         case .text: return outlineSettings.textOutline
