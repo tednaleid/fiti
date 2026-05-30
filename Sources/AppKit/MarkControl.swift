@@ -49,7 +49,9 @@ final class MarkControl: NSView {
 
         let stack = NSStackView(views: [sizeButton, preview, opacityButton])
         stack.orientation = .vertical
-        stack.spacing = 3
+        // No gap between the size button, the stroke, and the opacity button: the
+        // button and its adjacent stroke-half form one contiguous hover/click target.
+        stack.spacing = 0
         stack.alignment = .centerX
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
