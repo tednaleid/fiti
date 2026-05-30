@@ -46,4 +46,25 @@ struct MarkPreviewTests {
         #expect(MarkPreview.canvasSize.width == 60)
         #expect(MarkPreview.canvasSize.height == 140)
     }
+
+    @Test("axis(forY:) maps the top half to size and the bottom half to opacity")
+    func axisByHalf() {
+        // Non-flipped view: y grows upward, so the visual top is the larger y.
+        #expect(MarkPreview.axis(forY: 139, height: 140) == .size)     // top
+        #expect(MarkPreview.axis(forY: 71, height: 140) == .size)      // just above midpoint
+        #expect(MarkPreview.axis(forY: 70, height: 140) == .size)      // midpoint counts as top
+        #expect(MarkPreview.axis(forY: 69, height: 140) == .opacity)   // just below midpoint
+        #expect(MarkPreview.axis(forY: 1, height: 140) == .opacity)    // bottom
+    }
+
+    @Test("clicking the top half fires onHalfClick(.size), bottom half (.opacity)")
+    func halfClickFires() {
+        let mp = MarkPreview()
+        mp.frame = NSRect(x: 0, y: 0, width: 60, height: 140)
+        var picks: [PresetAxis] = []
+        mp.onHalfClick = { picks.append($0) }
+        mp.testOnly_click(atY: 130)  // top
+        mp.testOnly_click(atY: 10)   // bottom
+        #expect(picks == [.size, .opacity])
+    }
 }

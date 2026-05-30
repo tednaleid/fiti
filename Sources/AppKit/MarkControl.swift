@@ -29,11 +29,24 @@ final class MarkControl: NSView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) not supported") }
 
+    /// Trigger buttons are sized to match the other toolbar buttons (the color
+    /// swatches and tool icons), since the lineweight/drop glyphs are otherwise
+    /// shorter than their neighbors.
+    private static let buttonSize: CGFloat = 28
+
     private func build() {
         sizeButton.target = self
         sizeButton.action = #selector(sizeClicked)
         opacityButton.target = self
         opacityButton.action = #selector(opacityClicked)
+        for button in [sizeButton, opacityButton] {
+            button.translatesAutoresizingMaskIntoConstraints = false
+            button.widthAnchor.constraint(equalToConstant: Self.buttonSize).isActive = true
+            button.heightAnchor.constraint(equalToConstant: Self.buttonSize).isActive = true
+        }
+
+        // Top half of the rendered stroke opens size; bottom half opens opacity.
+        preview.onHalfClick = { [weak self] axis in self?.triggerOpen(axis) }
 
         let stack = NSStackView(views: [sizeButton, preview, opacityButton])
         stack.orientation = .vertical

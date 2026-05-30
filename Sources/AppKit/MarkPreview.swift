@@ -19,12 +19,34 @@ final class MarkPreview: NSView {
     private(set) var previewTool: Tool = .pen
     private let imageView = NSImageView()
 
+    /// Fired when the user clicks the preview: top half → `.size`, bottom half → `.opacity`.
+    var onHalfClick: ((PresetAxis) -> Void)?
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         build()
         refresh()
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) not supported") }
+
+    // The preview is one click target split in half; keep the image view from
+    // swallowing the click, and fire on the first mouse so it works while the
+    // app is inactive (same as the toolbar's FirstMouseButtons).
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        bounds.contains(convert(point, from: superview)) ? self : nil
+    }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        let y = convert(event.locationInWindow, from: nil).y
+        onHalfClick?(Self.axis(forY: y, height: bounds.height))
+    }
+
+    /// Which axis a click at `y` (view coords, non-flipped) targets: the top half
+    /// (y at or above the midpoint) is size, the bottom half is opacity.
+    static func axis(forY y: CGFloat, height: CGFloat) -> PresetAxis {
+        y >= height / 2 ? .size : .opacity
+    }
 
     private func build() {
         imageView.imageScaling = .scaleNone   // the renderer already produces real-sized pixels
@@ -91,5 +113,6 @@ final class MarkPreview: NSView {
     // swiftlint:disable identifier_name
     var testOnly_hasPreviewImage: Bool { imageView.image != nil }
     var testOnly_previewTool: Tool { previewTool }
+    func testOnly_click(atY y: CGFloat) { onHalfClick?(Self.axis(forY: y, height: bounds.height)) }
     // swiftlint:enable identifier_name
 }
