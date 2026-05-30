@@ -210,8 +210,9 @@ struct ToolbarControllerTests {
         controller.currentWidth = 9
         let c = controller.currentColor
         controller.currentColor = RGBA(r: c.r, g: c.g, b: c.b, a: 0.6)
-        #expect(suite.double(forKey: "fiti.width") == 9)
-        #expect(suite.double(forKey: "fiti.color.a") == 0.6)
+        // Default tool is pen, so changes persist under pen's per-tool keys.
+        #expect(suite.double(forKey: "fiti.style.pen.width") == 9)
+        #expect(suite.double(forKey: "fiti.style.pen.color.a") == 0.6)
         _ = toolbar
     }
 
@@ -224,9 +225,9 @@ struct ToolbarControllerTests {
         // NOT through a toolbar widget.
         controller.currentColor = RGBA(r: 0.1, g: 0.2, b: 0.3, a: 0.4)
         controller.currentWidth = 9
-        #expect(suite.double(forKey: "fiti.color.r") == 0.1)
-        #expect(suite.double(forKey: "fiti.color.a") == 0.4)
-        #expect(suite.double(forKey: "fiti.width") == 9)
+        #expect(suite.double(forKey: "fiti.style.pen.color.r") == 0.1)
+        #expect(suite.double(forKey: "fiti.style.pen.color.a") == 0.4)
+        #expect(suite.double(forKey: "fiti.style.pen.width") == 9)
         _ = toolbar
     }
 

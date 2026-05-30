@@ -48,12 +48,12 @@ public final class ToolbarController: NSObject {
         controller.onCurrentColorChanged = { [weak self] color in
             self?.updateSwatchHighlights()
             self?.markControl.color = color
-            self?.persistColor()
+            self?.persistActiveStyle()
             self?.refreshOpenPopover()
         }
         controller.onCurrentWidthChanged = { [weak self] width in
             self?.markControl.width = width
-            self?.defaults.set(width, forKey: "fiti.width")
+            self?.persistActiveStyle()
             self?.refreshOpenPopover()
         }
         controller.onDrawingsVisibilityChanged = { [weak self] visible in
@@ -308,27 +308,20 @@ public final class ToolbarController: NSObject {
 
     // MARK: - Persistence
 
+    private var toolStyleStore: UserDefaultsToolStyles { UserDefaultsToolStyles(defaults: defaults) }
+
     private func loadPersistedState() {
-        if let r = defaults.object(forKey: "fiti.color.r") as? Double,
-           let g = defaults.object(forKey: "fiti.color.g") as? Double,
-           let b = defaults.object(forKey: "fiti.color.b") as? Double,
-           let a = defaults.object(forKey: "fiti.color.a") as? Double {
-            controller.currentColor = RGBA(r: r, g: g, b: b, a: a)
-        }
-        if let w = defaults.object(forKey: "fiti.width") as? Double {
-            controller.currentWidth = w
-        }
+        controller.loadStyles(toolStyleStore.load())
         if defaults.bool(forKey: "fiti.autoFade") {
             controller.autoFadeEnabled = true
         }
     }
 
-    private func persistColor() {
-        let c = controller.currentColor
-        defaults.set(c.r, forKey: "fiti.color.r")
-        defaults.set(c.g, forKey: "fiti.color.g")
-        defaults.set(c.b, forKey: "fiti.color.b")
-        defaults.set(c.a, forKey: "fiti.color.a")
+    /// Persist the active tool's style. `currentColor`/`currentWidth` changes flow here,
+    /// and `styleTool` resolves selection mode back to the last drawing tool.
+    private func persistActiveStyle() {
+        let tool = controller.styleTool
+        toolStyleStore.save(controller.style(for: tool), for: tool)
     }
 
     // MARK: - Test hooks

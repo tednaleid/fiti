@@ -85,22 +85,33 @@ public final class AppController { // swiftlint:disable:this type_body_length
     // Default: red #e03131 from the toolbar's quick-pick palette, at 0.8
     // opacity so the slider is immediately discoverable. UserDefaults
     // overrides this when the toolbar reads persisted state at launch.
-    public var currentColor: RGBA = RGBA(r: 224.0 / 255.0, g: 49.0 / 255.0, b: 49.0 / 255.0, a: 0.8) {
+    public var currentColor: RGBA = ToolStyle.default.color {
         didSet {
             if oldValue != currentColor {
+                toolStyles[styleTool]?.color = currentColor   // mirror before notifying
                 onCurrentColorChanged?(currentColor)
                 refreshCursor()
             }
         }
     }
-    public var currentWidth: Double = 6 {
+    public var currentWidth: Double = ToolStyle.default.width {
         didSet {
             if oldValue != currentWidth {
+                toolStyles[styleTool]?.width = currentWidth   // mirror before notifying
                 onCurrentWidthChanged?(currentWidth)
                 refreshCursor()
             }
         }
     }
+
+    // Per-tool remembered styles (see AppController+ToolStyle). `currentColor`/
+    // `currentWidth` are the live "active" style every consumer reads; these slots are
+    // the memory behind them. Switching to a drawing tool loads its slot; writing
+    // color/width mirrors back into `styleTool`.
+    var toolStyles: [Tool: ToolStyle] = [.pen: .default, .text: .default, .arrow: .default]
+    /// The most recent drawing tool. `.selection` borrows it so selection-mode style
+    /// edits (with no live selection) land on the tool the user was last drawing with.
+    var lastDrawingTool: Tool = .pen
 
     /// The toolbar's frame in canvas coordinates, fed by the AppKit adapter.
     /// When the hover point is inside it, the cursor is a plain arrow and
@@ -123,6 +134,12 @@ public final class AppController { // swiftlint:disable:this type_body_length
                 } else {
                     clearSelectionState()
                 }
+            }
+            // Restore the chosen drawing tool's remembered style; selection keeps the
+            // active one (it borrows the last drawing tool via `styleTool`).
+            if currentTool.isDrawingTool {
+                lastDrawingTool = currentTool
+                applyStyle(of: currentTool)
             }
             onCurrentToolChanged?(currentTool)
             refreshCursor()

@@ -8,4 +8,10 @@ public enum Tool: Equatable, Hashable, Sendable {
     case selection
     case text
     case arrow
+
+    /// The tools that draw a mark and therefore carry their own remembered style.
+    /// `.selection` is a meta tool with no mark of its own.
+    public static let drawingTools: [Tool] = [.pen, .text, .arrow]
+
+    public var isDrawingTool: Bool { Self.drawingTools.contains(self) }
 }
