@@ -18,6 +18,11 @@ final class MarkPreview: NSView {
     }
     private(set) var previewTool: Tool = .pen
     private let imageView = NSImageView()
+    /// Overlay drawn over the hovered half (size = top, opacity = bottom) as a
+    /// brighter-accent ring, matching the buttons' mouseover affordance.
+    private let hoverOverlay = NSView()
+    private var hoverArea: NSTrackingArea?
+    private var hoveredAxis: PresetAxis?
 
     /// Fired when the user clicks the preview: top half → `.size`, bottom half → `.opacity`.
     var onHalfClick: ((PresetAxis) -> Void)?
@@ -42,6 +47,33 @@ final class MarkPreview: NSView {
         onHalfClick?(Self.axis(forY: y, height: bounds.height))
     }
 
+    override func mouseMoved(with event: NSEvent) {
+        let y = convert(event.locationInWindow, from: nil).y
+        setHoveredAxis(Self.axis(forY: y, height: bounds.height))
+    }
+    override func mouseExited(with event: NSEvent) { setHoveredAxis(nil) }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let area = hoverArea { removeTrackingArea(area) }
+        let area = NSTrackingArea(rect: bounds,
+                                  options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect],
+                                  owner: self, userInfo: nil)
+        addTrackingArea(area)
+        hoverArea = area
+    }
+
+    private func setHoveredAxis(_ axis: PresetAxis?) {
+        guard axis != hoveredAxis else { return }
+        hoveredAxis = axis
+        guard let axis else { hoverOverlay.isHidden = true; return }
+        // Non-flipped: the top half (size) is the upper y range.
+        let half = bounds.height / 2
+        hoverOverlay.frame = NSRect(x: 0, y: axis == .size ? half : 0,
+                                    width: bounds.width, height: half).insetBy(dx: 1, dy: 1)
+        hoverOverlay.isHidden = false
+    }
+
     /// Which axis a click at `y` (view coords, non-flipped) targets: the top half
     /// (y at or above the midpoint) is size, the bottom half is opacity.
     static func axis(forY y: CGFloat, height: CGFloat) -> PresetAxis {
@@ -60,6 +92,14 @@ final class MarkPreview: NSView {
             widthAnchor.constraint(equalToConstant: CGFloat(Self.canvasSize.width)),
             heightAnchor.constraint(equalToConstant: CGFloat(Self.canvasSize.height))
         ])
+
+        // Hover ring overlay, on top of the image, hidden until a half is hovered.
+        hoverOverlay.wantsLayer = true
+        hoverOverlay.layer?.cornerRadius = 4
+        hoverOverlay.layer?.borderWidth = 1.5
+        hoverOverlay.layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.9).cgColor
+        hoverOverlay.isHidden = true
+        addSubview(hoverOverlay)   // added after imageView → draws on top
     }
 
     private func refresh() {
