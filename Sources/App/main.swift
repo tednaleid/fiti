@@ -28,6 +28,7 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
     private var keyMonitor: KeyMonitor!
     private var toolbarScreenObserver: NSObjectProtocol?
     private var toolbarMoveObserver: NSObjectProtocol?
+    private var screenParamsObserver: NSObjectProtocol?
 
     init(args: Args) { self.args = args }
 
@@ -204,8 +205,10 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
 
     /// Keep the full-screen drawing canvas on whichever monitor hosts the
     /// floating toolbar. Fires when the user drags the toolbar between
-    /// monitors (didChangeScreenNotification) and once at startup so the
-    /// canvas follows the toolbar's autosaved frame.
+    /// monitors (didChangeScreenNotification), when the display arrangement
+    /// changes (didChangeScreenParametersNotification — monitor connected /
+    /// disconnected or resolution change), and once at startup so the canvas
+    /// follows the toolbar's autosaved frame.
     @MainActor
     private func observeToolbarScreenChanges() {
         toolbarScreenObserver = NotificationCenter.default.addObserver(
@@ -224,15 +227,46 @@ final class FitiAppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.syncToolbarRegion() }
         }
+        // Connecting/disconnecting a monitor (or a resolution change) posts
+        // didChangeScreenParametersNotification but NOT the toolbar's
+        // didChangeScreenNotification, so without this the overlay keeps the
+        // stale size it had on the old arrangement — e.g. a laptop-sized capture
+        // box in the corner of a newly-attached 4K. Re-cover the toolbar's screen.
+        screenParamsObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                #if DEBUG
+                NSLog("fiti: screen parameters changed — screens=\(NSScreen.screens.map(\.frame)) window=\(self.window.frame) toolbarScreen=\(self.toolbar.panel.screen?.frame as Any)")
+                #endif
+                self.followToolbarToScreen(clearStrokes: true)
+            }
+        }
     }
 
+    /// Resize the full-screen overlay so it exactly covers whichever monitor
+    /// hosts the floating toolbar, using the toolbar screen's *current* frame.
+    /// Compares frames (via `OverlayLayout`) rather than screen identity, so a
+    /// screen that kept its identity but changed size still resizes; falls back
+    /// to the main screen if the toolbar's screen was disconnected.
     @MainActor
     private func followToolbarToScreen(clearStrokes: Bool) {
-        guard let target = toolbar.panel.screen else { return }
-        guard window.screen != target else { return }
+        let toolbarScreen = toolbar.panel.screen.map { coreRect($0.frame) }
+        let fallback = NSScreen.main.map { coreRect($0.frame) }
+        guard let target = OverlayLayout.targetFrame(toolbarScreen: toolbarScreen,
+                                                     fallbackScreen: fallback,
+                                                     current: coreRect(window.frame)) else { return }
         if clearStrokes { controller.clear() }
-        window.setFrame(target.frame, display: true)
+        window.setFrame(NSRect(x: target.x, y: target.y, width: target.width, height: target.height),
+                        display: true)
         syncToolbarRegion()
+    }
+
+    private func coreRect(_ r: NSRect) -> Rect {
+        Rect(x: Double(r.minX), y: Double(r.minY), width: Double(r.width), height: Double(r.height))
     }
 
     @MainActor
