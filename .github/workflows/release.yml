@@ -167,7 +167,7 @@ jobs:
             desc "Native macOS transparent drawing overlay (telestrator-style)"
             homepage "https://github.com/tednaleid/fiti"
 
-            depends_on macos: ">= :sonoma"
+            depends_on macos: :sonoma
 
             app "Fiti.app"
 

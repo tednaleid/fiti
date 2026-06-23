@@ -60,7 +60,7 @@ cask "fiti" do
   desc "Native macOS transparent drawing overlay (telestrator-style)"
   homepage "https://github.com/${OWNER}/${MAIN_REPO}"
 
-  depends_on macos: ">= :sonoma"
+  depends_on macos: :sonoma
 
   app "Fiti.app"
 
