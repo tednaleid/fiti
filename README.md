@@ -1,8 +1,6 @@
 # fiti
 
-<p align="center">
-  <video src="https://github.com/user-attachments/assets/88a51d14-608d-4eb6-9685-d56ff53678b5" controls muted width="100%"></video>
-</p>
+https://github.com/user-attachments/assets/88a51d14-608d-4eb6-9685-d56ff53678b5
 
 Native macOS transparent drawing overlay. Press a hotkey, draw on top of any app, press it again to hide. Useful for annotating during screen shares, demos, and recordings: circle the thing you're pointing at, sketch over a diagram, or scribble notes that auto-fade after a few seconds.
 
